@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-electron
+release
+coverage
+.DS_Store
+*.log
+.env
+.env.local
+auth.json

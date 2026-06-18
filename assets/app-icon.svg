@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Jira Week Tracker app icon">
+  <defs>
+    <linearGradient id="bg" x1="176" y1="96" x2="848" y2="928" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fffefa"/>
+      <stop offset="0.58" stop-color="#eef8f1"/>
+      <stop offset="1" stop-color="#dfeee6"/>
+    </linearGradient>
+    <linearGradient id="page" x1="300" y1="205" x2="724" y2="770" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f4f6ef"/>
+    </linearGradient>
+    <filter id="shadow" x="8%" y="4%" width="84%" height="96%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="34" stdDeviation="30" flood-color="#1f2a22" flood-opacity="0.20"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1f2a22" flood-opacity="0.10"/>
+    </filter>
+    <filter id="inner" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feOffset dx="0" dy="4"/>
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite operator="out" in="SourceGraphic" in2="blur" result="inverse"/>
+      <feFlood flood-color="#ffffff" flood-opacity="0.65" result="color"/>
+      <feComposite operator="in" in="color" in2="inverse" result="shadow"/>
+      <feComposite operator="over" in="shadow" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+  <path d="M229 776c88 81 233 112 359 76 150-43 241-169 242-312 0-112-55-218-143-280-79-56-183-77-282-50-107 29-186 102-218 197-43 128-19 273 42 369Z" fill="#2f8f64" opacity="0.10"/>
+  <g filter="url(#shadow)">
+    <rect x="276" y="184" width="472" height="592" rx="76" fill="url(#page)"/>
+    <rect x="276" y="184" width="472" height="592" rx="76" fill="none" stroke="#d6ddd2" stroke-width="10"/>
+    <path d="M276 303h472" stroke="#243026" stroke-width="18" stroke-linecap="round" opacity="0.10"/>
+    <rect x="358" y="136" width="58" height="126" rx="29" fill="#243026"/>
+    <rect x="608" y="136" width="58" height="126" rx="29" fill="#243026"/>
+    <rect x="368" y="146" width="38" height="92" rx="19" fill="#2f8f64"/>
+    <rect x="618" y="146" width="38" height="92" rx="19" fill="#2f8f64"/>
+    <g filter="url(#inner)">
+      <rect x="350" y="384" width="68" height="68" rx="22" fill="#e4f4ec"/>
+      <rect x="478" y="384" width="68" height="68" rx="22" fill="#e4f4ec"/>
+      <rect x="606" y="384" width="68" height="68" rx="22" fill="#fff0d7"/>
+      <rect x="350" y="515" width="68" height="68" rx="22" fill="#e4f4ec"/>
+      <rect x="478" y="515" width="68" height="68" rx="22" fill="#e4f4ec"/>
+    </g>
+    <path d="m369 419 15 16 33-38" fill="none" stroke="#2f8f64" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m497 419 15 16 33-38" fill="none" stroke="#2f8f64" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M635 404v35M617 422h36" stroke="#c77a22" stroke-width="16" stroke-linecap="round"/>
+    <path d="m369 550 15 16 33-38" fill="none" stroke="#2f8f64" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m497 550 15 16 33-38" fill="none" stroke="#2f8f64" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g filter="url(#shadow)">
+    <circle cx="652" cy="668" r="154" fill="#ffffff"/>
+    <circle cx="652" cy="668" r="122" fill="none" stroke="#e1e5dc" stroke-width="32"/>
+    <path d="M652 546a122 122 0 0 1 112 73" fill="none" stroke="#2f8f64" stroke-width="32" stroke-linecap="round"/>
+    <path d="M652 605v73l55 31" fill="none" stroke="#243026" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="652" cy="668" r="18" fill="#243026"/>
+  </g>
+</svg>

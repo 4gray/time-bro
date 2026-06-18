@@ -1,0 +1,88 @@
+{
+  "name": "jira-week-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local Electron assistant for weekly Jira time tracking.",
+  "author": "fourgray",
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -n VITE,ELECTRON_TS,ELECTRON -c green,blue,magenta \"vite --host 127.0.0.1\" \"tsc -p tsconfig.electron.json --watch --preserveWatchOutput\" \"wait-on tcp:5173 dist-electron/electron/main.js && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main.js\"",
+    "dev:renderer": "vite --host 127.0.0.1",
+    "assets:icons": "node scripts/generate-icons.mjs",
+    "build": "tsc --noEmit && vite build && tsc -p tsconfig.electron.json",
+    "dist": "npm run build && electron-builder",
+    "dist:all": "npm run build && electron-builder --mac dmg zip --win nsis zip --linux AppImage deb tar.gz --publish never",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip --publish never",
+    "dist:win": "npm run build && electron-builder --win nsis zip --publish never",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
+    "release:dry-run": "npm run test && npm run build",
+    "release:patch": "npm version patch -m \"chore(release): v%s\"",
+    "release:minor": "npm version minor -m \"chore(release): v%s\"",
+    "release:major": "npm version major -m \"chore(release): v%s\"",
+    "release:push": "git push && git push --tags",
+    "lint": "tsc --noEmit",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rolldown/plugin-babel": "^0.2.3",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "babel-plugin-react-compiler": "^1.0.0",
+    "concurrently": "^8.2.2",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.35.1",
+    "typescript": "^5.5.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "local.jira-week-tracker",
+    "productName": "Jira Week Tracker",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Office",
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ]
+    }
+  }
+}
