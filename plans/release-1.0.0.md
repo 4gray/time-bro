@@ -21,7 +21,9 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - Create and push tag `v1.0.0`. Done for the first attempt.
 - Confirm the GitHub Actions release run started. Done for the first attempt.
 - Fix CI-only timezone-sensitive TodayView test failure. Done.
-- Repoint `v1.0.0` to the fixed release commit and rerun the workflow. Pending.
+- Repoint `v1.0.0` to the fixed release commit and rerun the workflow. Done for the second attempt.
+- Fix Linux `.deb` maintainer metadata failure. Done.
+- Repoint `v1.0.0` to the Linux metadata fix and rerun the workflow. Pending.
 
 ## Verification
 
@@ -32,3 +34,6 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - First GitHub Actions run `27918104351` started from `v1.0.0` and failed in `TodayView.test.tsx` because the test hardcoded a local time range.
 - `TZ=UTC npm run test` passed after making the TodayView test timezone-stable.
 - `npm run release:dry-run` passed after the CI test fix.
+- Second GitHub Actions run `27918159919` passed Test, macOS build, and Windows build, then failed Linux `.deb` packaging because package author/maintainer email was missing.
+- `package.json` author now includes maintainer email for Linux `.deb` metadata.
+- `npm run release:dry-run` passed after adding maintainer metadata.

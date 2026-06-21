@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "TimeBro is a local Electron assistant for weekly Jira time tracking.",
-  "author": "fourgray",
+  "author": "fourgray <fourgray@proton.me>",
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n VITE,ELECTRON_TS,ELECTRON -c green,blue,magenta \"vite --host 127.0.0.1\" \"tsc -p tsconfig.electron.json --watch --preserveWatchOutput\" \"wait-on tcp:5173 dist-electron/electron/main.js && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main.js\"",
