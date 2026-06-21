@@ -72,6 +72,22 @@ const formatSyncTime = (syncResult?: SyncResult) => {
   return `SYNCED ${time}`;
 };
 
+const sortPersonalNotes = (notes: PersonalNote[]) =>
+  [...notes].sort((a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime());
+
+const updateVisiblePersonalNotes = (
+  current: PersonalNote[],
+  previousNote: PersonalNote,
+  nextNote: PersonalNote,
+  visibleWeekKey: string
+) => {
+  const withoutPrevious = current.filter((note) => note.id !== previousNote.id);
+  if (nextNote.weekKey !== visibleWeekKey) {
+    return sortPersonalNotes(withoutPrevious);
+  }
+  return sortPersonalNotes([...withoutPrevious, nextNote]);
+};
+
 export const App = () => {
   const demoConfig = useMemo(() => getDemoConfig(), []);
   const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
@@ -107,6 +123,7 @@ export const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
+  const [editingPersonalNote, setEditingPersonalNote] = useState<PersonalNote | undefined>();
   const [welcomeConnected, setWelcomeConnected] = useState(false);
   const [theme, setTheme] = useState<ThemeMode | null>(() => {
     if (demoConfig?.theme) {
@@ -640,9 +657,7 @@ export const App = () => {
       }
 
       const currentNotes = noteWeekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(noteWeekKey);
-      const nextNotes = [...currentNotes, note].sort(
-        (a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime()
-      );
+      const nextNotes = sortPersonalNotes([...currentNotes, note]);
       await savePersonalNotes(noteWeekKey, nextNotes);
       if (noteWeekKey === weekState.weekKey) {
         setPersonalNotes(nextNotes);
@@ -656,12 +671,97 @@ export const App = () => {
     }
   };
 
+  const handleUpdatePersonalNote = async (payload: {
+    text: string;
+    timeSpentSeconds: number;
+    startedISO: string;
+  }) => {
+    if (!editingPersonalNote) {
+      return false;
+    }
+
+    const started = new Date(payload.startedISO);
+    const noteWeekKey = toLocalDateKey(getWeekBounds(started).weekStart);
+    const nextNote: PersonalNote = {
+      ...editingPersonalNote,
+      weekKey: noteWeekKey,
+      dateKey: toLocalDateKey(started),
+      text: payload.text.trim(),
+      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
+      startedISO: payload.startedISO,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!nextNote.text || nextNote.timeSpentSeconds <= 0) {
+      setLogError("Add a note and a duration before saving.");
+      return false;
+    }
+
+    setIsLogging(true);
+    setLogError(undefined);
+    setLogMessage(undefined);
+
+    try {
+      if (demoScenario) {
+        setPersonalNotes((current) => updateVisiblePersonalNotes(current, editingPersonalNote, nextNote, weekState.weekKey));
+        setLogMessage(`Demo updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
+        return true;
+      }
+
+      if (editingPersonalNote.weekKey === noteWeekKey) {
+        const currentNotes =
+          noteWeekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(editingPersonalNote.weekKey);
+        const nextNotes = sortPersonalNotes([
+          ...currentNotes.filter((note) => note.id !== editingPersonalNote.id),
+          nextNote
+        ]);
+
+        await savePersonalNotes(noteWeekKey, nextNotes);
+        if (noteWeekKey === weekState.weekKey) {
+          setPersonalNotes(nextNotes);
+        }
+      } else {
+        const [previousWeekNotes, nextWeekNotes] = await Promise.all([
+          editingPersonalNote.weekKey === weekState.weekKey
+            ? Promise.resolve(personalNotes)
+            : getPersonalNotes(editingPersonalNote.weekKey),
+          noteWeekKey === weekState.weekKey ? Promise.resolve(personalNotes) : getPersonalNotes(noteWeekKey)
+        ]);
+        const previousWeekNextNotes = previousWeekNotes.filter((note) => note.id !== editingPersonalNote.id);
+        const nextWeekNextNotes = sortPersonalNotes([
+          ...nextWeekNotes.filter((note) => note.id !== editingPersonalNote.id),
+          nextNote
+        ]);
+
+        await Promise.all([
+          savePersonalNotes(editingPersonalNote.weekKey, previousWeekNextNotes),
+          savePersonalNotes(noteWeekKey, nextWeekNextNotes)
+        ]);
+
+        if (editingPersonalNote.weekKey === weekState.weekKey) {
+          setPersonalNotes(previousWeekNextNotes);
+        } else if (noteWeekKey === weekState.weekKey) {
+          setPersonalNotes(nextWeekNextNotes);
+        }
+      }
+
+      setLogMessage(`Updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
+      return true;
+    } catch (error) {
+      setLogError(error instanceof Error ? error.message : "Unable to update the personal note locally.");
+      return false;
+    } finally {
+      setIsLogging(false);
+    }
+  };
+
   const syncState = isSyncing ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
   const banner = syncError ?? syncMessage;
 
   const openAddTime = (date?: Date) => {
     setEditingWorklog(undefined);
+    setEditingPersonalNote(undefined);
     setLogError(undefined);
     setLogMessage(undefined);
 
@@ -684,7 +784,16 @@ export const App = () => {
     setAddModalDate(undefined);
     setLogError(undefined);
     setLogMessage(undefined);
+    setEditingPersonalNote(undefined);
     setEditingWorklog(worklog);
+  };
+
+  const openEditPersonalNote = (note: PersonalNote) => {
+    setAddModalDate(undefined);
+    setLogError(undefined);
+    setLogMessage(undefined);
+    setEditingWorklog(undefined);
+    setEditingPersonalNote(note);
   };
 
   if (!demoScenario && !isBooting && (!isConfigured || welcomeConnected)) {
@@ -753,6 +862,7 @@ export const App = () => {
               logMessage={logMessage}
               onLog={handleAddWorklog}
               onEditWorklog={openEditWorklog}
+              onEditPersonalNote={openEditPersonalNote}
               onSelectTicket={setSelectedTicket}
             />
           ) : view === "week" ? (
@@ -768,6 +878,7 @@ export const App = () => {
               onNextWeek={() => setWeekStart((current) => addDays(current, 7))}
               onAddTime={openAddTime}
               onEditWorklog={openEditWorklog}
+              onEditPersonalNote={openEditPersonalNote}
               onToggleSkipped={handleToggleSkipped}
             />
           ) : view === "tickets" ? (
@@ -829,6 +940,22 @@ export const App = () => {
           onLog={handleUpdateWorklog}
           onDelete={handleDeleteWorklog}
           onAddPersonalNote={handleAddPersonalNote}
+        />
+      )}
+
+      {editingPersonalNote && (
+        <AddTimeModal
+          date={new Date(editingPersonalNote.startedISO)}
+          dateOptions={addTimeDateOptions}
+          ticketOptions={ticketOptions}
+          isConfigured={isConfigured}
+          isLogging={isLogging}
+          logError={logError}
+          editingPersonalNote={editingPersonalNote}
+          onClose={() => setEditingPersonalNote(undefined)}
+          onLog={handleAddWorklog}
+          onAddPersonalNote={handleAddPersonalNote}
+          onUpdatePersonalNote={handleUpdatePersonalNote}
         />
       )}
     </div>

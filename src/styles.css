@@ -778,6 +778,7 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .ticket-key-inline {
@@ -908,6 +909,15 @@ a {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
+  flex: none;
+}
+
+.day-log-action-slot {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
 }
 
 .day-log-summary {
@@ -975,7 +985,6 @@ a {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-  pointer-events: auto;
 }
 
 .wl-pop::after {
@@ -1063,28 +1072,33 @@ a {
   flex: 1;
 }
 
-.day-log-edit,
-.wl-pop-edit {
+.day-log-edit {
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: none;
   color: var(--dim);
-  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, color 150ms ease, border-color 150ms ease, background 150ms ease;
 }
 
-.day-log-edit {
-  width: 22px;
-  height: 22px;
-  opacity: 0.72;
+.day-log-edit svg {
+  display: block;
 }
 
-.day-log-edit:hover,
-.wl-pop-edit:hover {
+.day-log:hover .day-log-edit,
+.day-note-row:hover .day-log-edit,
+.day-log-edit:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.day-log-edit:hover {
   color: var(--blue-soft);
   border-color: var(--border-strong);
   background: var(--bg-hover);
@@ -1961,6 +1975,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .entry-key {
@@ -1999,6 +2014,14 @@ a {
   flex: none;
 }
 
+.entry-action-slot {
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+
 .entry-edit {
   display: inline-grid;
   place-items: center;
@@ -2009,7 +2032,19 @@ a {
   border-radius: 7px;
   background: none;
   color: var(--dim);
-  transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+
+.entry-edit svg {
+  display: block;
+}
+
+.entry:hover .entry-edit,
+.entry-edit:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .entry-edit:hover {

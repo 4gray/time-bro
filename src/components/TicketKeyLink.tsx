@@ -10,6 +10,7 @@ interface TicketKeyLinkProps {
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
   showEpic?: boolean;
+  showJiraLink?: boolean;
   keyClassName?: string;
   className?: string;
   style?: CSSProperties;
@@ -21,6 +22,7 @@ export const TicketKeyLink = ({
   issueType,
   epic,
   showEpic = false,
+  showJiraLink = true,
   keyClassName,
   className,
   style
@@ -29,7 +31,7 @@ export const TicketKeyLink = ({
     <span className={keyClassName} style={style}>
       {issueKey}
     </span>
-    {url ? (
+    {url && showJiraLink ? (
       <a
         className="ticket-jira-link"
         href={url}

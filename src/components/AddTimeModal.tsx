@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronDown, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
-import type { JiraTicket, JiraWorklog } from "../../shared/types";
+import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import type { JiraDurationUnit } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
@@ -22,10 +22,12 @@ interface AddTimeModalProps {
   isDeleting?: boolean;
   logError?: string;
   editingWorklog?: JiraWorklog;
+  editingPersonalNote?: PersonalNote;
   onClose: () => void;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onDelete?: () => Promise<boolean>;
   onAddPersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
+  onUpdatePersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
 }
 
 const PRESETS: Array<{ label: string; seconds: number }> = [
@@ -53,12 +55,12 @@ const CUSTOM_UNITS: Array<{ unit: DurationUnit; label: string }> = [
 
 const pad = (value: number) => String(value).padStart(2, "0");
 
-const getInitialStart = (date: Date, editingWorklog?: JiraWorklog) => {
-  if (!editingWorklog) {
-    return date;
-  }
-
-  const started = new Date(editingWorklog.started);
+const getInitialStart = (date: Date, editingWorklog?: JiraWorklog, editingPersonalNote?: PersonalNote) => {
+  const started = editingWorklog
+    ? new Date(editingWorklog.started)
+    : editingPersonalNote
+      ? new Date(editingPersonalNote.startedISO)
+      : date;
   return Number.isNaN(started.getTime()) ? date : started;
 };
 
@@ -216,18 +218,24 @@ export const AddTimeModal = ({
   isDeleting = false,
   logError,
   editingWorklog,
+  editingPersonalNote,
   onClose,
   onLog,
   onDelete,
-  onAddPersonalNote
+  onAddPersonalNote,
+  onUpdatePersonalNote
 }: AddTimeModalProps) => {
-  const isEditing = Boolean(editingWorklog);
-  const initialStart = getInitialStart(date, editingWorklog);
+  const isEditingWorklog = Boolean(editingWorklog);
+  const isEditingPersonalNote = Boolean(editingPersonalNote);
+  const isEditing = isEditingWorklog || isEditingPersonalNote;
+  const initialStart = getInitialStart(date, editingWorklog, editingPersonalNote);
   const initialSeconds = editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60;
+  const initialPersonalSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
   const initialPreset = PRESETS.some((preset) => preset.seconds === initialSeconds);
+  const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
   const preferredDateKey = chooseWorkingDateKey(toLocalDateKey(initialStart), dateOptions);
   const dateOptionsKey = dateOptions.join("|");
-  const [mode, setMode] = useState<"ticket" | "note">("ticket");
+  const [mode, setMode] = useState<"ticket" | "note">(isEditingPersonalNote ? "note" : "ticket");
   const [activeKey, setActiveKey] = useState<string | undefined>(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
@@ -237,10 +245,10 @@ export const AddTimeModal = ({
   const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
   const [note, setNote] = useState(editingWorklog?.comment ?? "");
-  const [personalNote, setPersonalNote] = useState("");
-  const [personalNoteSeconds, setPersonalNoteSeconds] = useState(30 * 60);
-  const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>("preset");
-  const [personalCustomAmount, setPersonalCustomAmount] = useState("1");
+  const [personalNote, setPersonalNote] = useState(editingPersonalNote?.text ?? "");
+  const [personalNoteSeconds, setPersonalNoteSeconds] = useState(initialPersonalSeconds);
+  const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>(initialPersonalPreset ? "preset" : "custom");
+  const [personalCustomAmount, setPersonalCustomAmount] = useState(customHoursAmount(initialPersonalSeconds));
   const [personalCustomUnit, setPersonalCustomUnit] = useState<DurationUnit>("h");
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -256,8 +264,16 @@ export const AddTimeModal = ({
     : undefined);
   const selectedDate = fromLocalDateKey(dateStr);
   const hasWorkingDate = dateOptions.includes(dateStr);
-  const canSubmit = mode === "note" && !isEditing
-    ? Boolean(hasWorkingDate && onAddPersonalNote && personalNote.trim() && personalNoteSeconds > 0)
+  const isNoteMode = mode === "note" || isEditingPersonalNote;
+  const modalTitle = isEditingWorklog ? "Edit time" : isEditingPersonalNote ? "Edit note" : mode === "note" ? "Personal note" : "Log time";
+  const canSubmit = isNoteMode && !isEditingWorklog
+    ? Boolean(
+        hasWorkingDate &&
+          (isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote) &&
+          personalNote.trim() &&
+          personalNoteSeconds > 0 &&
+          !isLogging
+      )
     : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
 
   const handleSubmit = async () => {
@@ -267,11 +283,12 @@ export const AddTimeModal = ({
 
     const startedISO = new Date(`${dateStr}T${timeStr}`).toISOString();
 
-    if (mode === "note" && !isEditing) {
-      if (!onAddPersonalNote) {
+    if (isNoteMode && !isEditingWorklog) {
+      const savePersonalNote = isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote;
+      if (!savePersonalNote) {
         return;
       }
-      const ok = await onAddPersonalNote({
+      const ok = await savePersonalNote({
         text: personalNote,
         timeSpentSeconds: personalNoteSeconds,
         startedISO
@@ -317,12 +334,14 @@ export const AddTimeModal = ({
   };
 
   useEffect(() => {
-    const start = getInitialStart(date, editingWorklog);
+    const start = getInitialStart(date, editingWorklog, editingPersonalNote);
     const seconds = editingWorklog?.timeSpentSeconds ?? 2 * 60 * 60;
+    const localNoteSeconds = editingPersonalNote?.timeSpentSeconds ?? 30 * 60;
     const hasPreset = PRESETS.some((preset) => preset.seconds === seconds);
+    const hasPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === localNoteSeconds);
 
-    setMode("ticket");
-    setActiveKey(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
+    setMode(editingPersonalNote ? "note" : "ticket");
+    setActiveKey(editingPersonalNote ? undefined : editingWorklog?.issueKey ?? ticketOptions[0]?.key);
     setPickerOpen(false);
     setDurationSeconds(seconds);
     setTicketDurationMode(hasPreset ? "preset" : "custom");
@@ -331,8 +350,12 @@ export const AddTimeModal = ({
     setDateStr(chooseWorkingDateKey(toLocalDateKey(start), dateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
     setNote(editingWorklog?.comment ?? "");
-    setPersonalNote("");
-  }, [date, dateOptionsKey, editingWorklog?.id, ticketOptions]);
+    setPersonalNote(editingPersonalNote?.text ?? "");
+    setPersonalNoteSeconds(localNoteSeconds);
+    setPersonalDurationMode(hasPersonalPreset ? "preset" : "custom");
+    setPersonalCustomAmount(customHoursAmount(localNoteSeconds));
+    setPersonalCustomUnit("h");
+  }, [date, dateOptionsKey, editingPersonalNote?.id, editingWorklog?.id, ticketOptions]);
 
   useEffect(() => {
     if (!isEditing && !activeKey && ticketOptions[0]) {
@@ -421,17 +444,17 @@ export const AddTimeModal = ({
       className="modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={isEditing ? "Edit time entry" : mode === "note" ? "Personal note" : "Log time"}
+      aria-label={isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
     >
       <div className="modal-backdrop" onClick={onClose} />
       <div className="modal-panel">
         <div className="modal-head">
           <div className="modal-title-row">
-            <span className="modal-title">{isEditing ? "Edit time" : mode === "note" ? "Personal note" : "Log time"}</span>
+            <span className="modal-title">{modalTitle}</span>
             <span className="modal-day">{dayLabel(selectedDate)}</span>
           </div>
           <div className="modal-head-actions">
-            {isEditing && onDelete && (
+            {isEditingWorklog && onDelete && (
               <button
                 type="button"
                 className="modal-delete"
@@ -461,7 +484,7 @@ export const AddTimeModal = ({
         )}
 
         <div className="modal-body">
-          {mode === "ticket" || isEditing ? (
+          {mode === "ticket" || isEditingWorklog ? (
             <>
               <div className="modal-label">TICKET</div>
               <div className="modal-picker" ref={pickerRef}>
@@ -477,15 +500,15 @@ export const AddTimeModal = ({
                   ) : null}
                   <button
                     type="button"
-                    className={`modal-ticket ${isEditing ? "is-locked" : ""}`}
+                    className={`modal-ticket ${isEditingWorklog ? "is-locked" : ""}`}
                     onClick={() => {
-                      if (!isEditing) {
+                      if (!isEditingWorklog) {
                         setPickerOpen((open) => !open);
                       }
                     }}
-                    disabled={!isEditing && ticketOptions.length === 0}
-                    aria-disabled={isEditing}
-                    title={isEditing ? "Ticket cannot be changed for an existing Jira worklog" : undefined}
+                    disabled={!isEditingWorklog && ticketOptions.length === 0}
+                    aria-disabled={isEditingWorklog}
+                    title={isEditingWorklog ? "Ticket cannot be changed for an existing Jira worklog" : undefined}
                   >
                     {activeTicket ? (
                       <span className="modal-ticket-summary">{activeTicket.summary}</span>
@@ -494,10 +517,10 @@ export const AddTimeModal = ({
                         {isConfigured ? "No assigned tickets" : "Connect Jira to choose a ticket"}
                       </span>
                     )}
-                    {!isEditing && <ChevronDown size={16} color="#5d636f" />}
+                    {!isEditingWorklog && <ChevronDown size={16} color="#5d636f" />}
                   </button>
                 </div>
-                {!isEditing && pickerOpen && ticketOptions.length > 0 && (
+                {!isEditingWorklog && pickerOpen && ticketOptions.length > 0 && (
                   <div className="ticket-picker">
                     {ticketOptions.map((ticket) => (
                       <button
@@ -553,7 +576,7 @@ export const AddTimeModal = ({
               </div>
               <textarea
                 className="note-textarea"
-                placeholder={isEditing ? "Update the Jira worklog comment" : "Add a note… syncs to the Jira worklog comment"}
+                placeholder={isEditingWorklog ? "Update the Jira worklog comment" : "Add a note… syncs to the Jira worklog comment"}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 rows={2}
@@ -625,9 +648,13 @@ export const AddTimeModal = ({
               CANCEL
             </button>
             <button type="button" className="primary-button" onClick={handleSubmit} disabled={!canSubmit}>
-              {(mode === "ticket" || isEditing) && isLogging ? <Loader2 className="spin" size={15} /> : null}
-              {isEditing
+              {((mode === "ticket" || isEditingWorklog) && isLogging) || (isEditingPersonalNote && isLogging) ? (
+                <Loader2 className="spin" size={15} />
+              ) : null}
+              {isEditingWorklog
                 ? `Save ${formatClock(durationSeconds)}`
+                : isEditingPersonalNote
+                  ? "Save note"
                 : mode === "note"
                   ? "Save note"
                   : activeTicket

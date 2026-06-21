@@ -31,6 +31,7 @@ interface TodayViewProps {
   logMessage?: string;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
+  onEditPersonalNote: (note: PersonalNote) => void;
   onSelectTicket: (ticket: JiraTicket) => void;
 }
 
@@ -63,6 +64,7 @@ export const TodayView = ({
   logMessage,
   onLog,
   onEditWorklog,
+  onEditPersonalNote,
   onSelectTicket
 }: TodayViewProps) => {
   const [activeKey, setActiveKey] = useState<string | undefined>(selectedTicket?.key ?? ticketOptions[0]?.key);
@@ -320,15 +322,17 @@ export const TodayView = ({
                           {formatHm24(start)}–{formatHm24(end)}
                         </span>
                         <span className="entry-dur">{formatClock(worklog.timeSpentSeconds)}</span>
-                        <button
-                          type="button"
-                          className="entry-edit"
-                          onClick={() => onEditWorklog(worklog)}
-                          title="Edit worklog"
-                          aria-label={`Edit worklog for ${worklog.issueKey}`}
-                        >
-                          <Pencil size={13} strokeWidth={2} />
-                        </button>
+                        <span className="entry-action-slot">
+                          <button
+                            type="button"
+                            className="entry-edit"
+                            onClick={() => onEditWorklog(worklog)}
+                            title="Edit worklog"
+                            aria-label={`Edit worklog for ${worklog.issueKey}`}
+                          >
+                            <Pencil size={13} strokeWidth={2} />
+                          </button>
+                        </span>
                       </div>
                       {worklog.comment && (
                         <div className="entry-note">
@@ -355,6 +359,17 @@ export const TodayView = ({
                           {formatHm24(start)}–{formatHm24(end)}
                         </span>
                         <span className="entry-dur">{formatDuration(note.timeSpentSeconds / 3600)}</span>
+                        <span className="entry-action-slot">
+                          <button
+                            type="button"
+                            className="entry-edit"
+                            onClick={() => onEditPersonalNote(note)}
+                            title="Edit personal note"
+                            aria-label="Edit personal note"
+                          >
+                            <Pencil size={13} strokeWidth={2} />
+                          </button>
+                        </span>
                       </div>
                     </div>
                   );

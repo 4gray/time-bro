@@ -1,5 +1,5 @@
 import { Loader2, MessageSquare, Pencil, PenLine, Plus, RotateCw } from "lucide-react";
-import type { DayTrackingSummary, JiraWorklog, SyncResult, WeekState } from "../../shared/types";
+import type { DayTrackingSummary, JiraWorklog, PersonalNote, SyncResult, WeekState } from "../../shared/types";
 import {
   formatDuration,
   formatHours,
@@ -22,6 +22,7 @@ interface WeekViewProps {
   onNextWeek: () => void;
   onAddTime: (date?: Date) => void;
   onEditWorklog: (worklog: JiraWorklog) => void;
+  onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
 }
 
@@ -62,6 +63,7 @@ const DayColumn = ({
   worklogsByKey,
   onAddTime,
   onEditWorklog,
+  onEditPersonalNote,
   onToggleSkipped
 }: {
   day: DayTrackingSummary;
@@ -70,6 +72,7 @@ const DayColumn = ({
   worklogsByKey: Map<string, JiraWorklog[]>;
   onAddTime: (date?: Date) => void;
   onEditWorklog: (worklog: JiraWorklog) => void;
+  onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
 }) => {
   const date = fromLocalDateKey(day.dateKey);
@@ -165,17 +168,19 @@ const DayColumn = ({
                       <span className="day-log-spacer" />
                       {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
                       <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
-                      {logs.length === 1 && (
-                        <button
-                          type="button"
-                          className="day-log-edit"
-                          onClick={() => onEditWorklog(logs[0])}
-                          title="Edit worklog"
-                          aria-label={`Edit worklog for ${issue.key}`}
-                        >
-                          <Pencil size={12} strokeWidth={2} />
-                        </button>
-                      )}
+                      <span className="day-log-action-slot">
+                        {logs.length === 1 && (
+                          <button
+                            type="button"
+                            className="day-log-edit"
+                            onClick={() => onEditWorklog(logs[0])}
+                            title="Edit worklog"
+                            aria-label={`Edit worklog for ${issue.key}`}
+                          >
+                            <Pencil size={12} strokeWidth={2} />
+                          </button>
+                        )}
+                      </span>
                     </div>
                     <div className="day-log-summary">{issue.summary}</div>
 
@@ -187,6 +192,7 @@ const DayColumn = ({
                             issueKey={issue.key}
                             url={issue.url}
                             issueType={issue.issueType}
+                            showJiraLink={false}
                             keyClassName="day-log-key"
                             style={{ color: color.text }}
                           />
@@ -206,15 +212,6 @@ const DayColumn = ({
                                     <span>
                                       {hm(start)}–{hm(end)} · {formatHours(log.timeSpentSeconds / 3600)}
                                     </span>
-                                    <button
-                                      type="button"
-                                      className="wl-pop-edit"
-                                      onClick={() => onEditWorklog(log)}
-                                      title="Edit worklog"
-                                      aria-label={`Edit worklog for ${log.issueKey}`}
-                                    >
-                                      <Pencil size={12} strokeWidth={2} />
-                                    </button>
                                   </div>
                                   {log.comment && (
                                     <div className="wl-pop-comment">
@@ -243,6 +240,17 @@ const DayColumn = ({
                     <span className="local-note-label">NOTE</span>
                     <span className="day-log-spacer" />
                     <span className="day-log-dur">{formatDuration(note.timeSpentSeconds / 3600)}</span>
+                    <span className="day-log-action-slot">
+                      <button
+                        type="button"
+                        className="day-log-edit"
+                        onClick={() => onEditPersonalNote(note)}
+                        title="Edit personal note"
+                        aria-label="Edit personal note"
+                      >
+                        <Pencil size={12} strokeWidth={2} />
+                      </button>
+                    </span>
                   </div>
                   <div className="day-note-text">{note.text}</div>
                 </div>
@@ -298,6 +306,7 @@ export const WeekView = ({
   onNextWeek,
   onAddTime,
   onEditWorklog,
+  onEditPersonalNote,
   onToggleSkipped
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
@@ -396,6 +405,7 @@ export const WeekView = ({
               worklogsByKey={worklogsByKey}
               onAddTime={onAddTime}
               onEditWorklog={onEditWorklog}
+              onEditPersonalNote={onEditPersonalNote}
               onToggleSkipped={onToggleSkipped}
             />
           );

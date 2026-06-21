@@ -99,6 +99,7 @@ describe("WeekView", () => {
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
         onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
       />
     );
@@ -106,10 +107,14 @@ describe("WeekView", () => {
     expect(markup).toContain("FTDM-397");
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
     expect(markup).toContain("Open FTDM-397 in Jira");
+    expect(markup.match(/href="https:\/\/elevait\.atlassian\.net\/browse\/FTDM-397"/g)).toHaveLength(1);
+    expect(markup.match(/Open FTDM-397 in Jira/g)).toHaveLength(2);
     expect(markup).toContain("EPIC");
     expect(markup).toContain("Edit worklog for FTDM-397");
+    expect(markup.match(/Edit worklog for FTDM-397/g)).toHaveLength(1);
     expect(markup).toContain("Mentored a teammate on release planning");
     expect(markup).toContain("NOTE");
+    expect(markup).toContain("Edit personal note");
     expect(markup).toContain(">2h</span>");
     expect(markup).not.toContain("2h 00m");
   });

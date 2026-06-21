@@ -37,4 +37,34 @@ describe("AddTimeModal", () => {
     expect(markup).not.toContain("SUN");
     expect(markup).not.toContain("21 JUN");
   });
+
+  it("opens in local note edit mode with the saved note text", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date("2026-06-18T10:00:00.000Z")}
+        dateOptions={["2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={false}
+        isLogging={false}
+        editingPersonalNote={{
+          id: "note-1",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-18",
+          text: "Mentoring and planning",
+          timeSpentSeconds: 2 * 3600,
+          startedISO: "2026-06-18T10:00:00.000Z",
+          createdAt: "2026-06-18T10:00:00.000Z",
+          updatedAt: "2026-06-18T10:00:00.000Z"
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onUpdatePersonalNote={async () => true}
+      />
+    );
+
+    expect(markup).toContain("Edit note");
+    expect(markup).toContain("Mentoring and planning");
+    expect(markup).toContain("Save note");
+    expect(markup).not.toContain("Connect Jira to choose a ticket");
+  });
 });

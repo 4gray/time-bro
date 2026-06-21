@@ -71,6 +71,7 @@ describe("TodayView", () => {
         isLogging={false}
         onLog={async () => true}
         onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
         onSelectTicket={() => undefined}
       />
     );
@@ -82,10 +83,9 @@ describe("TodayView", () => {
     expect(markup).toContain("EPIC");
     expect(markup).toContain("SUB");
     expect(markup).toContain("Edit worklog for FTDM-397");
+    expect(markup).toContain("Edit personal note");
     expect(markup).toContain("Mentoring and planning");
     expect(markup).toContain("LOCAL");
-    expect(markup).toContain(
-      '<span class="entry-summary">Mentoring and planning</span><span class="entry-leader"></span><span class="entry-range">14:00–16:00</span><span class="entry-dur">2h</span>'
-    );
+    expect(markup).toContain('<span class="entry-range">14:00–16:00</span><span class="entry-dur">2h</span>');
   });
 });
