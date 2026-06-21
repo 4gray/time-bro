@@ -46,21 +46,21 @@ jobs:
           - platform: macos
             os: macos-latest
             script: npm run dist:mac
-            artifact_name: jira-week-tracker-macos
+            artifact_name: timebro-macos
             artifact_paths: |
               release/*.dmg
               release/*.zip
           - platform: windows
             os: windows-latest
             script: npm run dist:win
-            artifact_name: jira-week-tracker-windows
+            artifact_name: timebro-windows
             artifact_paths: |
               release/*.exe
               release/*.zip
           - platform: linux
             os: ubuntu-latest
             script: npm run dist:linux
-            artifact_name: jira-week-tracker-linux
+            artifact_name: timebro-linux
             artifact_paths: |
               release/*.AppImage
               release/*.deb
@@ -123,6 +123,7 @@ jobs:
             gh release upload "$TAG_NAME" "${assets[@]}" --clobber
           else
             gh release create "$TAG_NAME" "${assets[@]}" \
+              --draft \
               --title "$TAG_NAME" \
               --generate-notes \
               --verify-tag
