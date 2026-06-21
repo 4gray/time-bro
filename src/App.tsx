@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   JiraConnectionResult,
@@ -140,6 +140,9 @@ export const App = () => {
   const [systemLight, setSystemLight] = useState(
     () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: light)").matches === true
   );
+  const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
+  const startupSyncCheckedRef = useRef(false);
+  const skipInitialWeekReloadRef = useRef(false);
 
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
@@ -253,6 +256,70 @@ export const App = () => {
     }
   }, [isConfigured, settings]);
 
+  const runSync = useCallback(
+    async (
+      settingsForSync: AppSettings = settings,
+      options: { queueAfterCurrent?: boolean } = {}
+    ): Promise<SyncResult | undefined> => {
+      if (demoScenario) {
+        setSyncError(undefined);
+        setSyncResult(demoScenario.syncResult);
+        setSyncMessage("Demo data refreshed from seeded fixtures.");
+        return demoScenario.syncResult;
+      }
+
+      while (syncInFlightRef.current) {
+        const currentSync = syncInFlightRef.current;
+        if (!options.queueAfterCurrent) {
+          return currentSync;
+        }
+        await currentSync;
+      }
+
+      if (!isJiraConfigured(settingsForSync)) {
+        setSyncMessage(undefined);
+        setSyncError("Connect Jira in Settings before syncing.");
+        return undefined;
+      }
+
+      setIsSyncing(true);
+      setSyncError(undefined);
+      setSyncMessage(undefined);
+
+      const syncTask = (async () => {
+        try {
+          const result = await nativeApi.syncJiraWorklogs({
+            settings: settingsForSync,
+            weekKey: weekState.weekKey,
+            weekStartISO: weekState.weekStartISO,
+            weekEndExclusiveISO: weekState.weekEndExclusiveISO
+          });
+          await saveSyncResult(result);
+          setSyncResult(result);
+          setSyncMessage(`Synced ${result.worklogCount} worklogs across ${result.issueCount} candidate issues.`);
+          return result;
+        } catch (error) {
+          setSyncError(error instanceof Error ? error.message : "Unable to sync Jira worklogs.");
+          return undefined;
+        }
+      })();
+
+      syncInFlightRef.current = syncTask;
+
+      try {
+        return await syncTask;
+      } finally {
+        if (syncInFlightRef.current === syncTask) {
+          syncInFlightRef.current = undefined;
+          setIsSyncing(false);
+        }
+      }
+    },
+    [demoScenario, settings, weekState.weekEndExclusiveISO, weekState.weekKey, weekState.weekStartISO]
+  );
+
+  const handleSync = useCallback(() => runSync(), [runSync]);
+
   useEffect(() => {
     if (demoScenario) {
       return;
@@ -280,6 +347,7 @@ export const App = () => {
       setSyncResult(storedSyncResult);
       setFavoriteKeys(storedFavorites);
       setPersonalNotes(storedPersonalNotes);
+      skipInitialWeekReloadRef.current = true;
       setIsBooting(false);
     };
 
@@ -295,7 +363,12 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    if (demoScenario) {
+    if (demoScenario || isBooting) {
+      return;
+    }
+
+    if (skipInitialWeekReloadRef.current) {
+      skipInitialWeekReloadRef.current = false;
       return;
     }
 
@@ -328,7 +401,21 @@ export const App = () => {
     return () => {
       isMounted = false;
     };
-  }, [demoScenario, weekStart]);
+  }, [demoScenario, isBooting, weekStart]);
+
+  useEffect(() => {
+    if (demoScenario || isBooting || startupSyncCheckedRef.current) {
+      return;
+    }
+
+    startupSyncCheckedRef.current = true;
+
+    if (!isConfigured) {
+      return;
+    }
+
+    void runSync();
+  }, [demoScenario, isBooting, isConfigured, runSync]);
 
   useEffect(() => {
     if (demoScenario) {
@@ -446,6 +533,7 @@ export const App = () => {
 
     if (result.ok) {
       await saveSettings(cleanedSettings);
+      await runSync(cleanedSettings);
       setSettings(cleanedSettings);
       setSettingsDraft(cleanedSettings);
       setTestResult(result);
@@ -487,41 +575,6 @@ export const App = () => {
     }
   };
 
-  const handleSync = async () => {
-    if (demoScenario) {
-      setSyncError(undefined);
-      setSyncResult(demoScenario.syncResult);
-      setSyncMessage("Demo data refreshed from seeded fixtures.");
-      return;
-    }
-
-    if (!isConfigured) {
-      setSyncMessage(undefined);
-      setSyncError("Connect Jira in Settings before syncing.");
-      return;
-    }
-
-    setIsSyncing(true);
-    setSyncError(undefined);
-    setSyncMessage(undefined);
-
-    try {
-      const result = await nativeApi.syncJiraWorklogs({
-        settings,
-        weekKey: weekState.weekKey,
-        weekStartISO: weekState.weekStartISO,
-        weekEndExclusiveISO: weekState.weekEndExclusiveISO
-      });
-      await saveSyncResult(result);
-      setSyncResult(result);
-      setSyncMessage(`Synced ${result.worklogCount} worklogs across ${result.issueCount} candidate issues.`);
-    } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unable to sync Jira worklogs.");
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleAddWorklog = async (payload: {
     issueKey: string;
     timeSpentSeconds: number;
@@ -540,7 +593,7 @@ export const App = () => {
 
       const result = await nativeApi.addWorklog({ settings, ...payload });
       setLogMessage(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
-      await handleSync();
+      await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
@@ -580,7 +633,7 @@ export const App = () => {
         comment: payload.comment
       });
       setLogMessage(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
-      await handleSync();
+      await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
@@ -613,7 +666,7 @@ export const App = () => {
         worklogId: editingWorklog.id
       });
       setLogMessage(`Deleted worklog from ${result.issueKey}.`);
-      await handleSync();
+      await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
