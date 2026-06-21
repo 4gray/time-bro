@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Calendar, ChevronDown, Clock, Loader2, LockKeyhole, PenLine, X } from "lucide-react";
 import type { JiraTicket } from "../../shared/types";
-import { formatClock, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
+import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
+import type { JiraDurationUnit } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -14,6 +15,7 @@ interface LogPayload {
 
 interface AddTimeModalProps {
   date: Date;
+  dateOptions: string[];
   ticketOptions: JiraTicket[];
   isConfigured: boolean;
   isLogging: boolean;
@@ -37,6 +39,15 @@ const PERSONAL_NOTE_PRESETS: Array<{ label: string; seconds: number }> = [
   { label: "2h", seconds: 2 * 60 * 60 }
 ];
 
+type DurationMode = "preset" | "custom";
+type DurationUnit = JiraDurationUnit;
+
+const CUSTOM_UNITS: Array<{ unit: DurationUnit; label: string }> = [
+  { unit: "h", label: "H" },
+  { unit: "d", label: "D" },
+  { unit: "w", label: "W" }
+];
+
 const pad = (value: number) => String(value).padStart(2, "0");
 
 const dayLabel = (date: Date) =>
@@ -47,8 +58,141 @@ const dayLabel = (date: Date) =>
     .format(date)
     .toUpperCase()}`;
 
+const optionLabel = (dateKey: string) => {
+  const date = fromLocalDateKey(dateKey);
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(date).toUpperCase();
+  const month = new Intl.DateTimeFormat(undefined, { month: "short" }).format(date).toUpperCase();
+  return { weekday, date: `${date.getDate()} ${month}` };
+};
+
+const chooseWorkingDateKey = (preferredDateKey: string, dateOptions: string[]) => {
+  if (dateOptions.includes(preferredDateKey)) {
+    return preferredDateKey;
+  }
+
+  const latestPrior = [...dateOptions].reverse().find((dateKey) => dateKey <= preferredDateKey);
+  return latestPrior ?? dateOptions[0] ?? preferredDateKey;
+};
+
+const customDurationToSeconds = (amountText: string, unit: DurationUnit) => {
+  return jiraUnitDurationToSeconds(amountText, unit);
+};
+
+interface DaySelectorProps {
+  dateOptions: string[];
+  value: string;
+  onChange: (dateKey: string) => void;
+}
+
+const DaySelector = ({ dateOptions, value, onChange }: DaySelectorProps) => {
+  if (dateOptions.length === 0) {
+    return <div className="modal-day-empty">No active working days this week.</div>;
+  }
+
+  return (
+    <div className="modal-day-selector" role="radiogroup" aria-label="Working day">
+      {dateOptions.map((dateKey) => {
+        const label = optionLabel(dateKey);
+        const isSelected = dateKey === value;
+        return (
+          <button
+            key={dateKey}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            className={`modal-day-option ${isSelected ? "active" : ""}`}
+            onClick={() => onChange(dateKey)}
+          >
+            <span>{label.weekday}</span>
+            <strong>{label.date}</strong>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+interface DurationPickerProps {
+  seconds: number;
+  presets: Array<{ label: string; seconds: number }>;
+  valueClassName: string;
+  customMode: DurationMode;
+  customAmount: string;
+  customUnit: DurationUnit;
+  customAmountLabel: string;
+  onPreset: (seconds: number) => void;
+  onCustomOpen: () => void;
+  onCustomAmountChange: (amount: string) => void;
+  onCustomAmountBlur: () => void;
+  onCustomUnitChange: (unit: DurationUnit) => void;
+}
+
+const DurationPicker = ({
+  seconds,
+  presets,
+  valueClassName,
+  customMode,
+  customAmount,
+  customUnit,
+  customAmountLabel,
+  onPreset,
+  onCustomOpen,
+  onCustomAmountChange,
+  onCustomAmountBlur,
+  onCustomUnitChange
+}: DurationPickerProps) => (
+  <div className="duration-picker">
+    <div className={valueClassName}>{formatClock(seconds)}</div>
+    <div className="modal-presets">
+      {presets.map((preset) => (
+        <button
+          type="button"
+          key={preset.label}
+          className={`preset ${customMode === "preset" && preset.seconds === seconds ? "active" : ""}`}
+          onClick={() => onPreset(preset.seconds)}
+        >
+          {preset.label}
+        </button>
+      ))}
+      <button type="button" className={`preset ${customMode === "custom" ? "active" : ""}`} onClick={onCustomOpen}>
+        Custom
+      </button>
+    </div>
+    {customMode === "custom" && (
+      <div className="custom-duration">
+        <input
+          className="custom-duration-input"
+          type="number"
+          min="0.25"
+          step="0.25"
+          inputMode="decimal"
+          value={customAmount}
+          onChange={(event) => onCustomAmountChange(event.target.value)}
+          onBlur={onCustomAmountBlur}
+          aria-label={customAmountLabel}
+        />
+        <div className="custom-unit-toggle" aria-label="Custom duration unit">
+          {CUSTOM_UNITS.map((unit) => (
+            <button
+              type="button"
+              key={unit.unit}
+              className={customUnit === unit.unit ? "active" : ""}
+              aria-pressed={customUnit === unit.unit}
+              onClick={() => onCustomUnitChange(unit.unit)}
+            >
+              {unit.label}
+            </button>
+          ))}
+        </div>
+        <span className="custom-duration-hint">1D = 8h · 1W = 40h</span>
+      </div>
+    )}
+  </div>
+);
+
 export const AddTimeModal = ({
   date,
+  dateOptions,
   ticketOptions,
   isConfigured,
   isLogging,
@@ -57,24 +201,37 @@ export const AddTimeModal = ({
   onLog,
   onAddPersonalNote
 }: AddTimeModalProps) => {
+  const preferredDateKey = chooseWorkingDateKey(toLocalDateKey(date), dateOptions);
+  const dateOptionsKey = dateOptions.join("|");
   const [mode, setMode] = useState<"ticket" | "note">("ticket");
   const [activeKey, setActiveKey] = useState<string | undefined>(ticketOptions[0]?.key);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(2 * 60 * 60);
-  const [durationText, setDurationText] = useState("2h 00m");
-  const [dateStr, setDateStr] = useState(toLocalDateKey(date));
+  const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>("preset");
+  const [ticketCustomAmount, setTicketCustomAmount] = useState("1");
+  const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
+  const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(date.getHours())}:${pad(date.getMinutes())}`);
   const [note, setNote] = useState("");
   const [personalNote, setPersonalNote] = useState("");
   const [personalNoteSeconds, setPersonalNoteSeconds] = useState(30 * 60);
+  const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>("preset");
+  const [personalCustomAmount, setPersonalCustomAmount] = useState("1");
+  const [personalCustomUnit, setPersonalCustomUnit] = useState<DurationUnit>("h");
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const activeTicket = ticketOptions.find((ticket) => ticket.key === activeKey);
+  const selectedDate = fromLocalDateKey(dateStr);
+  const hasWorkingDate = dateOptions.includes(dateStr);
   const canSubmit = mode === "note"
-    ? Boolean(personalNote.trim() && personalNoteSeconds > 0)
-    : Boolean(isConfigured && activeTicket && durationSeconds > 0 && !isLogging);
+    ? Boolean(hasWorkingDate && personalNote.trim() && personalNoteSeconds > 0)
+    : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging);
 
   const handleSubmit = async () => {
+    if (!hasWorkingDate) {
+      return;
+    }
+
     const startedISO = new Date(`${dateStr}T${timeStr}`).toISOString();
 
     if (mode === "note") {
@@ -130,17 +287,59 @@ export const AddTimeModal = ({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [pickerOpen]);
 
-  const onDurationInput = (value: string) => {
-    setDurationText(value);
-    const parsed = parseDurationToSeconds(value);
-    if (parsed !== null) {
-      setDurationSeconds(parsed);
-    }
+  useEffect(() => {
+    const nextPreferredDateKey = chooseWorkingDateKey(toLocalDateKey(date), dateOptions);
+    setDateStr((current) => (dateOptions.includes(current) ? current : nextPreferredDateKey));
+  }, [date, dateOptionsKey, dateOptions]);
+
+  const applyTicketPreset = (seconds: number) => {
+    setTicketDurationMode("preset");
+    setDurationSeconds(seconds);
   };
 
-  const applyPreset = (seconds: number) => {
-    setDurationSeconds(seconds);
-    setDurationText(formatClock(seconds));
+  const applyTicketCustom = (amount: string, unit = ticketCustomUnit) => {
+    setTicketDurationMode("custom");
+    setTicketCustomAmount(amount);
+    setDurationSeconds(customDurationToSeconds(amount, unit));
+  };
+
+  const setTicketCustomUnitAndDuration = (unit: DurationUnit) => {
+    setTicketDurationMode("custom");
+    setTicketCustomUnit(unit);
+    setDurationSeconds(customDurationToSeconds(ticketCustomAmount, unit));
+  };
+
+  const normalizeTicketCustomAmount = () => {
+    if (durationSeconds > 0) {
+      return;
+    }
+    setTicketCustomAmount("1");
+    setDurationSeconds(customDurationToSeconds("1", ticketCustomUnit));
+  };
+
+  const applyPersonalPreset = (seconds: number) => {
+    setPersonalDurationMode("preset");
+    setPersonalNoteSeconds(seconds);
+  };
+
+  const applyPersonalCustom = (amount: string, unit = personalCustomUnit) => {
+    setPersonalDurationMode("custom");
+    setPersonalCustomAmount(amount);
+    setPersonalNoteSeconds(customDurationToSeconds(amount, unit));
+  };
+
+  const setPersonalCustomUnitAndDuration = (unit: DurationUnit) => {
+    setPersonalDurationMode("custom");
+    setPersonalCustomUnit(unit);
+    setPersonalNoteSeconds(customDurationToSeconds(personalCustomAmount, unit));
+  };
+
+  const normalizePersonalCustomAmount = () => {
+    if (personalNoteSeconds > 0) {
+      return;
+    }
+    setPersonalCustomAmount("1");
+    setPersonalNoteSeconds(customDurationToSeconds("1", personalCustomUnit));
   };
 
   return (
@@ -150,7 +349,7 @@ export const AddTimeModal = ({
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">{mode === "note" ? "Personal note" : "Log time"}</span>
-            <span className="modal-day">{dayLabel(date)}</span>
+            <span className="modal-day">{dayLabel(selectedDate)}</span>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             <X size={14} strokeWidth={2.2} />
@@ -221,34 +420,25 @@ export const AddTimeModal = ({
               <div className="modal-grid">
                 <div className="modal-col">
                   <div className="modal-label">DURATION</div>
-                  <input
-                    className="modal-duration"
-                    value={durationText}
-                    onChange={(event) => onDurationInput(event.target.value)}
-                    onBlur={() => setDurationText(formatClock(durationSeconds))}
-                    aria-label="Duration"
-                    spellCheck={false}
+                  <DurationPicker
+                    seconds={durationSeconds}
+                    presets={PRESETS}
+                    valueClassName="modal-duration"
+                    customMode={ticketDurationMode}
+                    customAmount={ticketCustomAmount}
+                    customUnit={ticketCustomUnit}
+                    customAmountLabel="Custom ticket duration amount"
+                    onPreset={applyTicketPreset}
+                    onCustomOpen={() => applyTicketCustom(ticketCustomAmount)}
+                    onCustomAmountChange={(amount) => applyTicketCustom(amount)}
+                    onCustomAmountBlur={normalizeTicketCustomAmount}
+                    onCustomUnitChange={setTicketCustomUnitAndDuration}
                   />
-                  <div className="modal-presets">
-                    {PRESETS.map((preset) => (
-                      <button
-                        type="button"
-                        key={preset.label}
-                        className={`preset ${preset.seconds === durationSeconds ? "active" : ""}`}
-                        onClick={() => applyPreset(preset.seconds)}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
                 <div className="modal-col">
                   <div className="modal-label">STARTED</div>
                   <div className="modal-started">
-                    <label className="input-chip">
-                      <Calendar size={14} stroke="#6b7280" strokeWidth={1.7} />
-                      <input type="date" value={dateStr} onChange={(event) => setDateStr(event.target.value)} />
-                    </label>
+                    <DaySelector dateOptions={dateOptions} value={dateStr} onChange={setDateStr} />
                     <label className="input-chip">
                       <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
                       <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />
@@ -285,23 +475,33 @@ export const AddTimeModal = ({
                 onChange={(event) => setPersonalNote(event.target.value)}
                 rows={4}
               />
+              <div className="personal-note-section">
+                <div className="modal-label">
+                  <Calendar size={13} strokeWidth={1.8} />
+                  DAY
+                </div>
+                <DaySelector dateOptions={dateOptions} value={dateStr} onChange={setDateStr} />
+                <label className="input-chip personal-time-chip">
+                  <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
+                  <input type="time" value={timeStr} onChange={(event) => setTimeStr(event.target.value)} />
+                </label>
+              </div>
               <div className="personal-note-duration">
-                <div>
-                  <div className="modal-label">TIME SPENT</div>
-                  <div className="personal-note-time">{formatClock(personalNoteSeconds)}</div>
-                </div>
-                <div className="modal-presets">
-                  {PERSONAL_NOTE_PRESETS.map((preset) => (
-                    <button
-                      type="button"
-                      key={preset.label}
-                      className={`preset ${preset.seconds === personalNoteSeconds ? "active" : ""}`}
-                      onClick={() => setPersonalNoteSeconds(preset.seconds)}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+                <div className="modal-label">TIME SPENT</div>
+                <DurationPicker
+                  seconds={personalNoteSeconds}
+                  presets={PERSONAL_NOTE_PRESETS}
+                  valueClassName="personal-note-time"
+                  customMode={personalDurationMode}
+                  customAmount={personalCustomAmount}
+                  customUnit={personalCustomUnit}
+                  customAmountLabel="Custom personal note duration amount"
+                  onPreset={applyPersonalPreset}
+                  onCustomOpen={() => applyPersonalCustom(personalCustomAmount)}
+                  onCustomAmountChange={(amount) => applyPersonalCustom(amount)}
+                  onCustomAmountBlur={normalizePersonalCustomAmount}
+                  onCustomUnitChange={setPersonalCustomUnitAndDuration}
+                />
               </div>
               <div className="local-note-callout">
                 <LockKeyhole size={13} />

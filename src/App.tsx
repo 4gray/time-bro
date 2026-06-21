@@ -195,6 +195,8 @@ export const App = () => {
     return [...map.values()];
   }, [favoriteKeys, selectedTicket, tickets]);
 
+  const addTimeDateOptions = weekState.activeWorkingDates;
+
   const touchedNotLogged = useMemo(() => {
     const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
     return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
@@ -523,25 +525,25 @@ export const App = () => {
   const banner = syncError ?? syncMessage;
 
   const openAddTime = (date?: Date) => {
-    if (date) {
-      setAddModalDate(date);
-      return;
-    }
+    const now = new Date();
+    const preferredDateKey = date ? toLocalDateKey(date) : toLocalDateKey(now);
+    const fallbackDateKey =
+      [...weekState.days]
+        .reverse()
+        .find((day) => day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey <= preferredDateKey)?.dateKey ??
+      addTimeDateOptions[0] ??
+      weekState.days[0]?.dateKey ??
+      preferredDateKey;
+    const selectedDateKey = addTimeDateOptions.includes(preferredDateKey) ? preferredDateKey : fallbackDateKey;
+    const selectedDate = fromLocalDateKey(selectedDateKey);
+    selectedDate.setHours(now.getHours(), now.getMinutes(), 0, 0);
 
-    const todayDateKey = toLocalDateKey(new Date());
-    const visibleToday = weekState.days.find((day) => day.dateKey === todayDateKey && !day.isSkipped);
-    const latestVisibleDay = [...weekState.days]
-      .reverse()
-      .find((day) => !day.isSkipped && day.isConfiguredWorkingDay && day.dateKey <= todayDateKey);
-    const fallbackDay = weekState.days.find((day) => !day.isSkipped && day.isConfiguredWorkingDay) ?? weekState.days[0];
-
-    setAddModalDate(fromLocalDateKey((visibleToday ?? latestVisibleDay ?? fallbackDay).dateKey));
+    setAddModalDate(selectedDate);
   };
 
   if (!isBooting && (!isConfigured || welcomeConnected)) {
     return (
       <div className="app-shell">
-        <div className="titlebar" />
         <WelcomeView
           initialSettings={settingsDraft}
           isConnected={welcomeConnected}
@@ -558,8 +560,6 @@ export const App = () => {
 
   return (
     <div className="app-shell">
-      <div className="titlebar" />
-
       <div className="shell-body">
         <Sidebar
           view={view}
@@ -649,6 +649,7 @@ export const App = () => {
       {addModalDate && (
         <AddTimeModal
           date={addModalDate}
+          dateOptions={addTimeDateOptions}
           ticketOptions={ticketOptions}
           isConfigured={isConfigured}
           isLogging={isLogging}

@@ -75,6 +75,7 @@ const DayColumn = ({
   const remaining = Math.max(day.targetHours - totalLogged, 0);
   const emptyColor = isFuture ? "var(--line-soft)" : "var(--line)";
   const hasRows = day.issues.length > 0 || day.personalNotes.length > 0;
+  const canAddTime = day.isConfiguredWorkingDay && !day.isSkipped;
 
   const trackedClass =
     day.targetHours > 0 && day.trackedHours >= day.targetHours
@@ -92,7 +93,7 @@ const DayColumn = ({
           <div className="day-name">{day.isToday ? "TODAY" : day.weekdayName.slice(0, 3).toUpperCase()}</div>
           <div className="day-date">{date.getDate()}</div>
         </div>
-        {!day.isSkipped && (
+        {canAddTime && (
           <button
             type="button"
             className={`day-add ${day.isToday ? "is-today" : ""}`}
@@ -205,7 +206,7 @@ const DayColumn = ({
               ))}
               <div className="day-spacer" />
             </div>
-          ) : day.isToday ? (
+          ) : day.isToday && day.isConfiguredWorkingDay ? (
             <>
               <div className="day-spacer" />
               <button type="button" className="day-cta" onClick={() => onAddTime(date)}>
