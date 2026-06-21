@@ -16,6 +16,8 @@ import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
 import { WeekView } from "./components/WeekView";
+import { getDemoConfig } from "./demo/config";
+import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import {
   getFavoriteKeys,
@@ -66,33 +68,42 @@ const formatSyncTime = (syncResult?: SyncResult) => {
 };
 
 export const App = () => {
-  const [view, setView] = useState<AppView>("week");
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [settingsDraft, setSettingsDraft] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [weekStart, setWeekStart] = useState(() => getWeekBounds(new Date()).weekStart);
+  const demoConfig = useMemo(() => getDemoConfig(), []);
+  const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
+  const currentDate = demoScenario?.today ?? new Date();
+  const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
+  const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
+  const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
+  const [weekStart, setWeekStart] = useState(() => demoScenario?.weekStart ?? getWeekBounds(currentDate).weekStart);
   const [weekOverride, setWeekOverride] = useState<WeekOverride>(() => ({
-    weekKey: toLocalDateKey(getWeekBounds(new Date()).weekStart),
-    skippedDates: []
+    ...(demoScenario?.weekOverride ?? {
+      weekKey: toLocalDateKey(getWeekBounds(currentDate).weekStart),
+      skippedDates: []
+    })
   }));
-  const [syncResult, setSyncResult] = useState<SyncResult | undefined>();
-  const [isBooting, setIsBooting] = useState(true);
+  const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
+  const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [syncError, setSyncError] = useState<string | undefined>();
   const [syncMessage, setSyncMessage] = useState<string | undefined>();
   const [savedMessage, setSavedMessage] = useState<string | undefined>();
   const [testResult, setTestResult] = useState<JiraConnectionResult | undefined>();
-  const [tickets, setTickets] = useState<TicketsResult | undefined>();
+  const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | undefined>();
-  const [favoriteKeys, setFavoriteKeys] = useState<string[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>();
+  const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => demoScenario?.favoriteKeys ?? []);
+  const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>(() => demoScenario?.selectedTicket);
   const [isLogging, setIsLogging] = useState(false);
   const [logError, setLogError] = useState<string | undefined>();
   const [logMessage, setLogMessage] = useState<string | undefined>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [theme, setTheme] = useState<ThemeMode | null>(() => {
+    if (demoConfig?.theme) {
+      return demoConfig.theme;
+    }
+
     try {
       const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
       return stored === "light" || stored === "dark" ? stored : null;
@@ -107,8 +118,8 @@ export const App = () => {
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
   const weekState = useMemo(
-    () => buildWeekState(weekStart, settings, weekOverride, syncResult),
-    [settings, syncResult, weekOverride, weekStart]
+    () => buildWeekState(weekStart, settings, weekOverride, syncResult, demoScenario?.today ?? new Date()),
+    [demoScenario, settings, syncResult, weekOverride, weekStart]
   );
 
   const isConfigured = isJiraConfigured(settings);
@@ -164,7 +175,7 @@ export const App = () => {
     return map;
   }, [selectedTicket, syncResult, tickets]);
 
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = toLocalDateKey(currentDate);
   const todayBucket = syncResult?.daySummaries[todayKey];
   const todayWorklogs = todayBucket?.worklogs ?? [];
   const todayTrackedHours = (todayBucket?.trackedSeconds ?? 0) / 3600;
@@ -213,6 +224,10 @@ export const App = () => {
   }, [isConfigured, settings]);
 
   useEffect(() => {
+    if (demoScenario) {
+      return;
+    }
+
     let isMounted = true;
 
     const loadInitialState = async () => {
@@ -247,6 +262,10 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
+    if (demoScenario) {
+      return;
+    }
+
     let isMounted = true;
     const weekKey = toLocalDateKey(weekStart);
 
@@ -274,24 +293,28 @@ export const App = () => {
     return () => {
       isMounted = false;
     };
-  }, [weekStart]);
+  }, [demoScenario, weekStart]);
 
   useEffect(() => {
+    if (demoScenario) {
+      return;
+    }
+
     nativeApi.scheduleReminder({
       settings,
       weekKey: weekState.weekKey,
       skippedDates: weekState.skippedDates,
       remainingWeekHours: weekState.remainingWeekHours,
-      todayDateKey: toLocalDateKey(new Date())
+      todayDateKey: todayKey
     });
-  }, [settings, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
+  }, [demoScenario, settings, todayKey, weekState.weekKey, weekState.remainingWeekHours, weekState.skippedDates]);
 
   useEffect(() => {
-    if (isBooting) {
+    if (isBooting || demoScenario) {
       return;
     }
     void loadTickets();
-  }, [isBooting, loadTickets]);
+  }, [demoScenario, isBooting, loadTickets]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -314,11 +337,13 @@ export const App = () => {
   }, []);
 
   const selectTheme = (next: ThemeMode) => {
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, next);
-      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
-    } catch {
-      /* ignore persistence failures */
+    if (!demoScenario) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next);
+        localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+      } catch {
+        /* ignore persistence failures */
+      }
     }
     setTheme(next);
   };
@@ -330,7 +355,9 @@ export const App = () => {
   const handleToggleFavorite = (key: string) => {
     setFavoriteKeys((current) => {
       const next = current.includes(key) ? current.filter((candidate) => candidate !== key) : [...current, key];
-      void saveFavoriteKeys(next);
+      if (!demoScenario) {
+        void saveFavoriteKeys(next);
+      }
       return next;
     });
   };
@@ -347,7 +374,9 @@ export const App = () => {
     const nextOverride = { weekKey: weekState.weekKey, skippedDates };
 
     setWeekOverride(nextOverride);
-    await saveWeekOverride(nextOverride);
+    if (!demoScenario) {
+      await saveWeekOverride(nextOverride);
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -359,10 +388,12 @@ export const App = () => {
       workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : [1, 2, 3, 4, 5]
     };
 
-    await saveSettings(cleanedSettings);
+    if (!demoScenario) {
+      await saveSettings(cleanedSettings);
+    }
     setSettings(cleanedSettings);
     setSettingsDraft(cleanedSettings);
-    setSavedMessage("Settings saved locally.");
+    setSavedMessage(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
     window.setTimeout(() => setSavedMessage(undefined), 2500);
   };
 
@@ -371,6 +402,16 @@ export const App = () => {
     setTestResult(undefined);
 
     try {
+      if (demoScenario) {
+        setTestResult({
+          ok: true,
+          accountId: demoScenario.syncResult.accountId,
+          displayName: demoScenario.syncResult.displayName,
+          message: `Connected as ${demoScenario.syncResult.displayName}.`
+        });
+        return;
+      }
+
       const result = await nativeApi.testJiraConnection({
         ...settingsDraft,
         jiraBaseUrl: normalizeJiraSiteInput(settingsDraft.jiraBaseUrl),
@@ -383,6 +424,13 @@ export const App = () => {
   };
 
   const handleSync = async () => {
+    if (demoScenario) {
+      setSyncError(undefined);
+      setSyncResult(demoScenario.syncResult);
+      setSyncMessage("Demo data refreshed from seeded fixtures.");
+      return;
+    }
+
     if (!isConfigured) {
       setSyncMessage(undefined);
       setSyncError("Connect Jira in Settings before syncing.");
@@ -421,6 +469,11 @@ export const App = () => {
     setLogMessage(undefined);
 
     try {
+      if (demoScenario) {
+        setLogMessage(`Demo logged ${formatDuration(payload.timeSpentSeconds / 3600)} to ${payload.issueKey}.`);
+        return true;
+      }
+
       const result = await nativeApi.addWorklog({ settings, ...payload });
       setLogMessage(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
       await handleSync();
@@ -438,10 +491,16 @@ export const App = () => {
   const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
   const banner = syncError ?? syncMessage;
 
-  const openAddTime = (date?: Date) => setAddModalDate(date ?? new Date());
+  const openAddTime = (date?: Date) => setAddModalDate(date ?? currentDate);
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      data-demo={demoScenario ? "true" : undefined}
+      data-screenshot-ready={isBooting ? "false" : "true"}
+      data-theme={effectiveTheme}
+      data-view={view}
+    >
       <div className="titlebar" />
 
       <div className="shell-body">
@@ -467,7 +526,7 @@ export const App = () => {
             </div>
           ) : view === "today" ? (
             <TodayView
-              date={new Date()}
+              date={currentDate}
               selectedTicket={selectedTicket}
               ticketOptions={ticketOptions}
               todayWorklogs={todayWorklogs}
@@ -489,11 +548,12 @@ export const App = () => {
             <WeekView
               weekState={weekState}
               syncResult={syncResult}
+              currentDate={currentDate}
               isSyncing={isSyncing}
               isConfigured={isConfigured}
               onSync={handleSync}
               onPreviousWeek={() => setWeekStart((current) => addDays(current, -7))}
-              onCurrentWeek={() => goToWeek(new Date())}
+              onCurrentWeek={() => goToWeek(currentDate)}
               onNextWeek={() => setWeekStart((current) => addDays(current, 7))}
               onAddTime={openAddTime}
               onToggleSkipped={handleToggleSkipped}
@@ -512,7 +572,7 @@ export const App = () => {
               onLog={handleLogTicket}
             />
           ) : view === "reports" ? (
-            <ReportsView weekState={weekState} onCurrentWeek={() => goToWeek(new Date())} />
+            <ReportsView weekState={weekState} onCurrentWeek={() => goToWeek(currentDate)} />
           ) : (
             <SettingsView
               draft={settingsDraft}

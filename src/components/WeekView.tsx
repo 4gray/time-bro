@@ -12,6 +12,7 @@ import { TicketKeyLink } from "./TicketKeyLink";
 interface WeekViewProps {
   weekState: WeekState;
   syncResult?: SyncResult;
+  currentDate?: Date;
   isSyncing: boolean;
   isConfigured: boolean;
   onSync: () => void;
@@ -228,6 +229,7 @@ const DayColumn = ({
 export const WeekView = ({
   weekState,
   syncResult,
+  currentDate,
   isSyncing,
   isConfigured,
   onSync,
@@ -240,7 +242,7 @@ export const WeekView = ({
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
   const rangeLabel = formatWeekRangeCompact(weekStart);
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = toLocalDateKey(currentDate ?? new Date());
   const pct =
     weekState.weeklyTargetHours > 0
       ? Math.min((weekState.trackedWeekHours / weekState.weeklyTargetHours) * 100, 100)
