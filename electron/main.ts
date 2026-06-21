@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, screen, shell } from "electron";
 import path from "node:path";
 import { addWorklog, deleteWorklog, fetchAssignedTickets, testJiraConnection, syncJiraWorklogs, updateWorklog } from "./jira";
 import { scheduleReminder } from "./reminders";
+import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
 import type {
   AddWorklogRequest,
   AppSettings,
@@ -23,11 +24,13 @@ const getWindowIconPath = () => {
 };
 
 const createWindow = async () => {
+  const userDataPath = app.getPath("userData");
+  const windowStateOptions = getWindowStateOptions(userDataPath, screen.getAllDisplays());
+
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 960,
-    minWidth: 1040,
-    minHeight: 720,
+    ...windowStateOptions,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     title: "TimeBro",
     backgroundColor: "#fdfdfb",
     icon: getWindowIconPath(),
@@ -40,6 +43,8 @@ const createWindow = async () => {
       sandbox: false
     }
   });
+
+  trackWindowState(mainWindow, userDataPath);
 
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
