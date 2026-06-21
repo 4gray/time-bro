@@ -26,7 +26,7 @@ const createWindow = async () => {
     height: 960,
     minWidth: 1040,
     minHeight: 720,
-    title: "Jira Week Tracker",
+    title: "TimeBro",
     backgroundColor: "#fdfdfb",
     icon: getWindowIconPath(),
     show: false,
@@ -90,7 +90,7 @@ ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) =
 });
 
 app.whenReady().then(async () => {
-  app.setAppUserModelId("local.jira-week-tracker");
+  app.setAppUserModelId("local.timebro");
   await createWindow();
 
   app.on("activate", async () => {

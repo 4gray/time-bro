@@ -10,9 +10,13 @@ import type {
   TicketsResult
 } from "../../shared/types";
 
+const getNativeBridge = () => window.timeBro ?? window.jiraWeekTracker;
+
 export const nativeApi = {
   testJiraConnection(settings: AppSettings): Promise<JiraConnectionResult> {
-    if (!window.jiraWeekTracker) {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
       return Promise.resolve({
         ok: false,
         message: settings.jiraBaseUrl
@@ -21,19 +25,23 @@ export const nativeApi = {
       });
     }
 
-    return window.jiraWeekTracker.testJiraConnection(settings);
+    return bridge.testJiraConnection(settings);
   },
 
   syncJiraWorklogs(request: SyncRequest): Promise<SyncResult> {
-    if (!window.jiraWeekTracker) {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
       return Promise.reject(new Error("Open the Electron app to sync Jira worklogs."));
     }
 
-    return window.jiraWeekTracker.syncJiraWorklogs(request);
+    return bridge.syncJiraWorklogs(request);
   },
 
   fetchAssignedTickets(request: TicketsRequest): Promise<TicketsResult> {
-    if (!window.jiraWeekTracker) {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
       return Promise.resolve({
         fetchedAt: new Date().toISOString(),
         accountId: "",
@@ -42,22 +50,26 @@ export const nativeApi = {
       });
     }
 
-    return window.jiraWeekTracker.fetchAssignedTickets(request);
+    return bridge.fetchAssignedTickets(request);
   },
 
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult> {
-    if (!window.jiraWeekTracker) {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
       return Promise.reject(new Error("Open the Electron app to log time to Jira."));
     }
 
-    return window.jiraWeekTracker.addWorklog(request);
+    return bridge.addWorklog(request);
   },
 
   scheduleReminder(payload: ReminderSchedulePayload) {
-    if (!window.jiraWeekTracker) {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
       return Promise.resolve({ scheduled: false });
     }
 
-    return window.jiraWeekTracker.scheduleReminder(payload);
+    return bridge.scheduleReminder(payload);
   }
 };

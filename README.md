@@ -1,6 +1,6 @@
-# Jira Week Tracker
+# TimeBro
 
-Jira Week Tracker is a small local desktop app for tracking weekly Jira work log item progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
+TimeBro is a small local desktop app for tracking weekly Jira work log item progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
 
 The app helps answer one practical question: for the selected week, how many Jira work log item hours have I logged, and how much is still missing from my weekly target?
 
@@ -110,7 +110,7 @@ OAuth 2.0 3LO is better for a distributed product with a registered Atlassian in
 
 1. Open [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 2. Choose **Create API token**. For now, do not choose the scoped-token flow.
-3. Give it a label such as `Jira Week Tracker`.
+3. Give it a label such as `TimeBro`.
 4. Copy the token once and paste it into the app Settings view with your Jira email.
 5. Enter your Jira site as either `mycompany`, `mycompany.atlassian.net`, or `https://mycompany.atlassian.net`.
 

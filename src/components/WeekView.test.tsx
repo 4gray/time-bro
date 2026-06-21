@@ -46,6 +46,7 @@ describe("WeekView", () => {
       <WeekView
         weekState={weekState}
         isSyncing={false}
+        isConfigured={true}
         onSync={() => undefined}
         onPreviousWeek={() => undefined}
         onCurrentWeek={() => undefined}

@@ -1,6 +1,6 @@
 # Agent Development Guide
 
-This project is a local Electron + React desktop app for personal Jira weekly time tracking. Follow these instructions when working as an agent in this repository.
+This project is TimeBro, a local Electron + React desktop app for personal Jira weekly time tracking. Follow these instructions when working as an agent in this repository.
 
 ## Planning
 

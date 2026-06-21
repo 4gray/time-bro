@@ -12,16 +12,19 @@ import type {
   TicketsResult
 } from "../shared/types";
 
+interface TimeBroNativeApi {
+  testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
+  syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
+  fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
+  addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
+  scheduleReminder: (
+    payload: ReminderSchedulePayload
+  ) => Promise<{ scheduled: boolean; fireAt?: string }>;
+}
+
 declare global {
   interface Window {
-    jiraWeekTracker?: {
-      testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
-      syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
-      fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
-      addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
-      scheduleReminder: (
-        payload: ReminderSchedulePayload
-      ) => Promise<{ scheduled: boolean; fireAt?: string }>;
-    };
+    timeBro?: TimeBroNativeApi;
+    jiraWeekTracker?: TimeBroNativeApi;
   }
 }

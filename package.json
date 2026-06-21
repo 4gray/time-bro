@@ -1,8 +1,8 @@
 {
-  "name": "jira-week-tracker",
+  "name": "timebro",
   "version": "0.1.0",
   "private": true,
-  "description": "A local Electron assistant for weekly Jira time tracking.",
+  "description": "TimeBro is a local Electron assistant for weekly Jira time tracking.",
   "author": "fourgray",
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -47,8 +47,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "local.jira-week-tracker",
-    "productName": "Jira Week Tracker",
+    "appId": "local.timebro",
+    "productName": "TimeBro",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",

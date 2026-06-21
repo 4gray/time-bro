@@ -13,6 +13,7 @@ interface WeekViewProps {
   weekState: WeekState;
   syncResult?: SyncResult;
   isSyncing: boolean;
+  isConfigured: boolean;
   onSync: () => void;
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
@@ -228,6 +229,7 @@ export const WeekView = ({
   weekState,
   syncResult,
   isSyncing,
+  isConfigured,
   onSync,
   onPreviousWeek,
   onCurrentWeek,
@@ -287,7 +289,13 @@ export const WeekView = ({
         </div>
 
         <div className="week-actions">
-          <button type="button" className="sync-button" onClick={onSync} disabled={isSyncing} title="Sync with Jira">
+          <button
+            type="button"
+            className="sync-button"
+            onClick={onSync}
+            disabled={isSyncing || !isConfigured}
+            title={isConfigured ? "Sync with Jira" : "Connect Jira in settings to sync"}
+          >
             {isSyncing ? <Loader2 className="spin" size={14} /> : <RotateCw size={14} strokeWidth={2} />}
             SYNC
           </button>

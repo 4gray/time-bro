@@ -31,7 +31,7 @@ export const Sidebar = ({
     <aside className={`sidebar ${collapsed ? "collapsed" : ""}`} aria-label="Primary">
       <div className="sb-brand">
         <div className="sb-logo">%d</div>
-        <span className="nav-label sb-word">Sprintf</span>
+        <span className="nav-label sb-word">TimeBro</span>
       </div>
 
       <nav className="sb-nav">

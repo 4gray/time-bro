@@ -32,6 +32,9 @@ import { addDays, formatDuration, toLocalDateKey } from "./utils/date";
 const isJiraConfigured = (settings: AppSettings) =>
   Boolean(settings.jiraBaseUrl.trim() && settings.jiraEmail.trim() && settings.jiraApiToken.trim());
 
+const THEME_STORAGE_KEY = "timebro-theme";
+const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
+
 const normalizeJiraSiteInput = (rawSite: string) => {
   const trimmed = rawSite.trim().replace(/\/+$/, "");
 
@@ -91,7 +94,7 @@ export const App = () => {
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [theme, setTheme] = useState<ThemeMode | null>(() => {
     try {
-      const stored = localStorage.getItem("sprintf-theme");
+      const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
       return stored === "light" || stored === "dark" ? stored : null;
     } catch {
       return null;
@@ -312,7 +315,8 @@ export const App = () => {
 
   const selectTheme = (next: ThemeMode) => {
     try {
-      localStorage.setItem("sprintf-theme", next);
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
     } catch {
       /* ignore persistence failures */
     }
@@ -379,6 +383,12 @@ export const App = () => {
   };
 
   const handleSync = async () => {
+    if (!isConfigured) {
+      setSyncMessage(undefined);
+      setSyncError("Connect Jira in Settings before syncing.");
+      return;
+    }
+
     setIsSyncing(true);
     setSyncError(undefined);
     setSyncMessage(undefined);
@@ -480,6 +490,7 @@ export const App = () => {
               weekState={weekState}
               syncResult={syncResult}
               isSyncing={isSyncing}
+              isConfigured={isConfigured}
               onSync={handleSync}
               onPreviousWeek={() => setWeekStart((current) => addDays(current, -7))}
               onCurrentWeek={() => goToWeek(new Date())}

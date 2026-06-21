@@ -11,7 +11,7 @@ import type {
   TicketsResult
 } from "../shared/types";
 
-contextBridge.exposeInMainWorld("jiraWeekTracker", {
+const timeBroApi = {
   testJiraConnection: (settings: AppSettings): Promise<JiraConnectionResult> => {
     return ipcRenderer.invoke("jira:test-connection", settings);
   },
@@ -27,4 +27,7 @@ contextBridge.exposeInMainWorld("jiraWeekTracker", {
   scheduleReminder: (payload: ReminderSchedulePayload): Promise<{ scheduled: boolean; fireAt?: string }> => {
     return ipcRenderer.invoke("reminder:schedule", payload);
   }
-});
+};
+
+contextBridge.exposeInMainWorld("timeBro", timeBroApi);
+contextBridge.exposeInMainWorld("jiraWeekTracker", timeBroApi);
