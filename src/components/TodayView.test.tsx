@@ -54,7 +54,7 @@ describe("TodayView", () => {
             weekKey: "2026-06-15",
             dateKey: "2026-06-18",
             text: "Mentoring and planning",
-            timeSpentSeconds: 30 * 60,
+            timeSpentSeconds: 2 * 3600,
             startedISO: "2026-06-18T12:00:00.000Z",
             createdAt: "2026-06-18T12:00:00.000Z",
             updatedAt: "2026-06-18T12:00:00.000Z"
@@ -82,5 +82,8 @@ describe("TodayView", () => {
     expect(markup).toContain("SUB");
     expect(markup).toContain("Mentoring and planning");
     expect(markup).toContain("LOCAL");
+    expect(markup).toContain(
+      '<span class="entry-summary">Mentoring and planning</span><span class="entry-leader"></span><span class="entry-range">14:00–16:00</span><span class="entry-dur">2h</span>'
+    );
   });
 });

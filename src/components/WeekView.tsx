@@ -1,7 +1,7 @@
 import { Loader2, MessageSquare, PenLine, Plus, RotateCw } from "lucide-react";
 import type { DayTrackingSummary, JiraWorklog, SyncResult, WeekState } from "../../shared/types";
 import {
-  formatClock,
+  formatDuration,
   formatHours,
   formatWeekRangeCompact,
   fromLocalDateKey,
@@ -199,7 +199,7 @@ const DayColumn = ({
                     <PenLine size={12} stroke="var(--dim)" strokeWidth={1.9} />
                     <span className="local-note-label">NOTE</span>
                     <span className="day-log-spacer" />
-                    <span className="day-log-dur">{formatClock(note.timeSpentSeconds)}</span>
+                    <span className="day-log-dur">{formatDuration(note.timeSpentSeconds / 3600)}</span>
                   </div>
                   <div className="day-note-text">{note.text}</div>
                 </div>

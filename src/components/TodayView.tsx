@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, ChevronDown, Clock, Loader2, MessageSquare, PenLine } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
-import { formatClock, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
+import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -343,7 +343,7 @@ export const TodayView = ({
                         <span className="entry-range">
                           {formatHm24(start)}–{formatHm24(end)}
                         </span>
-                        <span className="entry-dur">{formatClock(note.timeSpentSeconds)}</span>
+                        <span className="entry-dur">{formatDuration(note.timeSpentSeconds / 3600)}</span>
                       </div>
                     </div>
                   );

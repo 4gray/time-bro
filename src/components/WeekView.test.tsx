@@ -11,8 +11,8 @@ const weekState: WeekState = {
   weeklyTargetHours: 40,
   trackedWeekHours: 2.5,
   jiraTrackedWeekHours: 2,
-  personalNoteHours: 0.5,
-  remainingWeekHours: 37.5,
+  personalNoteHours: 2,
+  remainingWeekHours: 36,
   dailyTargetHours: 8,
   activeWorkingDates: ["2026-06-18"],
   skippedDates: [],
@@ -25,8 +25,8 @@ const weekState: WeekState = {
       isConfiguredWorkingDay: true,
       isSkipped: false,
       targetHours: 8,
-      trackedHours: 2.5,
-      missingHours: 5.5,
+      trackedHours: 4,
+      missingHours: 4,
       issues: [
         {
           id: "133470",
@@ -44,7 +44,7 @@ const weekState: WeekState = {
           weekKey: "2026-06-15",
           dateKey: "2026-06-18",
           text: "Mentored a teammate on release planning",
-          timeSpentSeconds: 30 * 60,
+          timeSpentSeconds: 2 * 3600,
           startedISO: "2026-06-18T12:00:00.000Z",
           createdAt: "2026-06-18T12:00:00.000Z",
           updatedAt: "2026-06-18T12:00:00.000Z"
@@ -76,5 +76,7 @@ describe("WeekView", () => {
     expect(markup).toContain("EPIC");
     expect(markup).toContain("Mentored a teammate on release planning");
     expect(markup).toContain("NOTE");
+    expect(markup).toContain(">2h</span>");
+    expect(markup).not.toContain("2h 00m");
   });
 });
