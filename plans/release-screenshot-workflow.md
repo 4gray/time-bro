@@ -15,7 +15,7 @@ Use an in-memory demo mode controlled by URL parameters, not a persistent Indexe
 - Freeze the app clock in demo mode so Today, Week, Reports, and worklog ranges stay stable across machines and future dates.
 - Keep fixture data fake and brand-safe: no real Jira hostnames, emails, issue keys, tokens, customer names, or private comments.
 - Capture screenshots with a Node script using Playwright against the renderer app, not by manually clicking through the UI.
-- Save screenshots to a versioned folder such as `design/release-screenshots/v0.1.0/`.
+- Save screenshots to a versioned folder under `screenshots/`, such as `screenshots/v1.0.0/`.
 - Include the core views: `today`, `week`, `tickets`, `reports`, and `settings`, each in `light` and `dark`.
 - Support optional named scenes later, for example `add-time-modal`, `empty-week`, `sync-error`, or `collapsed-sidebar`.
 - Fail the screenshot script on console errors, page errors, missing ready markers, blank screenshots, or unexpected viewport dimensions.
@@ -31,18 +31,16 @@ Use an in-memory demo mode controlled by URL parameters, not a persistent Indexe
 - Add package scripts such as `screenshots`, `screenshots:release`, and `screenshots:install-browser`. Done.
 - Document the command and output location in `README.md`. Done.
 - Bump the IndexedDB version constant from 2 to 3 after rendered verification found an existing browser profile with `jira-week-tracker` version 3. Done.
+- Move screenshot output out of `design/` and delete tracked `design/` screenshot assets. Done for the 1.0.0 release refresh.
 - Optionally add a GitHub Actions workflow to generate screenshot artifacts on `workflow_dispatch` or release tags. Deferred.
 
 ## Verification
 
-- `npm run test` passed.
-- `npm run build` passed.
-- `npm audit` reported 0 vulnerabilities after adding Playwright.
-- `npm run screenshots` generated all 10 light/dark core view screenshots.
-- Contact sheet inspected visually for dark/light Today, Week, Tickets, Reports, and Settings.
-- Browser smoke-check passed for demo Week -> Tickets navigation with no console warnings or errors.
-- Normal non-demo renderer path loaded from IndexedDB with `data-demo` absent and no console warnings or errors.
-- Demo mode avoids writes to IndexedDB/localStorage for fake settings, tickets, worklogs, favorites, skipped days, and theme selection.
+- `npm install` completed with 0 vulnerabilities in the npm audit summary while preparing the worktree dependencies.
+- `npm run screenshots -- --out screenshots/v1.0.0` generated all 10 light/dark core view screenshots for release 1.0.0.
+- Contact sheet inspected visually for the 1.0.0 dark/light Today, Week, Tickets, Reports, and Settings screenshots.
+- `npm run build` passed after the screenshot output path change.
+- `npm run test` passed after the screenshot output path change.
 
 ## Notes
 

@@ -23,7 +23,7 @@ const parseArgs = (argv) => {
     viewport: DEFAULT_VIEWPORT,
     views: DEFAULT_VIEWS,
     themes: DEFAULT_THEMES,
-    outDir: path.join(repoRoot, "design", "release-screenshots", `v${packageJson.version}`),
+    outDir: path.join(repoRoot, "screenshots", `v${packageJson.version}`),
     fullPage: false,
     headed: false,
     baseUrl: undefined
@@ -108,7 +108,7 @@ Options:
   --viewport <size>     Browser viewport, WIDTHxHEIGHT. Default: ${DEFAULT_VIEWPORT}
   --views <list>        Comma-separated views: ${DEFAULT_VIEWS.join(", ")}
   --themes <list>       Comma-separated themes: ${DEFAULT_THEMES.join(", ")}
-  --out <dir>           Output directory. Default: design/release-screenshots/v${packageJson.version}
+  --out <dir>           Output directory. Default: screenshots/v${packageJson.version}
   --url <url>           Reuse an already running renderer URL instead of starting Vite
   --full-page           Capture full-page screenshots instead of the viewport
   --headed              Show the browser while capturing

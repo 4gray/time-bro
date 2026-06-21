@@ -1,26 +1,36 @@
 # TimeBro
 
+**A local-first Jira time tracker for people who do not want Friday afternoon to become forensic accounting.** ⏱️
+
+TimeBro turns your Jira work logs into a calm weekly cockpit: what is logged, what is missing, which days are off, and which ticket needs a little attention before the week closes.
+
 <p align="center">
-  <img src="./assets/app-icon.svg" alt="TimeBro app icon" width="112" height="112" />
+  <img src="./screenshots/v1.0.0/dark-week.png" alt="TimeBro dark Week view showing weekday cards, tracked hours, target progress, Jira worklog rows, vacation controls, and add-time buttons." width="960" />
 </p>
 
-Your manager has bravely decided that every minute is a tiny KPI waiting to be loved. If you are now searching for the perfect time-tracking instrument, TimeBro is your reliable desk buddy for keeping Jira worklogs tidy and making the manager suspiciously happy.
+<p align="center">
+  <em>Dark Week view: weekly progress ring, Monday-local day columns, tracked/target hours, Jira worklog rows with notes, skipped-day handling, and quick add/edit controls.</em>
+</p>
 
-TimeBro is a small local desktop app for tracking weekly Jira work log item progress. It is built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server.
+TimeBro is a small desktop app built with React, TypeScript, Vite, Electron, and IndexedDB. There is no backend server, no telemetry, and no credential relay: your data stays on your machine and Jira calls go only to the Jira site you configure.
 
-The app helps answer one practical question: for the selected week, how many Jira work log item hours have I logged, and how much is still missing from my weekly target?
+## Views
 
-## Features
+- **Today**: log time into the selected Jira ticket, pick duration presets or a custom value, add worklog notes, review today's Jira worklogs and local personal notes, and see how much remains against the daily target.
+- **Week**: browse previous/current/next weeks, inspect Monday-Friday day columns, compare tracked hours to targets, mark vacation/skipped days, add or edit entries from a day, and see Jira worklog comments inline.
+- **Tickets**: review assigned in-progress tickets, recently closed tickets, favorite/starred tickets, weekly logged hours by issue, epic/project context, and one-click logging.
+- **Reports**: summarize weekly target progress with daily average, days on target, tickets touched, billable Jira percentage, hours-per-day charts, ticket breakdowns, and CSV export.
+- **Settings**: connect Jira Cloud with email + API token, test the connection, configure weekly targets and working days, schedule local reminders, and choose light or dark theme.
 
-- Week dashboard with previous/current/next week navigation.
-- Configurable weekly target hours, defaulting to `40h`.
-- Monday-Friday day cards with target, tracked, missing, skipped/vacation state, and Jira issue lists.
-- Vacation/skipped days are removed from the active working day count, and the weekly target is redistributed across the remaining active days.
-- Jira Cloud REST API v3 connection test, work log item sync, and Add Time work log item creation.
-- Jira issue rows show the issue key, logged hours, and a one-line ellipsized ticket title.
-- Settings for Jira site, email, API token, weekly target, working days, reminder time, and reminder enablement.
-- Local IndexedDB stores for settings, week overrides, and sync results.
-- Native Electron reminder notifications while the app is running.
+## Feature Highlights
+
+- Local-first storage for settings, week overrides, favorites, personal notes, and sync results in IndexedDB.
+- Jira Cloud REST API v3 sync for your own work log items, filtered by authenticated account ID and Monday-local week bounds.
+- Safe Add Time flow that intentionally creates Jira work log items with started time, duration, and optional ADF comment.
+- Configurable weekly target hours, defaulting to `40h`, with working-day and skipped-day redistribution.
+- Work log fidelity across API, IPC, storage, and UI: item IDs, issue keys, started timestamps, durations, and flattened ADF comments are preserved.
+- Native Electron reminder notifications while the app is running, with vacation days and completed weeks respected.
+- Light and dark themes, plus deterministic demo screenshots for release notes and docs.
 
 ## Tech Stack
 
@@ -40,7 +50,7 @@ The app helps answer one practical question: for the selected week, how many Jir
 ├── shared/            # Shared TypeScript types
 ├── src/               # React renderer app
 ├── plans/             # Agent-maintained implementation plans
-├── design/            # Design and QA screenshots
+├── screenshots/       # Versioned release screenshots
 ├── AGENTS.md          # Agent development instructions
 └── package.json       # Scripts, dependencies, Electron packaging config
 ```
@@ -223,7 +233,7 @@ The script starts the renderer on a free local port, opens demo URLs such as
 `?demo=1&view=week&theme=dark&seed=release&today=2026-06-17`, and writes PNGs to:
 
 ```text
-design/release-screenshots/v0.1.0/
+screenshots/v<package-version>/
 ```
 
 It captures `today`, `week`, `tickets`, `reports`, and `settings` in both dark and light themes. The data is in-memory only and does not write fake Jira settings, worklogs, tickets, or favorites into IndexedDB.
@@ -232,7 +242,7 @@ Useful overrides:
 
 ```bash
 npm run screenshots -- --seed blog-1 --today 2026-06-17 --viewport 1600x1000
-npm run screenshots -- --views week,reports --themes dark --out design/release-screenshots/blog-1
+npm run screenshots -- --views week,reports --themes dark --out screenshots/blog-1
 ```
 
 ### One-Command Version Bumps
