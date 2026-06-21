@@ -3,6 +3,8 @@ import {
   CalendarDays,
   CheckCircle2,
   ExternalLink,
+  Eye,
+  EyeOff,
   KeyRound,
   LockKeyhole,
   Loader2,
@@ -12,6 +14,7 @@ import {
   SunMedium,
   TestTube2
 } from "lucide-react";
+import { useState } from "react";
 import type { AppSettings, JiraConnectionResult, WeekdayNumber } from "../../shared/types";
 import type { ThemeMode } from "./Sidebar";
 
@@ -48,6 +51,8 @@ export const SettingsView = ({
   effectiveTheme,
   onSelectTheme
 }: SettingsViewProps) => {
+  const [showJiraApiToken, setShowJiraApiToken] = useState(false);
+
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
       ...draft,
@@ -123,12 +128,25 @@ export const SettingsView = ({
 
           <label>
             <span>Jira API token</span>
-            <input
-              type="password"
-              placeholder="Paste a token from your Atlassian account"
-              value={draft.jiraApiToken}
-              onChange={(event) => updateField("jiraApiToken", event.target.value)}
-            />
+            <div className="settings-token">
+              <input
+                type={showJiraApiToken ? "text" : "password"}
+                placeholder="Paste a token from your Atlassian account"
+                value={draft.jiraApiToken}
+                onChange={(event) => updateField("jiraApiToken", event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                onClick={() => setShowJiraApiToken((visible) => !visible)}
+                aria-label={showJiraApiToken ? "Hide Jira API token" : "Show Jira API token"}
+                aria-pressed={showJiraApiToken}
+                title={showJiraApiToken ? "Hide token" : "Show token"}
+              >
+                {showJiraApiToken ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
+            </div>
             <small className="field-hint-text">
               Use a regular token for this MVP. Scoped-token support would need read:jira-work and read:jira-user via
               Atlassian's gateway.

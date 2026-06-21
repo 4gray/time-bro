@@ -2765,6 +2765,41 @@ input:focus {
   color: var(--dim);
 }
 
+.settings-token {
+  position: relative;
+}
+
+.settings-token input {
+  padding-right: 48px;
+  font-family: var(--font-mono);
+}
+
+.settings-token button {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--dim);
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.settings-token button:hover,
+.settings-token button:focus-visible {
+  background: var(--bg-hover);
+  color: var(--text-strong);
+}
+
+.settings-token button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 124, 255, 0.18);
+}
+
 .auth-primer {
   display: grid;
   grid-template-columns: 38px 1fr;
