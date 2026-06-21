@@ -23,7 +23,8 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - Fix CI-only timezone-sensitive TodayView test failure. Done.
 - Repoint `v1.0.0` to the fixed release commit and rerun the workflow. Done for the second attempt.
 - Fix Linux `.deb` maintainer metadata failure. Done.
-- Repoint `v1.0.0` to the Linux metadata fix and rerun the workflow. Pending.
+- Repoint `v1.0.0` to the Linux metadata fix and rerun the workflow. Done.
+- Add polished Markdown release notes with the dark Week screenshot to the draft GitHub release. Done.
 
 ## Verification
 
@@ -37,3 +38,6 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - Second GitHub Actions run `27918159919` passed Test, macOS build, and Windows build, then failed Linux `.deb` packaging because package author/maintainer email was missing.
 - `package.json` author now includes maintainer email for Linux `.deb` metadata.
 - `npm run release:dry-run` passed after adding maintainer metadata.
+- Third GitHub Actions run `27918300472` passed Test, macOS, Windows, Linux, and Publish jobs.
+- Draft GitHub release `v1.0.0` has 7 assets: macOS DMG/ZIP, Windows installer/ZIP, Linux AppImage/DEB/tar.gz.
+- Release notes were replaced with a Markdown changelog containing the `screenshots/v1.0.0/dark-week.png` raw GitHub image.
