@@ -17,9 +17,11 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - Update workflow publish step to create a draft release. Done.
 - Bump package metadata to `1.0.0`. Done.
 - Run tests/build. Done.
-- Commit and push `main`. In progress.
-- Create and push tag `v1.0.0`. Pending.
-- Confirm the GitHub Actions release run started. Pending.
+- Commit and push `main`. Done for the first attempt.
+- Create and push tag `v1.0.0`. Done for the first attempt.
+- Confirm the GitHub Actions release run started. Done for the first attempt.
+- Fix CI-only timezone-sensitive TodayView test failure. Done.
+- Repoint `v1.0.0` to the fixed release commit and rerun the workflow. Pending.
 
 ## Verification
 
@@ -27,3 +29,6 @@ Prepare and trigger the GitHub Actions release for `v1.0.0`, producing draft Git
 - `.github/workflows/release.yml` parses as valid YAML.
 - `package.json` and `package-lock.json` are set to `1.0.0`.
 - `npm run release:dry-run` passed.
+- First GitHub Actions run `27918104351` started from `v1.0.0` and failed in `TodayView.test.tsx` because the test hardcoded a local time range.
+- `TZ=UTC npm run test` passed after making the TodayView test timezone-stable.
+- `npm run release:dry-run` passed after the CI test fix.

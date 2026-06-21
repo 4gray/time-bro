@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { JiraTicket, JiraWorklog } from "../../shared/types";
+import { formatHm24 } from "../utils/date";
 import { TodayView } from "./TodayView";
 
 const ticket: JiraTicket = {
@@ -40,6 +41,17 @@ const worklog: JiraWorklog = {
   comment: "Follow-up on access package structure"
 };
 
+const personalNote = {
+  id: "note-1",
+  weekKey: "2026-06-15",
+  dateKey: "2026-06-18",
+  text: "Mentoring and planning",
+  timeSpentSeconds: 2 * 3600,
+  startedISO: "2026-06-18T12:00:00.000Z",
+  createdAt: "2026-06-18T12:00:00.000Z",
+  updatedAt: "2026-06-18T12:00:00.000Z"
+};
+
 describe("TodayView", () => {
   it("shows Jira link icons for today's selected, logged, and touched ticket keys", () => {
     const markup = renderToStaticMarkup(
@@ -48,18 +60,7 @@ describe("TodayView", () => {
         selectedTicket={ticket}
         ticketOptions={[ticket, touchedTicket]}
         todayWorklogs={[worklog]}
-        personalNotes={[
-          {
-            id: "note-1",
-            weekKey: "2026-06-15",
-            dateKey: "2026-06-18",
-            text: "Mentoring and planning",
-            timeSpentSeconds: 2 * 3600,
-            startedISO: "2026-06-18T12:00:00.000Z",
-            createdAt: "2026-06-18T12:00:00.000Z",
-            updatedAt: "2026-06-18T12:00:00.000Z"
-          }
-        ]}
+        personalNotes={[personalNote]}
         issueUrlsByKey={{ [ticket.key]: ticket.url }}
         issueTypesByKey={{ [ticket.key]: ticket.issueType, [touchedTicket.key]: touchedTicket.issueType }}
         todayTrackedHours={1}
@@ -86,6 +87,10 @@ describe("TodayView", () => {
     expect(markup).toContain("Edit personal note");
     expect(markup).toContain("Mentoring and planning");
     expect(markup).toContain("LOCAL");
-    expect(markup).toContain('<span class="entry-range">14:00–16:00</span><span class="entry-dur">2h</span>');
+    const noteStart = new Date(personalNote.startedISO);
+    const noteEnd = new Date(noteStart.getTime() + personalNote.timeSpentSeconds * 1000);
+    expect(markup).toContain(
+      `<span class="entry-range">${formatHm24(noteStart)}–${formatHm24(noteEnd)}</span><span class="entry-dur">2h</span>`
+    );
   });
 });
