@@ -10,11 +10,14 @@ import {
   updateWorklog
 } from "./jira";
 import { scheduleReminder } from "./reminders";
+import { checkForAppUpdate } from "./updates";
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
+import { getSafeReleaseUrl } from "../shared/releases";
 import type {
   AddWorklogRequest,
   AppSettings,
   DeleteWorklogRequest,
+  OpenReleasePageResult,
   ReminderSchedulePayload,
   SearchTicketsRequest,
   SyncRequest,
@@ -120,6 +123,19 @@ ipcMain.handle("jira:delete-worklog", (_event, request: DeleteWorklogRequest) =>
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {
   return scheduleReminder(payload);
+});
+
+ipcMain.handle("app:get-update-info", () => {
+  return checkForAppUpdate(app.getVersion());
+});
+
+ipcMain.handle("app:open-release-page", async (_event, url?: string): Promise<OpenReleasePageResult> => {
+  const releaseUrl = getSafeReleaseUrl(url);
+  await shell.openExternal(releaseUrl);
+  return {
+    ok: true,
+    url: releaseUrl
+  };
 });
 
 app.whenReady().then(async () => {

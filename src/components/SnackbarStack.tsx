@@ -1,12 +1,15 @@
-import { AlertTriangle, CheckCircle2, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Info, X } from "lucide-react";
 import { useEffect } from "react";
 
-export type SnackbarKind = "success" | "error";
+export type SnackbarKind = "success" | "error" | "info";
 
 export interface SnackbarNotification {
   id: number;
   kind: SnackbarKind;
   message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  autoDismiss?: boolean;
 }
 
 interface SnackbarStackProps {
@@ -23,16 +26,27 @@ interface SnackbarItemProps {
 
 const SnackbarItem = ({ notification, onDismiss, durationMs }: SnackbarItemProps) => {
   useEffect(() => {
+    if (notification.autoDismiss === false) {
+      return undefined;
+    }
+
     const timer = window.setTimeout(() => onDismiss(notification.id), durationMs);
     return () => window.clearTimeout(timer);
-  }, [durationMs, notification.id, onDismiss]);
+  }, [durationMs, notification.autoDismiss, notification.id, onDismiss]);
 
-  const Icon = notification.kind === "success" ? CheckCircle2 : AlertTriangle;
+  const Icon =
+    notification.kind === "success" ? CheckCircle2 : notification.kind === "error" ? AlertTriangle : Info;
 
   return (
     <div className={`snackbar ${notification.kind}`} role={notification.kind === "error" ? "alert" : "status"}>
       <Icon className="snackbar-icon" size={17} />
       <span className="snackbar-message">{notification.message}</span>
+      {notification.actionLabel && notification.onAction && (
+        <button className="snackbar-action" type="button" onClick={notification.onAction}>
+          <ExternalLink size={14} />
+          {notification.actionLabel}
+        </button>
+      )}
       <button
         className="snackbar-dismiss"
         type="button"

@@ -4,9 +4,11 @@ import type {
   AddWorklogRequest,
   AddWorklogResult,
   AppSettings,
+  AppUpdateInfo,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
   SearchTicketsRequest,
@@ -28,6 +30,12 @@ interface TimeBroNativeApi {
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;
   scheduleReminder: (payload: ReminderSchedulePayload) => Promise<ReminderScheduleResult>;
+  getUpdateInfo: () => Promise<AppUpdateInfo>;
+  openReleasePage: (url?: string) => Promise<OpenReleasePageResult>;
+}
+
+interface ImportMetaEnv {
+  readonly VITE_APP_VERSION: string;
 }
 
 declare global {

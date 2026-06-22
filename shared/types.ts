@@ -236,3 +236,19 @@ export interface ReminderScheduleResult {
   reason: ReminderScheduleReason;
   message?: string;
 }
+
+export interface AppUpdateInfo {
+  currentVersion: string;
+  latestVersion?: string;
+  releaseName?: string;
+  releasePageUrl: string;
+  publishedAt?: string;
+  checkedAt: string;
+  updateAvailable: boolean;
+  error?: string;
+}
+
+export interface OpenReleasePageResult {
+  ok: boolean;
+  url: string;
+}

@@ -1,5 +1,6 @@
 import {
   Bell,
+  BadgeInfo,
   CalendarDays,
   ExternalLink,
   Eye,
@@ -8,13 +9,14 @@ import {
   LockKeyhole,
   Loader2,
   Moon,
+  RefreshCw,
   Save,
   ShieldCheck,
   SunMedium,
   TestTube2
 } from "lucide-react";
 import { useState } from "react";
-import type { AppSettings, WeekdayNumber } from "../../shared/types";
+import type { AppSettings, AppUpdateInfo, WeekdayNumber } from "../../shared/types";
 import type { ThemeMode } from "./Sidebar";
 
 interface SettingsViewProps {
@@ -25,6 +27,10 @@ interface SettingsViewProps {
   isTesting: boolean;
   effectiveTheme: ThemeMode;
   onSelectTheme: (theme: ThemeMode) => void;
+  updateInfo?: AppUpdateInfo;
+  isCheckingUpdates: boolean;
+  onCheckForUpdates: () => void;
+  onOpenReleasePage: (url?: string) => void;
 }
 
 const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
@@ -37,6 +43,42 @@ const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
 
 const API_TOKEN_URL = "https://id.atlassian.com/manage-profile/security/api-tokens";
 
+const formatReleaseVersion = (version?: string) => {
+  const trimmed = version?.trim();
+  return trimmed ? `v${trimmed.replace(/^v/i, "")}` : "UNKNOWN";
+};
+
+const formatCheckedAt = (checkedAt?: string) => {
+  if (!checkedAt) {
+    return "NOT CHECKED YET";
+  }
+
+  return `CHECKED ${new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(new Date(checkedAt)).toUpperCase()}`;
+};
+
+const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdates: boolean) => {
+  if (isCheckingUpdates) {
+    return "Checking GitHub Releases...";
+  }
+
+  if (!updateInfo) {
+    return "Release status has not been checked yet.";
+  }
+
+  if (updateInfo.error) {
+    return updateInfo.error;
+  }
+
+  if (updateInfo.updateAvailable && updateInfo.latestVersion) {
+    return `${formatReleaseVersion(updateInfo.latestVersion)} is available.`;
+  }
+
+  return "TimeBro is up to date.";
+};
+
 export const SettingsView = ({
   draft,
   onDraftChange,
@@ -44,7 +86,11 @@ export const SettingsView = ({
   onTestConnection,
   isTesting,
   effectiveTheme,
-  onSelectTheme
+  onSelectTheme,
+  updateInfo,
+  isCheckingUpdates,
+  onCheckForUpdates,
+  onOpenReleasePage
 }: SettingsViewProps) => {
   const [showJiraApiToken, setShowJiraApiToken] = useState(false);
 
@@ -261,6 +307,53 @@ export const SettingsView = ({
             >
               <Moon size={14} />
               DARK
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-panel">
+          <div className="section-title">
+            <BadgeInfo size={16} />
+            <span>Version</span>
+          </div>
+
+          <div className="version-grid">
+            <div className="version-stat">
+              <span>Current</span>
+              <strong>{formatReleaseVersion(updateInfo?.currentVersion)}</strong>
+            </div>
+            <div className="version-stat">
+              <span>Latest</span>
+              <strong>{formatReleaseVersion(updateInfo?.latestVersion)}</strong>
+            </div>
+          </div>
+
+          <div
+            className={`update-status ${
+              updateInfo?.error ? "error" : updateInfo?.updateAvailable ? "available" : updateInfo ? "current" : ""
+            }`}
+          >
+            <strong>{getUpdateStatus(updateInfo, isCheckingUpdates)}</strong>
+            <small>{formatCheckedAt(updateInfo?.checkedAt)}</small>
+          </div>
+
+          <div className="inline-actions">
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={onCheckForUpdates}
+              disabled={isCheckingUpdates}
+            >
+              {isCheckingUpdates ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
+              Check updates
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => onOpenReleasePage(updateInfo?.releasePageUrl)}
+            >
+              <ExternalLink size={16} />
+              GitHub Releases
             </button>
           </div>
         </div>

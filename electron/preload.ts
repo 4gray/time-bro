@@ -3,9 +3,11 @@ import type {
   AddWorklogRequest,
   AddWorklogResult,
   AppSettings,
+  AppUpdateInfo,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
   SearchTicketsRequest,
@@ -42,6 +44,12 @@ const timeBroApi = {
   },
   scheduleReminder: (payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> => {
     return ipcRenderer.invoke("reminder:schedule", payload);
+  },
+  getUpdateInfo: (): Promise<AppUpdateInfo> => {
+    return ipcRenderer.invoke("app:get-update-info");
+  },
+  openReleasePage: (url?: string): Promise<OpenReleasePageResult> => {
+    return ipcRenderer.invoke("app:open-release-page", url);
   }
 };
 

@@ -2,9 +2,11 @@ import type {
   AddWorklogRequest,
   AddWorklogResult,
   AppSettings,
+  AppUpdateInfo,
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
   SearchTicketsRequest,
@@ -16,8 +18,10 @@ import type {
   UpdateWorklogRequest,
   UpdateWorklogResult
 } from "../../shared/types";
+import { GITHUB_RELEASES_URL, getSafeReleaseUrl } from "../../shared/releases";
 
 const getNativeBridge = () => window.timeBro ?? window.jiraWeekTracker;
+const rendererPreviewVersion = import.meta.env.VITE_APP_VERSION || "unknown";
 
 export const nativeApi = {
   testJiraConnection(settings: AppSettings): Promise<JiraConnectionResult> {
@@ -114,5 +118,36 @@ export const nativeApi = {
     }
 
     return bridge.scheduleReminder(payload);
+  },
+
+  getUpdateInfo(): Promise<AppUpdateInfo> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      return Promise.resolve({
+        currentVersion: rendererPreviewVersion,
+        releasePageUrl: GITHUB_RELEASES_URL,
+        checkedAt: new Date().toISOString(),
+        updateAvailable: false,
+        error: "Open the Electron app to check GitHub Releases."
+      });
+    }
+
+    return bridge.getUpdateInfo();
+  },
+
+  openReleasePage(url?: string): Promise<OpenReleasePageResult> {
+    const bridge = getNativeBridge();
+    const releaseUrl = getSafeReleaseUrl(url);
+
+    if (!bridge) {
+      window.open(releaseUrl, "_blank", "noopener,noreferrer");
+      return Promise.resolve({
+        ok: true,
+        url: releaseUrl
+      });
+    }
+
+    return bridge.openReleasePage(releaseUrl);
   }
 };

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
+  AppUpdateInfo,
   JiraConnectionResult,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -11,6 +12,7 @@ import type {
   TicketsResult,
   WeekOverride
 } from "../shared/types";
+import { GITHUB_RELEASES_URL } from "../shared/releases";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
@@ -45,6 +47,8 @@ const THEME_STORAGE_KEY = "timebro-theme";
 const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
 const MAX_SNACKBARS = 4;
 
+type SnackbarOptions = Pick<SnackbarNotification, "actionLabel" | "onAction" | "autoDismiss">;
+
 const normalizeJiraSiteInput = (rawSite: string) => {
   const trimmed = rawSite.trim().replace(/\/+$/, "");
 
@@ -73,6 +77,11 @@ const formatSyncTime = (syncResult?: SyncResult) => {
     .format(new Date(syncResult.syncedAt))
     .toUpperCase();
   return `SYNCED ${time}`;
+};
+
+const formatReleaseVersion = (version?: string) => {
+  const trimmed = version?.trim();
+  return trimmed ? `v${trimmed.replace(/^v/i, "")}` : "unknown";
 };
 
 const sortPersonalNotes = (notes: PersonalNote[]) =>
@@ -123,6 +132,14 @@ const updateVisiblePersonalNotes = (
   return sortPersonalNotes([...withoutPrevious, nextNote]);
 };
 
+const createDemoUpdateInfo = (): AppUpdateInfo => ({
+  currentVersion: "1.0.0",
+  latestVersion: "1.0.0",
+  releasePageUrl: GITHUB_RELEASES_URL,
+  checkedAt: new Date().toISOString(),
+  updateAvailable: false
+});
+
 export const App = () => {
   const demoConfig = useMemo(() => getDemoConfig(), []);
   const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
@@ -142,6 +159,10 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | undefined>(() =>
+    demoScenario ? createDemoUpdateInfo() : undefined
+  );
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | undefined>();
@@ -175,6 +196,7 @@ export const App = () => {
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
   const snackbarIdRef = useRef(0);
+  const updateSnackbarShownForRef = useRef<string | undefined>();
 
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
@@ -272,7 +294,7 @@ export const App = () => {
     setSnackbars((current) => current.filter((notification) => notification.id !== id));
   }, []);
 
-  const showSnackbar = useCallback((kind: SnackbarKind, message: string) => {
+  const showSnackbar = useCallback((kind: SnackbarKind, message: string, options: SnackbarOptions = {}) => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage) {
       return;
@@ -282,7 +304,8 @@ export const App = () => {
     const notification: SnackbarNotification = {
       id: snackbarIdRef.current,
       kind,
-      message: trimmedMessage
+      message: trimmedMessage,
+      ...options
     };
 
     setSnackbars((current) => [...current, notification].slice(-MAX_SNACKBARS));
@@ -290,6 +313,93 @@ export const App = () => {
 
   const showSuccess = useCallback((message: string) => showSnackbar("success", message), [showSnackbar]);
   const showError = useCallback((message: string) => showSnackbar("error", message), [showSnackbar]);
+
+  const openReleasePage = useCallback(
+    (url?: string) => {
+      void nativeApi.openReleasePage(url ?? GITHUB_RELEASES_URL).catch((error) => {
+        showError(error instanceof Error ? error.message : "Unable to open GitHub Releases.");
+      });
+    },
+    [showError]
+  );
+
+  const showUpdateAvailable = useCallback(
+    (info: AppUpdateInfo) => {
+      if (!info.updateAvailable || !info.latestVersion) {
+        return;
+      }
+
+      if (updateSnackbarShownForRef.current === info.latestVersion) {
+        return;
+      }
+
+      updateSnackbarShownForRef.current = info.latestVersion;
+      showSnackbar(
+        "info",
+        `TimeBro ${formatReleaseVersion(info.latestVersion)} is available. Current version: ${formatReleaseVersion(
+          info.currentVersion
+        )}.`,
+        {
+          actionLabel: "Open releases",
+          onAction: () => openReleasePage(info.releasePageUrl),
+          autoDismiss: false
+        }
+      );
+    },
+    [openReleasePage, showSnackbar]
+  );
+
+  const checkForUpdates = useCallback(
+    async (options: { notifyWhenCurrent?: boolean } = {}) => {
+      if (demoScenario) {
+        const demoUpdateInfo = createDemoUpdateInfo();
+        setUpdateInfo(demoUpdateInfo);
+
+        if (options.notifyWhenCurrent) {
+          showSuccess("TimeBro is up to date.");
+        }
+
+        return demoUpdateInfo;
+      }
+
+      setIsCheckingUpdates(true);
+
+      try {
+        const result = await nativeApi.getUpdateInfo();
+        setUpdateInfo(result);
+
+        if (result.updateAvailable) {
+          showUpdateAvailable(result);
+        } else if (options.notifyWhenCurrent) {
+          if (result.error) {
+            showError(result.error);
+          } else {
+            showSuccess("TimeBro is up to date.");
+          }
+        }
+
+        return result;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to check GitHub Releases.";
+        setUpdateInfo((current) => ({
+          currentVersion: current?.currentVersion ?? "unknown",
+          releasePageUrl: current?.releasePageUrl ?? GITHUB_RELEASES_URL,
+          checkedAt: new Date().toISOString(),
+          updateAvailable: false,
+          error: message
+        }));
+
+        if (options.notifyWhenCurrent) {
+          showError(message);
+        }
+
+        return undefined;
+      } finally {
+        setIsCheckingUpdates(false);
+      }
+    },
+    [demoScenario, showError, showSuccess, showUpdateAvailable]
+  );
 
   const loadTickets = useCallback(async () => {
     if (!isConfigured) {
@@ -418,6 +528,14 @@ export const App = () => {
   );
 
   const handleSync = useCallback(() => runSync(), [runSync]);
+
+  useEffect(() => {
+    if (demoScenario) {
+      return;
+    }
+
+    void checkForUpdates();
+  }, [checkForUpdates, demoScenario]);
 
   useEffect(() => {
     if (demoScenario) {
@@ -1070,6 +1188,12 @@ export const App = () => {
               isTesting={isTesting}
               effectiveTheme={effectiveTheme}
               onSelectTheme={selectTheme}
+              updateInfo={updateInfo}
+              isCheckingUpdates={isCheckingUpdates}
+              onCheckForUpdates={() => {
+                void checkForUpdates({ notifyWhenCurrent: true });
+              }}
+              onOpenReleasePage={openReleasePage}
             />
           )}
         </main>

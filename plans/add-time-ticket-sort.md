@@ -19,6 +19,8 @@
 - Persist the search assignee filter in localStorage separately from sorting.
 - When the picker is open with an empty input, browse Jira tickets by created date through the same IPC search endpoint so real Jira results can exceed the initial assigned/favorites list.
 - Keep the one-character typed state as a no-search state; empty browse must be explicitly requested with `allowEmptyQuery`.
+- Keep the picker controls on one compact row: `Assigned to me` plus `Created` sort direction.
+- Keep the picker search and controls fixed at the top of the dropdown while only the ticket list scrolls.
 
 ## Pending Work
 
@@ -35,6 +37,8 @@
 - Added persisted `Assigned to me` search filter toggle.
 - Added Jira JQL `assignee = currentUser()` scoping when the filter is active.
 - Added empty-query Jira browse mode for the picker, so initial Add Time results can page beyond the six assigned/favorite tickets returned by the weekly ticket preload.
+- Merged the filter and created-date sort controls into one compact row to give the ticket list more vertical room.
+- Split the picker into a fixed header and a scrollable ticket list so search and filters stay visible while browsing tickets.
 
 ## Verification
 
@@ -53,3 +57,8 @@
   - Confirmed the Add Time picker now shows `JIRA TICKETS` from empty-query Jira browse with real Jira keys.
   - Confirmed the real Electron picker starts with 12 rendered Jira rows and is scrollable; after scrolling, it renders 24 rows.
   - Captured screenshot: `/tmp/timebro-electron-jira-picker-scroll.png`.
+  - Follow-up UX check: verified the filter and created-date sort now render as one row in Electron; the picker still renders 12 rows initially and 24 after scrolling.
+  - Captured screenshot: `/tmp/timebro-electron-picker-controls-one-row.png`.
+  - Sticky-header check: verified in Electron that the picker shell has `overflow: hidden`, the ticket list has `overflow: auto`, and only `.ticket-picker-list` scrolls.
+  - Verified search and controls keep the same top position after list scroll; ticket rows still lazy-load from 12 to 24.
+  - Captured screenshot: `/tmp/timebro-electron-picker-sticky-head.png`.

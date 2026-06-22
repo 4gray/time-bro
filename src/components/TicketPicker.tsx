@@ -379,120 +379,123 @@ export const TicketPicker = ({
       </div>
 
       {!locked && pickerOpen && (
-        <div className="ticket-picker" onScroll={handlePickerScroll}>
-          {canSearch && (
-            <div className="ticket-picker-search">
-              <Search size={14} strokeWidth={1.9} />
-              <input
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    if (searchQuery) {
-                      setSearchQuery("");
-                    } else {
-                      setPickerOpen(false);
+        <div className="ticket-picker">
+          <div className="ticket-picker-head">
+            {canSearch && (
+              <div className="ticket-picker-search">
+                <Search size={14} strokeWidth={1.9} />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      if (searchQuery) {
+                        setSearchQuery("");
+                      } else {
+                        setPickerOpen(false);
+                      }
                     }
-                  }
 
-                  if (event.key === "Enter" && firstSearchResult) {
-                    event.preventDefault();
-                    chooseTicket(firstSearchResult);
-                  }
-                }}
-                placeholder="Search Jira by key or text"
-                aria-label="Search Jira issues"
-                autoFocus
-              />
-              {searchStatus === "loading" ? (
-                <Loader2 className="spin" size={14} />
-              ) : searchQuery ? (
-                <button
-                  type="button"
-                  className="ticket-picker-clear"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSearchResults([]);
-                    setSearchStatus("idle");
-                    setSearchError(undefined);
+                    if (event.key === "Enter" && firstSearchResult) {
+                      event.preventDefault();
+                      chooseTicket(firstSearchResult);
+                    }
                   }}
-                  aria-label="Clear Jira search"
-                >
-                  <X size={13} />
-                </button>
-              ) : null}
-            </div>
-          )}
-
-          <div className="ticket-picker-tools" aria-label="Ticket list controls">
-            <span className="ticket-picker-tools-label">FILTER</span>
-            <button
-              type="button"
-              className={`ticket-picker-filter ${assignedOnly ? "active" : ""}`}
-              aria-pressed={assignedOnly}
-              title="Only Jira issues assigned to me"
-              onClick={toggleAssignedOnly}
-            >
-              <UserCheck size={12} strokeWidth={2} />
-              <span>Assigned to me</span>
-            </button>
-          </div>
-
-          <div className="ticket-picker-tools" aria-label="Ticket sort controls">
-            <span className="ticket-picker-tools-label">SORT BY CREATED</span>
-            <div className="ticket-picker-sort" role="radiogroup" aria-label="Ticket sort">
-              <button
-                type="button"
-                className={sortMode === "createdAsc" ? "active" : ""}
-                aria-pressed={sortMode === "createdAsc"}
-                title="Created date: oldest first"
-                onClick={() => selectSortMode("createdAsc")}
-              >
-                <CalendarArrowUp size={12} strokeWidth={2} />
-                <span>Oldest</span>
-              </button>
-              <button
-                type="button"
-                className={sortMode === "createdDesc" ? "active" : ""}
-                aria-pressed={sortMode === "createdDesc"}
-                title="Created date: newest first"
-                onClick={() => selectSortMode("createdDesc")}
-              >
-                <CalendarArrowDown size={12} strokeWidth={2} />
-                <span>Newest</span>
-              </button>
-            </div>
-          </div>
-
-          {trimmedQuery.length === 1 && <div className="ticket-picker-note">Type 2+ characters to search Jira.</div>}
-          {searchStatus === "error" && <div className="ticket-picker-note is-error">{searchError}</div>}
-          {trimmedQuery.length >= 2 && searchStatus === "done" && searchResults.length === 0 && (
-            <div className="ticket-picker-note">No Jira matches for "{trimmedQuery}".</div>
-          )}
-
-          {visibleGroups.length > 0 ? (
-            visibleGroups.map((group) => (
-              <div className="ticket-picker-group" key={group.id}>
-                {group.label && <div className="ticket-picker-label">{group.label}</div>}
-                {group.tickets.map((ticket) => (
+                  placeholder="Search Jira by key or text"
+                  aria-label="Search Jira issues"
+                  autoFocus
+                />
+                {searchStatus === "loading" ? (
+                  <Loader2 className="spin" size={14} />
+                ) : searchQuery ? (
                   <button
-                    key={`${group.id}-${ticket.key}`}
                     type="button"
-                    className={`ticket-picker-item ${ticket.key === activeTicket?.key ? "active" : ""}`}
-                    onClick={() => chooseTicket(ticket)}
+                    className="ticket-picker-clear"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchResults([]);
+                      setSearchStatus("idle");
+                      setSearchError(undefined);
+                    }}
+                    aria-label="Clear Jira search"
                   >
-                    <span className="composer-target-key">{ticket.key}</span>
-                    <IssueTypeBadge issueType={ticket.issueType} />
-                    <span className="ticket-picker-summary">{ticket.summary}</span>
+                    <X size={13} />
                   </button>
-                ))}
+                ) : null}
               </div>
-            ))
-          ) : (
-            <div className="ticket-picker-note">
-              {canSearch ? "Search Jira to choose any ticket you can access." : emptyText}
+            )}
+
+            <div className="ticket-picker-controls" aria-label="Ticket filter and sort controls">
+              <button
+                type="button"
+                className={`ticket-picker-filter ${assignedOnly ? "active" : ""}`}
+                aria-pressed={assignedOnly}
+                title="Only Jira issues assigned to me"
+                onClick={toggleAssignedOnly}
+              >
+                <UserCheck size={12} strokeWidth={2} />
+                <span>Assigned to me</span>
+              </button>
+
+              <div className="ticket-picker-sort-control">
+                <span className="ticket-picker-sort-label">Created</span>
+                <div className="ticket-picker-sort" role="radiogroup" aria-label="Sort tickets by created date">
+                  <button
+                    type="button"
+                    className={sortMode === "createdAsc" ? "active" : ""}
+                    aria-pressed={sortMode === "createdAsc"}
+                    title="Created date: oldest first"
+                    onClick={() => selectSortMode("createdAsc")}
+                  >
+                    <CalendarArrowUp size={12} strokeWidth={2} />
+                    <span>Oldest</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={sortMode === "createdDesc" ? "active" : ""}
+                    aria-pressed={sortMode === "createdDesc"}
+                    title="Created date: newest first"
+                    onClick={() => selectSortMode("createdDesc")}
+                  >
+                    <CalendarArrowDown size={12} strokeWidth={2} />
+                    <span>Newest</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          )}
+
+            {trimmedQuery.length === 1 && <div className="ticket-picker-note">Type 2+ characters to search Jira.</div>}
+            {searchStatus === "error" && <div className="ticket-picker-note is-error">{searchError}</div>}
+            {trimmedQuery.length >= 2 && searchStatus === "done" && searchResults.length === 0 && (
+              <div className="ticket-picker-note">No Jira matches for "{trimmedQuery}".</div>
+            )}
+          </div>
+
+          <div className="ticket-picker-list" onScroll={handlePickerScroll}>
+            {visibleGroups.length > 0 ? (
+              visibleGroups.map((group) => (
+                <div className="ticket-picker-group" key={group.id}>
+                  {group.label && <div className="ticket-picker-label">{group.label}</div>}
+                  {group.tickets.map((ticket) => (
+                    <button
+                      key={`${group.id}-${ticket.key}`}
+                      type="button"
+                      className={`ticket-picker-item ${ticket.key === activeTicket?.key ? "active" : ""}`}
+                      onClick={() => chooseTicket(ticket)}
+                    >
+                      <span className="composer-target-key">{ticket.key}</span>
+                      <IssueTypeBadge issueType={ticket.issueType} />
+                      <span className="ticket-picker-summary">{ticket.summary}</span>
+                    </button>
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div className="ticket-picker-note">
+                {canSearch ? "Search Jira to choose any ticket you can access." : emptyText}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
