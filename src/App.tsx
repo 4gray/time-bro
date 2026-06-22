@@ -943,6 +943,7 @@ export const App = () => {
               isConfigured={isConfigured}
               isLogging={isLogging}
               onLog={handleAddWorklog}
+              onAddPersonalNote={handleAddPersonalNote}
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
               onSelectTicket={setSelectedTicket}

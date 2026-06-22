@@ -12,6 +12,12 @@ interface LogPayload {
   comment?: string;
 }
 
+interface PersonalNotePayload {
+  text: string;
+  timeSpentSeconds: number;
+  startedISO: string;
+}
+
 interface TodayViewProps {
   date: Date;
   selectedTicket?: JiraTicket;
@@ -28,10 +34,13 @@ interface TodayViewProps {
   isConfigured: boolean;
   isLogging: boolean;
   onLog: (payload: LogPayload) => Promise<boolean>;
+  onAddPersonalNote: (payload: PersonalNotePayload) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onSelectTicket: (ticket: JiraTicket) => void;
 }
+
+type ComposerMode = "worklog" | "note";
 
 const PRESETS: Array<{ label: string; seconds: number }> = [
   { label: "15m", seconds: 15 * 60 },
@@ -59,17 +68,20 @@ export const TodayView = ({
   isConfigured,
   isLogging,
   onLog,
+  onAddPersonalNote,
   onEditWorklog,
   onEditPersonalNote,
   onSelectTicket
 }: TodayViewProps) => {
   const [activeKey, setActiveKey] = useState<string | undefined>(selectedTicket?.key ?? ticketOptions[0]?.key);
+  const [composerMode, setComposerMode] = useState<ComposerMode>("worklog");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(2 * 60 * 60);
   const [durationText, setDurationText] = useState("2h 00m");
   const [dateStr, setDateStr] = useState(toLocalDateKey(date));
   const [timeStr, setTimeStr] = useState(`${pad(date.getHours())}:${pad(date.getMinutes())}`);
-  const [note, setNote] = useState("");
+  const [worklogComment, setWorklogComment] = useState("");
+  const [personalNoteText, setPersonalNoteText] = useState("");
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -122,26 +134,46 @@ export const TodayView = ({
   };
 
   const chooseTicket = (ticket: JiraTicket) => {
+    setComposerMode("worklog");
     setActiveKey(ticket.key);
     onSelectTicket(ticket);
     setPickerOpen(false);
   };
 
-  const canSubmit = Boolean(isConfigured && activeTicket && durationSeconds > 0 && !isLogging);
+  const canSubmit =
+    composerMode === "note"
+      ? Boolean(personalNoteText.trim() && durationSeconds > 0 && !isLogging)
+      : Boolean(isConfigured && activeTicket && durationSeconds > 0 && !isLogging);
 
   const handleSubmit = async () => {
-    if (!activeTicket || durationSeconds <= 0) {
+    if (durationSeconds <= 0) {
       return;
     }
     const startedISO = new Date(`${dateStr}T${timeStr}`).toISOString();
+
+    if (composerMode === "note") {
+      const ok = await onAddPersonalNote({
+        text: personalNoteText,
+        timeSpentSeconds: durationSeconds,
+        startedISO
+      });
+      if (ok) {
+        setPersonalNoteText("");
+      }
+      return;
+    }
+
+    if (!activeTicket) {
+      return;
+    }
     const ok = await onLog({
       issueKey: activeTicket.key,
       timeSpentSeconds: durationSeconds,
       startedISO,
-      comment: note.trim() || undefined
+      comment: worklogComment.trim() || undefined
     });
     if (ok) {
-      setNote("");
+      setWorklogComment("");
     }
   };
 
@@ -182,51 +214,85 @@ export const TodayView = ({
 
       <div className="today-body">
         <div className="composer">
-          <div className="field-label">LOGGING TO</div>
-          <div className="composer-picker" ref={pickerRef}>
-            <div className="composer-target-row">
-              {activeTicket ? (
-                <TicketKeyLink
-                  issueKey={activeTicket.key}
-                  url={activeTicket.url}
-                  issueType={activeTicket.issueType}
-                  epic={activeTicket.epic}
-                  keyClassName="composer-target-key"
-                />
-              ) : null}
-              <button
-                type="button"
-                className="composer-target"
-                onClick={() => setPickerOpen((open) => !open)}
-                disabled={ticketOptions.length === 0}
-              >
-                {activeTicket ? (
-                  <span className="composer-target-title">{activeTicket.summary}</span>
-                ) : (
-                  <span className="composer-target-title" style={{ color: "var(--dim-2)" }}>
-                    {isConfigured ? "No assigned tickets — pick one in TICKETS" : "Connect Jira to choose a ticket"}
-                  </span>
-                )}
-                <ChevronDown size={15} color="#5d636f" />
-              </button>
-            </div>
-            {pickerOpen && ticketOptions.length > 0 && (
-              <div className="ticket-picker">
-                {ticketOptions.map((ticket) => (
-                  <button
-                    key={ticket.key}
-                    type="button"
-                    className={`ticket-picker-item ${ticket.key === activeKey ? "active" : ""}`}
-                    onClick={() => chooseTicket(ticket)}
-                  >
-                    <span className="composer-target-key">{ticket.key}</span>
-                    <IssueTypeBadge issueType={ticket.issueType} />
-                    <span className="ticket-picker-summary">{ticket.summary}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="today-mode-tabs" aria-label="Entry type">
+            <button
+              type="button"
+              className={composerMode === "worklog" ? "active" : ""}
+              onClick={() => setComposerMode("worklog")}
+            >
+              <MessageSquare size={13} strokeWidth={1.8} />
+              Jira worklog
+            </button>
+            <button
+              type="button"
+              className={composerMode === "note" ? "active" : ""}
+              onClick={() => {
+                setComposerMode("note");
+                setPickerOpen(false);
+              }}
+            >
+              <PenLine size={13} strokeWidth={1.9} />
+              Personal note
+            </button>
           </div>
+
+          {composerMode === "worklog" ? (
+            <>
+              <div className="field-label composer-section compact">LOGGING TO</div>
+              <div className="composer-picker" ref={pickerRef}>
+                <div className="composer-target-row">
+                  {activeTicket ? (
+                    <TicketKeyLink
+                      issueKey={activeTicket.key}
+                      url={activeTicket.url}
+                      issueType={activeTicket.issueType}
+                      epic={activeTicket.epic}
+                      keyClassName="composer-target-key"
+                    />
+                  ) : null}
+                  <button
+                    type="button"
+                    className="composer-target"
+                    onClick={() => setPickerOpen((open) => !open)}
+                    disabled={ticketOptions.length === 0}
+                  >
+                    {activeTicket ? (
+                      <span className="composer-target-title">{activeTicket.summary}</span>
+                    ) : (
+                      <span className="composer-target-title" style={{ color: "var(--dim-2)" }}>
+                        {isConfigured ? "No assigned tickets — pick one in TICKETS" : "Connect Jira to choose a ticket"}
+                      </span>
+                    )}
+                    <ChevronDown size={15} color="#5d636f" />
+                  </button>
+                </div>
+                {pickerOpen && ticketOptions.length > 0 && (
+                  <div className="ticket-picker">
+                    {ticketOptions.map((ticket) => (
+                      <button
+                        key={ticket.key}
+                        type="button"
+                        className={`ticket-picker-item ${ticket.key === activeKey ? "active" : ""}`}
+                        onClick={() => chooseTicket(ticket)}
+                      >
+                        <span className="composer-target-key">{ticket.key}</span>
+                        <IssueTypeBadge issueType={ticket.issueType} />
+                        <span className="ticket-picker-summary">{ticket.summary}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="today-local-target">
+              <span>
+                <PenLine size={13} strokeWidth={1.9} />
+                LOCAL
+              </span>
+              <strong>Personal note</strong>
+            </div>
+          )}
 
           <div className="field-label composer-section">DURATION</div>
           <div className="duration-row">
@@ -265,22 +331,36 @@ export const TodayView = ({
             </label>
           </div>
 
-          <div className="field-label composer-section">WORK DESCRIPTION</div>
+          <div className="field-label composer-section">
+            {composerMode === "note" ? "PERSONAL NOTE" : "WORK DESCRIPTION"}
+          </div>
           <textarea
             className="note-textarea"
-            placeholder="Add a note… @ to mention a teammate"
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={2}
+            placeholder={
+              composerMode === "note"
+                ? "What did you spend time on? e.g. planning, mentoring, ops"
+                : "Add a note… @ to mention a teammate"
+            }
+            value={composerMode === "note" ? personalNoteText : worklogComment}
+            onChange={(event) =>
+              composerMode === "note" ? setPersonalNoteText(event.target.value) : setWorklogComment(event.target.value)
+            }
+            rows={composerMode === "note" ? 3 : 2}
           />
-          <div className="field-hint tight">OPTIONAL · SYNCS TO THE JIRA WORKLOG COMMENT</div>
+          <div className="field-hint tight">
+            {composerMode === "note" ? "REQUIRED · SAVES LOCALLY ON THIS DEVICE" : "OPTIONAL · SYNCS TO THE JIRA WORKLOG COMMENT"}
+          </div>
 
           <div className="composer-submit">
             <button type="button" className="submit-button" onClick={handleSubmit} disabled={!canSubmit}>
               {isLogging ? <Loader2 className="spin" size={15} /> : null}
-              {activeTicket ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}` : "Log time"}
+              {composerMode === "note"
+                ? `Save ${formatClock(durationSeconds)} local note`
+                : activeTicket
+                  ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
+                  : "Log time"}
             </button>
-            <span className="submit-hint">⌘⏎ · LOGS TO TODAY</span>
+            <span className="submit-hint">{composerMode === "note" ? "LOCAL · TODAY" : "⌘⏎ · LOGS TO TODAY"}</span>
           </div>
 
           <div className="entries-title">

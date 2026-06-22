@@ -71,12 +71,15 @@ describe("TodayView", () => {
         isConfigured={true}
         isLogging={false}
         onLog={async () => true}
+        onAddPersonalNote={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onSelectTicket={() => undefined}
       />
     );
 
+    expect(markup).toContain("Jira worklog");
+    expect(markup).toContain("Personal note");
     expect(markup).toContain("Open FTDM-397 in Jira");
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
     expect(markup).toContain("Open FTDM-401 in Jira");
