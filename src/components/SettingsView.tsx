@@ -187,8 +187,7 @@ export const SettingsView = ({
               </button>
             </div>
             <small className="field-hint-text">
-              Use a regular token for this MVP. Scoped-token support would need read:jira-work and read:jira-user via
-              Atlassian's gateway.
+              In Atlassian, choose Create token without scopes. Do not use the scoped token flow for TimeBro.
             </small>
           </label>
 

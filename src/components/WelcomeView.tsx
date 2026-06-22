@@ -217,7 +217,7 @@ export const WelcomeView = ({
 
               <div className="welcome-help">
                 <KeyRound size={14} />
-                <span>In Atlassian, head to Security, API tokens, Create, then paste it here.</span>
+                <span>In Atlassian, head to Security, API tokens, then use Create token, the option without scopes.</span>
               </div>
 
               <div className="welcome-privacy">

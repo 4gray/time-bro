@@ -12,10 +12,10 @@ const settings: AppSettings = {
   remindersEnabled: true
 };
 
-const jiraSearchResponse = () =>
+const jiraSearchResponse = (issues: unknown[] = []) =>
   new Response(
     JSON.stringify({
-      issues: [],
+      issues,
       isLast: true
     }),
     {
@@ -95,5 +95,39 @@ describe("searchJiraTickets", () => {
 
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
     expect(requestedUrl.searchParams.get("jql")).toBe("created <= now() ORDER BY created ASC");
+  });
+
+  it("requests and normalizes Jira issue status fields", async () => {
+    const fetchMock = vi.fn(async () =>
+      jiraSearchResponse([
+        {
+          id: "10001",
+          key: "OPS-77",
+          fields: {
+            summary: "Pair on incident review notes",
+            project: { key: "OPS", name: "Operations" },
+            status: {
+              name: "Refused",
+              statusCategory: { key: "completed" }
+            }
+          }
+        }
+      ])
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await searchJiraTickets({
+      settings,
+      query: "incident",
+      sortMode: "createdDesc"
+    });
+
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("status");
+    expect(result.issues[0]).toMatchObject({
+      key: "OPS-77",
+      statusName: "Refused",
+      statusCategory: "done"
+    });
   });
 });

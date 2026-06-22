@@ -445,9 +445,20 @@ const DEFAULT_SEARCH_TICKET_LIMIT = 20;
 const MAX_SEARCH_TICKET_LIMIT = 100;
 
 const normalizeStatusCategory = (key?: string): TicketStatusCategory => {
-  if (key === "new" || key === "indeterminate" || key === "done") {
-    return key;
+  const normalized = key?.trim().toLowerCase();
+
+  if (normalized === "new" || normalized === "to-do" || normalized === "todo") {
+    return "new";
   }
+
+  if (normalized === "indeterminate" || normalized === "in-flight" || normalized === "inflight") {
+    return "indeterminate";
+  }
+
+  if (normalized === "done" || normalized === "completed" || normalized === "complete") {
+    return "done";
+  }
+
   return "unknown";
 };
 

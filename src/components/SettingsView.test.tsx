@@ -46,6 +46,7 @@ describe("SettingsView", () => {
     const markup = renderSettings();
 
     expect(markup).toContain("Jira API token");
+    expect(markup).toContain("Create token without scopes");
     expect(markup).toContain('type="password"');
     expect(markup).toContain('aria-label="Show Jira API token"');
     expect(markup).toContain("jira-token-123");

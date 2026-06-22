@@ -12,6 +12,7 @@ import {
 import type { JiraTicket, TicketSortMode } from "../../shared/types";
 import { IssueTypeBadge } from "./IssueTypeBadge";
 import { TicketKeyLink } from "./TicketKeyLink";
+import { TicketStatusBadge } from "./TicketStatusBadge";
 
 export type TicketSearchHandler = (
   query: string,
@@ -486,6 +487,7 @@ export const TicketPicker = ({
                       <span className="composer-target-key">{ticket.key}</span>
                       <IssueTypeBadge issueType={ticket.issueType} />
                       <span className="ticket-picker-summary">{ticket.summary}</span>
+                      <TicketStatusBadge statusName={ticket.statusName} statusCategory={ticket.statusCategory} />
                     </button>
                   ))}
                 </div>

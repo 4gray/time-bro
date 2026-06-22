@@ -943,6 +943,55 @@ a {
   color: var(--amber-soft);
 }
 
+.ticket-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  max-width: 132px;
+  min-width: 0;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid rgba(117, 114, 108, 0.42);
+  border-radius: 6px;
+  background: rgba(117, 114, 108, 0.1);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ticket-status-badge.is-new {
+  border-color: rgba(79, 124, 255, 0.42);
+  background: rgba(79, 124, 255, 0.1);
+  color: var(--blue-soft);
+}
+
+.ticket-status-badge.is-indeterminate {
+  border-color: rgba(224, 164, 74, 0.48);
+  background: rgba(224, 164, 74, 0.1);
+  color: var(--amber-soft);
+}
+
+.ticket-status-badge.is-done {
+  border-color: rgba(62, 207, 142, 0.44);
+  background: rgba(62, 207, 142, 0.1);
+  color: var(--green);
+}
+
+.ticket-status-badge-text {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .epic-pill {
   display: inline-flex;
   align-items: center;
@@ -985,6 +1034,12 @@ a {
     background: #fff7e6;
     color: #9a6a16;
   }
+
+  :root:not(.theme-dark) .ticket-status-badge.is-done {
+    border-color: #94d8bd;
+    background: #edf9f3;
+    color: #15885d;
+  }
 }
 
 :root.theme-light .issue-type-badge {
@@ -997,6 +1052,12 @@ a {
   border-color: #e5c06d;
   background: #fff7e6;
   color: #9a6a16;
+}
+
+:root.theme-light .ticket-status-badge.is-done {
+  border-color: #94d8bd;
+  background: #edf9f3;
+  color: #15885d;
 }
 
 .day-log-key {
@@ -2079,7 +2140,7 @@ a {
 
 .ticket-picker-item {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
   width: 100%;
   text-align: left;
@@ -2103,6 +2164,16 @@ a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ticket-picker-item .ticket-status-badge {
+  margin-left: auto;
+}
+
+@media (max-width: 430px) {
+  .ticket-picker-item .ticket-status-badge {
+    max-width: 96px;
+  }
 }
 
 .duration-input {
