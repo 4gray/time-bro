@@ -205,24 +205,26 @@ export const App = () => {
     [currentDate, personalNotes, settings, syncResult, weekOverride, weekStart]
   );
 
+  const visibleSyncResult = syncResult?.weekKey === weekState.weekKey ? syncResult : undefined;
+
   const isConfigured = isJiraConfigured(settings);
 
   const hoursByKey = useMemo(() => {
     const map: Record<string, number> = {};
-    if (syncResult) {
-      for (const bucket of Object.values(syncResult.daySummaries)) {
+    if (visibleSyncResult) {
+      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
         for (const issue of bucket.issues) {
           map[issue.key] = (map[issue.key] ?? 0) + issue.loggedSeconds / 3600;
         }
       }
     }
     return map;
-  }, [syncResult]);
+  }, [visibleSyncResult]);
 
   const issueUrlsByKey = useMemo(() => {
     const map: Record<string, string> = {};
-    if (syncResult) {
-      for (const bucket of Object.values(syncResult.daySummaries)) {
+    if (visibleSyncResult) {
+      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
         for (const issue of bucket.issues) {
           if (issue.url) {
             map[issue.key] = issue.url;
@@ -231,12 +233,12 @@ export const App = () => {
       }
     }
     return map;
-  }, [syncResult]);
+  }, [visibleSyncResult]);
 
   const issueTypesByKey = useMemo(() => {
     const map: Record<string, JiraIssueTypeInfo> = {};
-    if (syncResult) {
-      for (const bucket of Object.values(syncResult.daySummaries)) {
+    if (visibleSyncResult) {
+      for (const bucket of Object.values(visibleSyncResult.daySummaries)) {
         for (const issue of bucket.issues) {
           if (issue.issueType) {
             map[issue.key] = issue.issueType;
@@ -256,11 +258,11 @@ export const App = () => {
     }
 
     return map;
-  }, [selectedTicket, syncResult, tickets]);
+  }, [selectedTicket, tickets, visibleSyncResult]);
 
   const todayKey = toLocalDateKey(currentDate);
   const todaySummary = weekState.days.find((day) => day.dateKey === todayKey);
-  const todayBucket = syncResult?.daySummaries[todayKey];
+  const todayBucket = visibleSyncResult?.daySummaries[todayKey];
   const todayWorklogs = todayBucket?.worklogs ?? [];
   const todayPersonalNotes = todaySummary?.personalNotes ?? [];
   const todayTrackedHours = todaySummary?.trackedHours ?? (todayBucket?.trackedSeconds ?? 0) / 3600;
@@ -698,6 +700,25 @@ export const App = () => {
     setWeekStart(getWeekBounds(date).weekStart);
   };
 
+  const goToPreviousWeek = () => {
+    setWeekStart((current) => addDays(current, -7));
+  };
+
+  const goToCurrentWeek = () => {
+    goToWeek(currentDate);
+  };
+
+  const goToNextWeek = () => {
+    setWeekStart((current) => addDays(current, 7));
+  };
+
+  const handleViewChange = (nextView: AppView) => {
+    if (nextView === "today" || nextView === "tickets") {
+      goToCurrentWeek();
+    }
+    setView(nextView);
+  };
+
   const handleToggleFavorite = (key: string) => {
     setFavoriteKeys((current) => {
       const next = current.includes(key) ? current.filter((candidate) => candidate !== key) : [...current, key];
@@ -1070,6 +1091,35 @@ export const App = () => {
     setAddModalDate(selectedDate);
   };
 
+  const openTrackingShortcut = useCallback(() => {
+    if (!isConfigured || welcomeConnected || isBooting || addModalDate || editingWorklog || editingPersonalNote) {
+      return;
+    }
+
+    setWeekStart(getWeekBounds(currentDate).weekStart);
+    setEditingWorklog(undefined);
+    setEditingPersonalNote(undefined);
+    setLogError(undefined);
+
+    const selectedDate = new Date(currentDate);
+    selectedDate.setSeconds(0, 0);
+    setAddModalDate(selectedDate);
+  }, [addModalDate, currentDate, editingPersonalNote, editingWorklog, isBooting, isConfigured, welcomeConnected]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) {
+        return;
+      }
+
+      event.preventDefault();
+      openTrackingShortcut();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [openTrackingShortcut]);
+
   const openEditWorklog = (worklog: JiraWorklog) => {
     setAddModalDate(undefined);
     setLogError(undefined);
@@ -1114,7 +1164,7 @@ export const App = () => {
         <Sidebar
           view={view}
           collapsed={sidebarCollapsed}
-          onViewChange={setView}
+          onViewChange={handleViewChange}
           onToggleCollapse={() => setSidebarCollapsed((current) => !current)}
           syncLabel={syncLabel}
           syncState={syncState}
@@ -1156,9 +1206,9 @@ export const App = () => {
               isSyncing={isSyncing}
               isConfigured={isConfigured}
               onSync={handleSync}
-              onPreviousWeek={() => setWeekStart((current) => addDays(current, -7))}
-              onCurrentWeek={() => goToWeek(currentDate)}
-              onNextWeek={() => setWeekStart((current) => addDays(current, 7))}
+              onPreviousWeek={goToPreviousWeek}
+              onCurrentWeek={goToCurrentWeek}
+              onNextWeek={goToNextWeek}
               onAddTime={openAddTime}
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
@@ -1178,7 +1228,12 @@ export const App = () => {
               onLog={handleLogTicket}
             />
           ) : view === "reports" ? (
-            <ReportsView weekState={weekState} onCurrentWeek={() => goToWeek(currentDate)} />
+            <ReportsView
+              weekState={weekState}
+              onPreviousWeek={goToPreviousWeek}
+              onCurrentWeek={goToCurrentWeek}
+              onNextWeek={goToNextWeek}
+            />
           ) : (
             <SettingsView
               draft={settingsDraft}

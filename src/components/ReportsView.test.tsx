@@ -55,7 +55,14 @@ const weekState: WeekState = {
 
 describe("ReportsView", () => {
   it("shows ticket titles and Jira links in the by-ticket panel", () => {
-    const markup = renderToStaticMarkup(<ReportsView weekState={weekState} onCurrentWeek={() => undefined} />);
+    const markup = renderToStaticMarkup(
+      <ReportsView
+        weekState={weekState}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+      />
+    );
 
     expect(markup).toContain("FTDM-397");
     expect(markup).toContain("Restructure the access domain in nx monorepo");
@@ -64,5 +71,8 @@ describe("ReportsView", () => {
     expect(markup).toContain("EPIC");
     expect(markup).toContain("Personal notes");
     expect(markup).toContain("LOCAL");
+    expect(markup).toContain("THIS WEEK");
+    expect(markup).toContain("Previous week");
+    expect(markup).toContain("Next week");
   });
 });

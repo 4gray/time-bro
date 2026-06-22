@@ -43,7 +43,8 @@ export const buildWeekState = (
   const weekEndExclusive = addDays(weekStart, 7);
   const weekKey = toLocalDateKey(weekStart);
   const todayKey = toLocalDateKey(today);
-  const skippedDates = override.skippedDates;
+  const skippedDates = override.weekKey === weekKey ? override.skippedDates : [];
+  const effectiveSyncResult = syncResult?.weekKey === weekKey ? syncResult : undefined;
   const workDates = Array.from({ length: 5 }, (_value, index) => addDays(weekStart, index));
   const notesByDate = personalNotes.reduce<Record<string, PersonalNote[]>>((notes, note) => {
     if (!notes[note.dateKey]) {
@@ -68,7 +69,7 @@ export const buildWeekState = (
     const isConfiguredWorkingDay = settings.workingDays.includes(weekday);
     const isSkipped = skippedDates.includes(dateKey);
     const targetHours = isConfiguredWorkingDay && !isSkipped ? dailyTargetHours : 0;
-    const bucket = syncResult?.daySummaries[dateKey];
+    const bucket = effectiveSyncResult?.daySummaries[dateKey];
     const dayNotes = [...(notesByDate[dateKey] ?? [])].sort(
       (a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime()
     );
@@ -90,7 +91,7 @@ export const buildWeekState = (
     };
   });
 
-  const jiraTrackedWeekHours = (syncResult?.trackedSeconds ?? 0) / 3600;
+  const jiraTrackedWeekHours = (effectiveSyncResult?.trackedSeconds ?? 0) / 3600;
   const personalNoteHours = personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
   const trackedWeekHours = jiraTrackedWeekHours + personalNoteHours;
 

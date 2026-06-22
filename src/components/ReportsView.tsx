@@ -2,10 +2,13 @@ import { useMemo } from "react";
 import type { JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { TicketKeyLink } from "./TicketKeyLink";
+import { WeekNavigator } from "./WeekNavigator";
 
 interface ReportsViewProps {
   weekState: WeekState;
+  onPreviousWeek: () => void;
   onCurrentWeek: () => void;
+  onNextWeek: () => void;
 }
 
 const clampPct = (value: number) => `${Math.min(Math.max(value, 0), 100)}%`;
@@ -28,7 +31,7 @@ const buildCsv = (weekState: WeekState) => {
   return rows.join("\n");
 };
 
-export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
+export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWeek }: ReportsViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
   const dailyTarget = weekState.dailyTargetHours || 8;
@@ -135,9 +138,11 @@ export const ReportsView = ({ weekState, onCurrentWeek }: ReportsViewProps) => {
         </div>
 
         <div className="reports-actions">
-          <button type="button" className="pill" onClick={onCurrentWeek}>
-            THIS WEEK
-          </button>
+          <WeekNavigator
+            onPreviousWeek={onPreviousWeek}
+            onCurrentWeek={onCurrentWeek}
+            onNextWeek={onNextWeek}
+          />
           <button type="button" className="pill" onClick={handleExport}>
             EXPORT CSV
           </button>

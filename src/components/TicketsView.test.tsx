@@ -44,5 +44,8 @@ describe("TicketsView", () => {
     expect(markup).toContain("SUB");
     expect(markup).toContain("Epic: Explorer");
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-300");
+    expect(markup).toContain("2h logged this week");
+    expect(markup).not.toContain("THIS WEEK");
+    expect(markup).not.toContain("⌘K SEARCH");
   });
 });

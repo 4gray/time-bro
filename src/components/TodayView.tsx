@@ -289,7 +289,7 @@ export const TodayView = ({
             placeholder={
               composerMode === "note"
                 ? "What did you spend time on? e.g. planning, mentoring, ops"
-                : "Добавить заметку"
+                : "Add note"
             }
             value={composerMode === "note" ? personalNoteText : worklogComment}
             onChange={(event) =>

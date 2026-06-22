@@ -115,8 +115,6 @@ export const TicketsView = ({
         <div className="filter-row">
           <span className="filter-chip active">ASSIGNEE: ME</span>
           <span className="filter-chip">STATUS: OPEN</span>
-          <div className="filter-spacer" />
-          <span className="filter-chip muted">⌘K SEARCH</span>
         </div>
       </div>
 

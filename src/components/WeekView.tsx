@@ -9,6 +9,7 @@ import {
   toLocalDateKey
 } from "../utils/date";
 import { TicketKeyLink } from "./TicketKeyLink";
+import { WeekNavigator } from "./WeekNavigator";
 
 interface WeekViewProps {
   weekState: WeekState;
@@ -376,15 +377,11 @@ export const WeekView = ({
             ADD TIME
           </button>
           <div className="week-divider" />
-          <button type="button" className="week-nav-arrow" onClick={onPreviousWeek} aria-label="Previous week">
-            ‹
-          </button>
-          <button type="button" className="pill" onClick={onCurrentWeek}>
-            THIS WEEK
-          </button>
-          <button type="button" className="week-nav-arrow" onClick={onNextWeek} aria-label="Next week">
-            ›
-          </button>
+          <WeekNavigator
+            onPreviousWeek={onPreviousWeek}
+            onCurrentWeek={onCurrentWeek}
+            onNextWeek={onNextWeek}
+          />
         </div>
       </div>
 

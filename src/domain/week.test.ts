@@ -98,6 +98,50 @@ describe("week calculations", () => {
     expect(state.days[1].missingHours).toBe(0);
   });
 
+  it("ignores stale sync and override data from a different selected week", () => {
+    const syncResult: SyncResult = {
+      weekKey: "2026-06-01",
+      weekStartISO: new Date(2026, 5, 1).toISOString(),
+      weekEndExclusiveISO: new Date(2026, 5, 8).toISOString(),
+      syncedAt: new Date(2026, 5, 2, 16).toISOString(),
+      accountId: "account-1",
+      trackedSeconds: 9 * 3600,
+      issueCount: 1,
+      worklogCount: 1,
+      daySummaries: {
+        "2026-06-02": {
+          trackedSeconds: 9 * 3600,
+          issues: [
+            {
+              id: "10000",
+              key: "APP-42",
+              summary: "Build tracker",
+              loggedSeconds: 9 * 3600
+            }
+          ],
+          worklogs: []
+        }
+      }
+    };
+
+    const state = buildWeekState(
+      monday,
+      DEFAULT_SETTINGS,
+      { weekKey: "2026-06-01", skippedDates: ["2026-06-10"] },
+      syncResult,
+      undefined,
+      new Date(2026, 5, 9, 9)
+    );
+
+    expect(state.weekKey).toBe("2026-06-08");
+    expect(state.jiraTrackedWeekHours).toBe(0);
+    expect(state.trackedWeekHours).toBe(0);
+    expect(state.weeklyTargetHours).toBe(40);
+    expect(state.remainingWeekHours).toBe(40);
+    expect(state.skippedDates).toEqual([]);
+    expect(state.days[2].isSkipped).toBe(false);
+  });
+
   it("counts local personal notes toward day and week tracking", () => {
     const timestamp = new Date(2026, 5, 9, 10).toISOString();
     const state = buildWeekState(

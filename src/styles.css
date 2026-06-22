@@ -674,8 +674,8 @@ a {
 .week-nav {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding-bottom: 6px;
+  gap: 10px;
+  flex: none;
 }
 
 .week-nav-arrow {
@@ -2554,6 +2554,8 @@ a {
 
 .filter-row {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 24px;
 }
@@ -2574,10 +2576,6 @@ a {
 
 .filter-chip.muted {
   color: var(--dim-2);
-}
-
-.filter-spacer {
-  flex: 1;
 }
 
 .tickets-body {
