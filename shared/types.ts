@@ -156,6 +156,7 @@ export interface SearchTicketsRequest {
   limit?: number;
   sortMode?: TicketSortMode;
   assignedOnly?: boolean;
+  allowEmptyQuery?: boolean;
 }
 
 export interface SearchTicketsResult {

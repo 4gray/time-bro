@@ -31,10 +31,10 @@ const searchedTicket: JiraTicket = {
 };
 
 describe("buildTicketPickerGroups", () => {
-  it("keeps the assigned picker list unchanged before searching", () => {
+  it("keeps the assigned picker list unchanged before browse results arrive", () => {
     const groups = buildTicketPickerGroups({
       ticketOptions: [assignedTicket],
-      searchResults: [searchedTicket],
+      searchResults: [],
       searchQuery: ""
     });
 
@@ -42,6 +42,27 @@ describe("buildTicketPickerGroups", () => {
       {
         id: "options",
         label: undefined,
+        tickets: [assignedTicket]
+      }
+    ]);
+  });
+
+  it("shows Jira browse results ahead of assigned tickets before text search", () => {
+    const groups = buildTicketPickerGroups({
+      ticketOptions: [assignedTicket, searchedTicket],
+      searchResults: [searchedTicket],
+      searchQuery: ""
+    });
+
+    expect(groups).toEqual([
+      {
+        id: "search",
+        label: "JIRA TICKETS",
+        tickets: [searchedTicket]
+      },
+      {
+        id: "options",
+        label: "ASSIGNED / FAVORITES",
         tickets: [assignedTicket]
       }
     ]);

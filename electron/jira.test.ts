@@ -64,4 +64,36 @@ describe("searchJiraTickets", () => {
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
     expect(requestedUrl.searchParams.get("jql")).toBe('(text ~ "metadata") ORDER BY created DESC');
   });
+
+  it("can browse assigned Jira tickets without a text query", async () => {
+    const fetchMock = vi.fn(async () => jiraSearchResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await searchJiraTickets({
+      settings,
+      query: "",
+      assignedOnly: true,
+      allowEmptyQuery: true,
+      sortMode: "createdDesc",
+      limit: 20
+    });
+
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestedUrl.searchParams.get("jql")).toBe("assignee = currentUser() ORDER BY created DESC");
+  });
+
+  it("can browse accessible Jira tickets without the assigned filter", async () => {
+    const fetchMock = vi.fn(async () => jiraSearchResponse());
+    vi.stubGlobal("fetch", fetchMock);
+
+    await searchJiraTickets({
+      settings,
+      query: "",
+      allowEmptyQuery: true,
+      sortMode: "createdAsc"
+    });
+
+    const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestedUrl.searchParams.get("jql")).toBe("created <= now() ORDER BY created ASC");
+  });
 });

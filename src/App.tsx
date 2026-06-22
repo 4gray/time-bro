@@ -312,10 +312,17 @@ export const App = () => {
   }, [isConfigured, settings]);
 
   const handleSearchTickets = useCallback(
-    async (query: string, sortMode: TicketSortMode = "createdDesc", limit = 20, assignedOnly = false) => {
+    async (
+      query: string,
+      sortMode: TicketSortMode = "createdDesc",
+      limit = 20,
+      assignedOnly = false,
+      allowEmptyQuery = false
+    ) => {
       const normalizedQuery = query.trim().toLowerCase();
+      const canBrowseWithoutQuery = allowEmptyQuery && normalizedQuery.length === 0;
 
-      if (!isConfigured || normalizedQuery.length < 2) {
+      if (!isConfigured || (normalizedQuery.length < 2 && !canBrowseWithoutQuery)) {
         return [];
       }
 
@@ -328,16 +335,25 @@ export const App = () => {
           byKey.set(ticket.key, ticket);
         }
 
-        const matches = [...byKey.values()]
-          .filter((ticket) =>
-            [ticket.key, ticket.summary, ticket.projectName, ticket.statusName]
-              .some((value) => value.toLowerCase().includes(normalizedQuery))
-          );
+        const matches = canBrowseWithoutQuery
+          ? [...byKey.values()]
+          : [...byKey.values()].filter((ticket) =>
+              [ticket.key, ticket.summary, ticket.projectName, ticket.statusName].some((value) =>
+                value.toLowerCase().includes(normalizedQuery)
+              )
+            );
 
         return [...matches].sort(compareTicketsByCreated(sortMode)).slice(0, limit);
       }
 
-      const result = await nativeApi.searchJiraTickets({ settings, query, limit, sortMode, assignedOnly });
+      const result = await nativeApi.searchJiraTickets({
+        settings,
+        query,
+        limit,
+        sortMode,
+        assignedOnly,
+        allowEmptyQuery
+      });
       return result.issues;
     },
     [demoScenario, isConfigured, settings]

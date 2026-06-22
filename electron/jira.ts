@@ -566,21 +566,32 @@ const ticketSearchOrder = (sortMode?: TicketSortMode) => {
 export const searchJiraTickets = async (request: SearchTicketsRequest): Promise<SearchTicketsResult> => {
   const { settings } = request;
   const query = normalizeTicketSearchQuery(request.query);
+  const canBrowseWithoutQuery = request.allowEmptyQuery === true && query.length === 0;
 
-  if (query.length < 2) {
+  if (query.length < 2 && !canBrowseWithoutQuery) {
     return { query, issues: [] };
   }
 
-  const clauses = [`text ~ "${escapeJqlString(query)}"`];
-  const issueKey = issueKeyFromQuery(query);
+  const clauses: string[] = [];
 
-  if (issueKey) {
-    clauses.unshift(`issuekey = ${issueKey}`);
+  if (request.assignedOnly) {
+    clauses.push("assignee = currentUser()");
   }
 
-  const matchJql = `(${Array.from(new Set(clauses)).join(" OR ")})`;
-  const scopeJql = request.assignedOnly ? `assignee = currentUser() AND ${matchJql}` : matchJql;
-  const jql = `${scopeJql} ORDER BY ${ticketSearchOrder(request.sortMode)}`;
+  if (query.length >= 2) {
+    const textClauses = [`text ~ "${escapeJqlString(query)}"`];
+    const issueKey = issueKeyFromQuery(query);
+
+    if (issueKey) {
+      textClauses.unshift(`issuekey = ${issueKey}`);
+    }
+
+    clauses.push(`(${Array.from(new Set(textClauses)).join(" OR ")})`);
+  } else if (!request.assignedOnly) {
+    clauses.push("created <= now()");
+  }
+
+  const jql = `${clauses.join(" AND ")} ORDER BY ${ticketSearchOrder(request.sortMode)}`;
   const issues = await searchTickets(settings, jql, clampTicketSearchLimit(request.limit));
 
   return {

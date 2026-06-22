@@ -17,7 +17,8 @@ export type TicketSearchHandler = (
   query: string,
   sortMode?: TicketSortMode,
   limit?: number,
-  assignedOnly?: boolean
+  assignedOnly?: boolean,
+  allowEmptyQuery?: boolean
 ) => Promise<JiraTicket[]>;
 
 interface TicketPickerGroup {
@@ -142,25 +143,26 @@ export const buildTicketPickerGroups = ({
   sortMode?: TicketSortMode;
 }): TicketPickerGroup[] => {
   const queryHasSearch = searchQuery.trim().length >= 2;
+  const hasBrowseResults = searchQuery.trim().length === 0 && searchResults.length > 0;
   const searchKeys = new Set(searchResults.map((ticket) => ticket.key));
   const groups: TicketPickerGroup[] = [];
 
-  if (queryHasSearch && searchResults.length > 0) {
+  if ((queryHasSearch || hasBrowseResults) && searchResults.length > 0) {
     groups.push({
       id: "search",
-      label: "JIRA SEARCH",
+      label: queryHasSearch ? "JIRA SEARCH" : "JIRA TICKETS",
       tickets: sortTicketsForPicker(searchResults, sortMode)
     });
   }
 
-  const optionTickets = queryHasSearch
+  const optionTickets = queryHasSearch || hasBrowseResults
     ? ticketOptions.filter((ticket) => !searchKeys.has(ticket.key))
     : ticketOptions;
 
   if (optionTickets.length > 0) {
     groups.push({
       id: "options",
-      label: queryHasSearch && searchResults.length > 0 ? "ASSIGNED / FAVORITES" : undefined,
+      label: (queryHasSearch || hasBrowseResults) && searchResults.length > 0 ? "ASSIGNED / FAVORITES" : undefined,
       tickets: sortTicketsForPicker(optionTickets, sortMode)
     });
   }
@@ -205,6 +207,8 @@ export const TicketPicker = ({
   const searchKeyRef = useRef("");
   const canSearch = Boolean(searchTickets) && isConfigured && !locked;
   const trimmedQuery = searchQuery.trim();
+  const canBrowseWithoutQuery = trimmedQuery.length === 0;
+  const canRunJiraSearch = canBrowseWithoutQuery || trimmedQuery.length >= 2;
   const rowClassName = variant === "modal" ? "modal-ticket-row" : "composer-target-row";
   const buttonClassName =
     variant === "modal" ? `modal-ticket ${locked ? "is-locked" : ""}` : "composer-target";
@@ -218,7 +222,7 @@ export const TicketPicker = ({
   const visibleTicketCount = visibleGroups.reduce((sum, group) => sum + group.tickets.length, 0);
   const canRequestMoreSearchResults =
     canSearch &&
-    trimmedQuery.length >= 2 &&
+    canRunJiraSearch &&
     searchStatus !== "loading" &&
     searchResults.length >= searchLimit &&
     searchLimit < MAX_SEARCH_LIMIT;
@@ -257,7 +261,7 @@ export const TicketPicker = ({
   }, [assignedOnly, pickerOpen, searchQuery, sortMode]);
 
   useEffect(() => {
-    if (!pickerOpen || !canSearch || !searchTickets || trimmedQuery.length < 2) {
+    if (!pickerOpen || !canSearch || !searchTickets || !canRunJiraSearch) {
       searchRequestRef.current += 1;
       searchKeyRef.current = "";
       setSearchResults([]);
@@ -278,7 +282,7 @@ export const TicketPicker = ({
     setSearchError(undefined);
 
     const timeoutId = window.setTimeout(() => {
-      searchTickets(trimmedQuery, sortMode, searchLimit, assignedOnly)
+      searchTickets(trimmedQuery, sortMode, searchLimit, assignedOnly, canBrowseWithoutQuery)
         .then((issues) => {
           if (searchRequestRef.current !== requestId) {
             return;
@@ -299,7 +303,17 @@ export const TicketPicker = ({
     }, 260);
 
     return () => window.clearTimeout(timeoutId);
-  }, [assignedOnly, canSearch, pickerOpen, searchLimit, searchTickets, sortMode, trimmedQuery]);
+  }, [
+    assignedOnly,
+    canBrowseWithoutQuery,
+    canRunJiraSearch,
+    canSearch,
+    pickerOpen,
+    searchLimit,
+    searchTickets,
+    sortMode,
+    trimmedQuery
+  ]);
 
   const chooseTicket = (ticket: JiraTicket) => {
     onSelect(ticket);
