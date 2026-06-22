@@ -1,7 +1,6 @@
 import {
   Bell,
   CalendarDays,
-  CheckCircle2,
   ExternalLink,
   Eye,
   EyeOff,
@@ -15,7 +14,7 @@ import {
   TestTube2
 } from "lucide-react";
 import { useState } from "react";
-import type { AppSettings, JiraConnectionResult, WeekdayNumber } from "../../shared/types";
+import type { AppSettings, WeekdayNumber } from "../../shared/types";
 import type { ThemeMode } from "./Sidebar";
 
 interface SettingsViewProps {
@@ -24,8 +23,6 @@ interface SettingsViewProps {
   onSave: () => void;
   onTestConnection: () => void;
   isTesting: boolean;
-  testResult?: JiraConnectionResult;
-  savedMessage?: string;
   effectiveTheme: ThemeMode;
   onSelectTheme: (theme: ThemeMode) => void;
 }
@@ -46,8 +43,6 @@ export const SettingsView = ({
   onSave,
   onTestConnection,
   isTesting,
-  testResult,
-  savedMessage,
   effectiveTheme,
   onSelectTheme
 }: SettingsViewProps) => {
@@ -82,8 +77,6 @@ export const SettingsView = ({
           Save settings
         </button>
       </div>
-
-      {savedMessage && <div className="callout success">{savedMessage}</div>}
 
       <section className="settings-grid">
         <form className="settings-panel" onSubmit={(event) => event.preventDefault()}>
@@ -169,12 +162,6 @@ export const SettingsView = ({
             </button>
           </div>
 
-          {testResult && (
-            <div className={`callout ${testResult.ok ? "success" : "error"}`}>
-              {testResult.ok && <CheckCircle2 size={16} />}
-              <span>{testResult.message}</span>
-            </div>
-          )}
         </form>
 
         <div className="settings-panel">

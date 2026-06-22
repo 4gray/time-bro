@@ -27,8 +27,6 @@ interface TodayViewProps {
   remindersEnabled: boolean;
   isConfigured: boolean;
   isLogging: boolean;
-  logError?: string;
-  logMessage?: string;
   onLog: (payload: LogPayload) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
@@ -60,8 +58,6 @@ export const TodayView = ({
   remindersEnabled,
   isConfigured,
   isLogging,
-  logError,
-  logMessage,
   onLog,
   onEditWorklog,
   onEditPersonalNote,
@@ -286,12 +282,6 @@ export const TodayView = ({
             </button>
             <span className="submit-hint">⌘⏎ · LOGS TO TODAY</span>
           </div>
-
-          {(logError || logMessage) && (
-            <div className={`callout ${logError ? "error" : "success"}`} style={{ margin: "16px 0 0" }}>
-              {logError ?? logMessage}
-            </div>
-          )}
 
           <div className="entries-title">
             TODAY'S ENTRIES — {entryCount} {entryCount === 1 ? "LOG" : "LOGS"}

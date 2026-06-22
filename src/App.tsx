@@ -15,6 +15,7 @@ import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
+import { SnackbarStack, type SnackbarKind, type SnackbarNotification } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
 import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeView";
@@ -41,6 +42,7 @@ const isJiraConfigured = (settings: AppSettings) =>
 
 const THEME_STORAGE_KEY = "timebro-theme";
 const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
+const MAX_SNACKBARS = 4;
 
 const normalizeJiraSiteInput = (rawSite: string) => {
   const trimmed = rawSite.trim().replace(/\/+$/, "");
@@ -107,10 +109,6 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
-  const [syncError, setSyncError] = useState<string | undefined>();
-  const [syncMessage, setSyncMessage] = useState<string | undefined>();
-  const [savedMessage, setSavedMessage] = useState<string | undefined>();
-  const [testResult, setTestResult] = useState<JiraConnectionResult | undefined>();
   const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | undefined>();
@@ -119,7 +117,7 @@ export const App = () => {
   const [isLogging, setIsLogging] = useState(false);
   const [isDeletingWorklog, setIsDeletingWorklog] = useState(false);
   const [logError, setLogError] = useState<string | undefined>();
-  const [logMessage, setLogMessage] = useState<string | undefined>();
+  const [snackbars, setSnackbars] = useState<SnackbarNotification[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
@@ -143,6 +141,7 @@ export const App = () => {
   const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
+  const snackbarIdRef = useRef(0);
 
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
@@ -236,6 +235,29 @@ export const App = () => {
     return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
   }, [tickets, todayWorklogs]);
 
+  const dismissSnackbar = useCallback((id: number) => {
+    setSnackbars((current) => current.filter((notification) => notification.id !== id));
+  }, []);
+
+  const showSnackbar = useCallback((kind: SnackbarKind, message: string) => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage) {
+      return;
+    }
+
+    snackbarIdRef.current += 1;
+    const notification: SnackbarNotification = {
+      id: snackbarIdRef.current,
+      kind,
+      message: trimmedMessage
+    };
+
+    setSnackbars((current) => [...current, notification].slice(-MAX_SNACKBARS));
+  }, []);
+
+  const showSuccess = useCallback((message: string) => showSnackbar("success", message), [showSnackbar]);
+  const showError = useCallback((message: string) => showSnackbar("error", message), [showSnackbar]);
+
   const loadTickets = useCallback(async () => {
     if (!isConfigured) {
       setTickets(undefined);
@@ -262,9 +284,8 @@ export const App = () => {
       options: { queueAfterCurrent?: boolean } = {}
     ): Promise<SyncResult | undefined> => {
       if (demoScenario) {
-        setSyncError(undefined);
         setSyncResult(demoScenario.syncResult);
-        setSyncMessage("Demo data refreshed from seeded fixtures.");
+        showSuccess("Demo data refreshed from seeded fixtures.");
         return demoScenario.syncResult;
       }
 
@@ -277,14 +298,11 @@ export const App = () => {
       }
 
       if (!isJiraConfigured(settingsForSync)) {
-        setSyncMessage(undefined);
-        setSyncError("Connect Jira in Settings before syncing.");
+        showError("Connect Jira in Settings before syncing.");
         return undefined;
       }
 
       setIsSyncing(true);
-      setSyncError(undefined);
-      setSyncMessage(undefined);
 
       const syncTask = (async () => {
         try {
@@ -296,10 +314,10 @@ export const App = () => {
           });
           await saveSyncResult(result);
           setSyncResult(result);
-          setSyncMessage(`Synced ${result.worklogCount} worklogs across ${result.issueCount} candidate issues.`);
+          showSuccess(`Synced ${result.worklogCount} worklogs across ${result.issueCount} candidate issues.`);
           return result;
         } catch (error) {
-          setSyncError(error instanceof Error ? error.message : "Unable to sync Jira worklogs.");
+          showError(error instanceof Error ? error.message : "Unable to sync Jira worklogs.");
           return undefined;
         }
       })();
@@ -315,7 +333,7 @@ export const App = () => {
         }
       }
     },
-    [demoScenario, settings, weekState.weekEndExclusiveISO, weekState.weekKey, weekState.weekStartISO]
+    [demoScenario, settings, showError, showSuccess, weekState.weekEndExclusiveISO, weekState.weekKey, weekState.weekStartISO]
   );
 
   const handleSync = useCallback(() => runSync(), [runSync]);
@@ -354,13 +372,13 @@ export const App = () => {
     loadInitialState().catch((error) => {
       console.error(error);
       setIsBooting(false);
-      setSyncError("Unable to load local tracker data.");
+      showError("Unable to load local tracker data.");
     });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     if (demoScenario || isBooting) {
@@ -389,19 +407,17 @@ export const App = () => {
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
       setPersonalNotes(storedPersonalNotes);
-      setSyncError(undefined);
-      setSyncMessage(undefined);
     };
 
     loadWeek().catch((error) => {
       console.error(error);
-      setSyncError("Unable to load the selected week.");
+      showError("Unable to load the selected week.");
     });
 
     return () => {
       isMounted = false;
     };
-  }, [demoScenario, isBooting, weekStart]);
+  }, [demoScenario, isBooting, showError, weekStart]);
 
   useEffect(() => {
     if (demoScenario || isBooting || startupSyncCheckedRef.current) {
@@ -524,8 +540,7 @@ export const App = () => {
     }
     setSettings(cleanedSettings);
     setSettingsDraft(cleanedSettings);
-    setSavedMessage(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
-    window.setTimeout(() => setSavedMessage(undefined), 2500);
+    showSuccess(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
   };
 
   const handleWelcomeConnect = async (payload: WelcomeConnectPayload): Promise<JiraConnectionResult> => {
@@ -545,7 +560,7 @@ export const App = () => {
       await runSync(cleanedSettings);
       setSettings(cleanedSettings);
       setSettingsDraft(cleanedSettings);
-      setTestResult(result);
+      showSuccess(result.message);
       setWelcomeConnected(true);
       setTicketsLoading(true);
       setTicketsError(undefined);
@@ -553,6 +568,8 @@ export const App = () => {
         .then(setTickets)
         .catch((error) => setTicketsError(error instanceof Error ? error.message : "Unable to load tickets."))
         .finally(() => setTicketsLoading(false));
+    } else {
+      showError(result.message);
     }
 
     return result;
@@ -560,16 +577,16 @@ export const App = () => {
 
   const handleTestConnection = async () => {
     setIsTesting(true);
-    setTestResult(undefined);
 
     try {
       if (demoScenario) {
-        setTestResult({
+        const result: JiraConnectionResult = {
           ok: true,
           accountId: demoScenario.syncResult.accountId,
           displayName: demoScenario.syncResult.displayName,
           message: `Connected as ${demoScenario.syncResult.displayName}.`
-        });
+        };
+        showSuccess(result.message);
         return;
       }
 
@@ -578,7 +595,11 @@ export const App = () => {
         jiraBaseUrl: normalizeJiraSiteInput(settingsDraft.jiraBaseUrl),
         jiraEmail: settingsDraft.jiraEmail.trim()
       });
-      setTestResult(result);
+      if (result.ok) {
+        showSuccess(result.message);
+      } else {
+        showError(result.message);
+      }
     } finally {
       setIsTesting(false);
     }
@@ -592,21 +613,22 @@ export const App = () => {
   }) => {
     setIsLogging(true);
     setLogError(undefined);
-    setLogMessage(undefined);
 
     try {
       if (demoScenario) {
-        setLogMessage(`Demo logged ${formatDuration(payload.timeSpentSeconds / 3600)} to ${payload.issueKey}.`);
+        showSuccess(`Demo logged ${formatDuration(payload.timeSpentSeconds / 3600)} to ${payload.issueKey}.`);
         return true;
       }
 
       const result = await nativeApi.addWorklog({ settings, ...payload });
-      setLogMessage(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
+      showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
       await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
-      setLogError(error instanceof Error ? error.message : "Unable to log time to Jira.");
+      const message = error instanceof Error ? error.message : "Unable to log time to Jira.";
+      setLogError(message);
+      showError(message);
       return false;
     } finally {
       setIsLogging(false);
@@ -625,11 +647,10 @@ export const App = () => {
 
     setIsLogging(true);
     setLogError(undefined);
-    setLogMessage(undefined);
 
     try {
       if (demoScenario) {
-        setLogMessage(`Demo updated ${formatDuration(payload.timeSpentSeconds / 3600)} on ${editingWorklog.issueKey}.`);
+        showSuccess(`Demo updated ${formatDuration(payload.timeSpentSeconds / 3600)} on ${editingWorklog.issueKey}.`);
         return true;
       }
 
@@ -641,12 +662,14 @@ export const App = () => {
         startedISO: payload.startedISO,
         comment: payload.comment
       });
-      setLogMessage(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
+      showSuccess(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
       await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
-      setLogError(error instanceof Error ? error.message : "Unable to update Jira worklog.");
+      const message = error instanceof Error ? error.message : "Unable to update Jira worklog.";
+      setLogError(message);
+      showError(message);
       return false;
     } finally {
       setIsLogging(false);
@@ -660,11 +683,10 @@ export const App = () => {
 
     setIsDeletingWorklog(true);
     setLogError(undefined);
-    setLogMessage(undefined);
 
     try {
       if (demoScenario) {
-        setLogMessage(`Demo deleted worklog from ${editingWorklog.issueKey}.`);
+        showSuccess(`Demo deleted worklog from ${editingWorklog.issueKey}.`);
         setEditingWorklog(undefined);
         return true;
       }
@@ -674,12 +696,14 @@ export const App = () => {
         issueKey: editingWorklog.issueKey,
         worklogId: editingWorklog.id
       });
-      setLogMessage(`Deleted worklog from ${result.issueKey}.`);
+      showSuccess(`Deleted worklog from ${result.issueKey}.`);
       await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
       return true;
     } catch (error) {
-      setLogError(error instanceof Error ? error.message : "Unable to delete Jira worklog.");
+      const message = error instanceof Error ? error.message : "Unable to delete Jira worklog.";
+      setLogError(message);
+      showError(message);
       return false;
     } finally {
       setIsDeletingWorklog(false);
@@ -706,7 +730,9 @@ export const App = () => {
     };
 
     if (!note.text || note.timeSpentSeconds <= 0) {
-      setLogError("Add a note and a duration before saving.");
+      const message = "Add a note and a duration before saving.";
+      setLogError(message);
+      showError(message);
       return false;
     }
 
@@ -714,7 +740,7 @@ export const App = () => {
       if (demoScenario) {
         setPersonalNotes((current) => [...current, note]);
         setLogError(undefined);
-        setLogMessage(`Demo saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
+        showSuccess(`Demo saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
         return true;
       }
 
@@ -725,10 +751,12 @@ export const App = () => {
         setPersonalNotes(nextNotes);
       }
       setLogError(undefined);
-      setLogMessage(`Saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
+      showSuccess(`Saved ${formatDuration(note.timeSpentSeconds / 3600)} as a local note.`);
       return true;
     } catch (error) {
-      setLogError(error instanceof Error ? error.message : "Unable to save the personal note locally.");
+      const message = error instanceof Error ? error.message : "Unable to save the personal note locally.";
+      setLogError(message);
+      showError(message);
       return false;
     }
   };
@@ -755,18 +783,19 @@ export const App = () => {
     };
 
     if (!nextNote.text || nextNote.timeSpentSeconds <= 0) {
-      setLogError("Add a note and a duration before saving.");
+      const message = "Add a note and a duration before saving.";
+      setLogError(message);
+      showError(message);
       return false;
     }
 
     setIsLogging(true);
     setLogError(undefined);
-    setLogMessage(undefined);
 
     try {
       if (demoScenario) {
         setPersonalNotes((current) => updateVisiblePersonalNotes(current, editingPersonalNote, nextNote, weekState.weekKey));
-        setLogMessage(`Demo updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
+        showSuccess(`Demo updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
         return true;
       }
 
@@ -807,10 +836,12 @@ export const App = () => {
         }
       }
 
-      setLogMessage(`Updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
+      showSuccess(`Updated ${formatDuration(nextNote.timeSpentSeconds / 3600)} local note.`);
       return true;
     } catch (error) {
-      setLogError(error instanceof Error ? error.message : "Unable to update the personal note locally.");
+      const message = error instanceof Error ? error.message : "Unable to update the personal note locally.";
+      setLogError(message);
+      showError(message);
       return false;
     } finally {
       setIsLogging(false);
@@ -819,13 +850,11 @@ export const App = () => {
 
   const syncState = isSyncing ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing ? "SYNCING…" : formatSyncTime(syncResult);
-  const banner = syncError ?? syncMessage;
 
   const openAddTime = (date?: Date) => {
     setEditingWorklog(undefined);
     setEditingPersonalNote(undefined);
     setLogError(undefined);
-    setLogMessage(undefined);
 
     const preferredDateKey = date ? toLocalDateKey(date) : toLocalDateKey(currentDate);
     const fallbackDateKey =
@@ -845,7 +874,6 @@ export const App = () => {
   const openEditWorklog = (worklog: JiraWorklog) => {
     setAddModalDate(undefined);
     setLogError(undefined);
-    setLogMessage(undefined);
     setEditingPersonalNote(undefined);
     setEditingWorklog(worklog);
   };
@@ -853,7 +881,6 @@ export const App = () => {
   const openEditPersonalNote = (note: PersonalNote) => {
     setAddModalDate(undefined);
     setLogError(undefined);
-    setLogMessage(undefined);
     setEditingWorklog(undefined);
     setEditingPersonalNote(note);
   };
@@ -871,6 +898,7 @@ export const App = () => {
             setView("week");
           }}
         />
+        <SnackbarStack notifications={snackbars} onDismiss={dismissSnackbar} />
       </div>
     );
   }
@@ -894,12 +922,6 @@ export const App = () => {
         />
 
         <main className="main-area">
-          {!isBooting && banner && view !== "settings" && (
-            <div className={`callout ${syncError ? "error" : "success"}`} role="status">
-              {banner}
-            </div>
-          )}
-
           {isBooting ? (
             <div className="view" style={{ display: "grid", placeItems: "center" }}>
               <span className="sync-label">LOADING…</span>
@@ -920,8 +942,6 @@ export const App = () => {
               remindersEnabled={settings.remindersEnabled}
               isConfigured={isConfigured}
               isLogging={isLogging}
-              logError={logError}
-              logMessage={logMessage}
               onLog={handleAddWorklog}
               onEditWorklog={openEditWorklog}
               onEditPersonalNote={openEditPersonalNote}
@@ -965,8 +985,6 @@ export const App = () => {
               onSave={handleSaveSettings}
               onTestConnection={handleTestConnection}
               isTesting={isTesting}
-              testResult={testResult}
-              savedMessage={savedMessage}
               effectiveTheme={effectiveTheme}
               onSelectTheme={selectTheme}
             />
@@ -1020,6 +1038,8 @@ export const App = () => {
           onUpdatePersonalNote={handleUpdatePersonalNote}
         />
       )}
+
+      <SnackbarStack notifications={snackbars} onDismiss={dismissSnackbar} />
     </div>
   );
 };
