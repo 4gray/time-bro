@@ -91,6 +91,40 @@ describe("personal notes CSV", () => {
     });
   });
 
+  it("round-trips a personal note title through export and import", () => {
+    const titledWeek: WeekState = {
+      ...weekState,
+      days: [
+        {
+          ...weekState.days[0],
+          personalNotes: [
+            {
+              ...weekState.days[0].personalNotes[0],
+              title: "Sprint planning",
+              text: "Planning, notes"
+            }
+          ]
+        }
+      ]
+    };
+
+    const csv = buildWeekCsv(titledWeek);
+    expect(csv).toContain("Date,Weekday,Issue,Summary,Hours,Title");
+    expect(csv).toContain('LOCAL-NOTE,"Planning, notes",1.25,Sprint planning');
+
+    const result = parsePersonalNotesCsv(csv, { idPrefix: "note-roundtrip" });
+    expect(result.notes).toHaveLength(1);
+    expect(result.notes[0]).toMatchObject({ title: "Sprint planning", text: "Planning, notes" });
+  });
+
+  it("imports notes without a Title column (title stays undefined)", () => {
+    const csv = ["Date,Weekday,Issue,Summary,Hours", "2026-06-18,Thursday,LOCAL-NOTE,Planning,1.00"].join("\n");
+    const result = parsePersonalNotesCsv(csv, { idPrefix: "note-legacy" });
+    expect(result.notes).toHaveLength(1);
+    expect(result.notes[0].title).toBeUndefined();
+    expect(result.notes[0].text).toBe("Planning");
+  });
+
   it("rejects CSV files without the expected report columns", () => {
     expect(() => parsePersonalNotesCsv("Date,Summary\n2026-06-18,Planning")).toThrow(
       "CSV must include Date, Issue, Summary, and Hours columns."

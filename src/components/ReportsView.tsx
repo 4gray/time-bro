@@ -35,7 +35,10 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
         isLocal?: boolean;
       }
     >();
-    let localNoteHours = 0;
+    // Personal notes are grouped by title (falling back to their text) so each
+    // distinct note shows as its own row — like tickets — instead of a single
+    // aggregated "Personal notes" entry.
+    const byNote = new Map<string, { groupKey: string; label: string; hours: number }>();
     for (const day of weekState.days) {
       for (const issue of day.issues) {
         const existing = byTicket.get(issue.key);
@@ -58,27 +61,39 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
           });
         }
       }
-      localNoteHours += day.personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
+
+      for (const note of day.personalNotes) {
+        const label = note.title?.trim() || note.text.trim() || "Personal note";
+        const groupKey = label.toLowerCase();
+        const existing = byNote.get(groupKey);
+        if (existing) {
+          existing.hours += note.timeSpentSeconds / 3600;
+        } else {
+          byNote.set(groupKey, { groupKey, label, hours: note.timeSpentSeconds / 3600 });
+        }
+      }
     }
 
-    if (localNoteHours > 0) {
-      byTicket.set("LOCAL-NOTE", {
-        key: "LOCAL",
-        summary: "Personal notes",
-        hours: localNoteHours,
-        isLocal: true
-      });
-    }
-    const tickets = [...byTicket.values()].sort((a, b) => b.hours - a.hours);
+    const ticketRows = [...byTicket.values()];
+    const noteRows = [...byNote.values()].map((note) => ({
+      key: `LOCAL::${note.groupKey}`,
+      summary: note.label,
+      url: undefined,
+      issueType: undefined,
+      epic: undefined,
+      hours: note.hours,
+      isLocal: true
+    }));
+    const tickets = [...ticketRows, ...noteRows].sort((a, b) => b.hours - a.hours);
 
-    const projects = new Set(tickets.filter((ticket) => !ticket.isLocal).map((ticket) => ticket.key.split("-")[0]));
+    const projects = new Set(ticketRows.map((ticket) => ticket.key.split("-")[0]));
 
     return {
       dailyAverage: activeDays.length > 0 ? weekState.trackedWeekHours / activeDays.length : 0,
       activeDayCount: activeDays.length,
       completeDayCount: completeDays.length,
       firstCompleteName: firstComplete?.weekdayName,
-      ticketCount: tickets.length,
+      ticketCount: ticketRows.length,
       projectCount: projects.size,
       tickets
     };

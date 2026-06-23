@@ -295,6 +295,7 @@ const DayColumn = ({
                       </button>
                     </span>
                   </div>
+                  {note.title?.trim() && <div className="day-note-title">{note.title}</div>}
                   <div className="day-note-text">{note.text}</div>
                 </div>
               ))}

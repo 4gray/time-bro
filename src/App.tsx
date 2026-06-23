@@ -135,7 +135,7 @@ const updateVisiblePersonalNotes = (
 };
 
 const getPersonalNoteImportFingerprint = (note: PersonalNote) =>
-  [note.dateKey, note.text.trim(), note.timeSpentSeconds].join("\u0000");
+  [note.dateKey, note.title?.trim() ?? "", note.text.trim(), note.timeSpentSeconds].join("\u0000");
 
 const mergeImportedPersonalNotes = (currentNotes: PersonalNote[], importedNotes: PersonalNote[]) => {
   const seen = new Set(currentNotes.map(getPersonalNoteImportFingerprint));
@@ -1069,6 +1069,7 @@ export const App = () => {
   };
 
   const handleAddPersonalNote = async (payload: {
+    title?: string;
     text: string;
     timeSpentSeconds: number;
     startedISO: string;
@@ -1080,6 +1081,7 @@ export const App = () => {
       id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       weekKey: noteWeekKey,
       dateKey: toLocalDateKey(started),
+      title: payload.title?.trim() || undefined,
       text: payload.text.trim(),
       timeSpentSeconds: Math.round(payload.timeSpentSeconds),
       startedISO: payload.startedISO,
@@ -1120,6 +1122,7 @@ export const App = () => {
   };
 
   const handleUpdatePersonalNote = async (payload: {
+    title?: string;
     text: string;
     timeSpentSeconds: number;
     startedISO: string;
@@ -1134,6 +1137,7 @@ export const App = () => {
       ...editingPersonalNote,
       weekKey: noteWeekKey,
       dateKey: toLocalDateKey(started),
+      title: payload.title?.trim() || undefined,
       text: payload.text.trim(),
       timeSpentSeconds: Math.round(payload.timeSpentSeconds),
       startedISO: payload.startedISO,
