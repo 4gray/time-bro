@@ -42,11 +42,23 @@ const weekState: WeekState = {
           id: "note-1",
           weekKey: "2026-06-15",
           dateKey: "2026-06-18",
-          text: "Interview feedback write-up",
+          title: "Interview feedback",
+          text: "Wrote up notes from the platform interviews",
           timeSpentSeconds: 30 * 60,
           startedISO: "2026-06-18T12:00:00.000Z",
           createdAt: "2026-06-18T12:00:00.000Z",
           updatedAt: "2026-06-18T12:00:00.000Z"
+        },
+        {
+          id: "note-2",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-18",
+          title: "1:1 with Dana",
+          text: "Career growth check-in",
+          timeSpentSeconds: 30 * 60,
+          startedISO: "2026-06-18T13:00:00.000Z",
+          createdAt: "2026-06-18T13:00:00.000Z",
+          updatedAt: "2026-06-18T13:00:00.000Z"
         }
       ]
     }
@@ -69,7 +81,11 @@ describe("ReportsView", () => {
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
     expect(markup).toContain("Open FTDM-397 in Jira");
     expect(markup).toContain("EPIC");
-    expect(markup).toContain("Personal notes");
+    // Personal notes appear as separate rows keyed by their title, not lumped
+    // into one aggregated "Personal notes" entry.
+    expect(markup).not.toContain("Personal notes");
+    expect(markup).toContain("Interview feedback");
+    expect(markup).toContain("1:1 with Dana");
     expect(markup).toContain("LOCAL");
     expect(markup).toContain("THIS WEEK");
     expect(markup).toContain("Previous week");

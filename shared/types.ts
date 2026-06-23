@@ -131,6 +131,8 @@ export interface PersonalNote {
   id: string;
   weekKey: string;
   dateKey: string;
+  /** Optional short headline; groups notes separately in reports. */
+  title?: string;
   text: string;
   timeSpentSeconds: number;
   startedISO: string;

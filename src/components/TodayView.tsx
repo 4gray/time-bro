@@ -14,6 +14,7 @@ interface LogPayload {
 }
 
 interface PersonalNotePayload {
+  title?: string;
   text: string;
   timeSpentSeconds: number;
   startedISO: string;
@@ -83,6 +84,7 @@ export const TodayView = ({
   const [dateStr, setDateStr] = useState(toLocalDateKey(date));
   const [timeStr, setTimeStr] = useState(`${pad(date.getHours())}:${pad(date.getMinutes())}`);
   const [worklogComment, setWorklogComment] = useState("");
+  const [personalNoteTitle, setPersonalNoteTitle] = useState("");
   const [personalNoteText, setPersonalNoteText] = useState("");
 
   useEffect(() => {
@@ -140,11 +142,13 @@ export const TodayView = ({
 
     if (composerMode === "note") {
       const ok = await onAddPersonalNote({
+        title: personalNoteTitle,
         text: personalNoteText,
         timeSpentSeconds: durationSeconds,
         startedISO
       });
       if (ok) {
+        setPersonalNoteTitle("");
         setPersonalNoteText("");
       }
       return;
@@ -286,6 +290,16 @@ export const TodayView = ({
           <div className="field-label composer-section">
             {composerMode === "note" ? "PERSONAL NOTE" : "WORK DESCRIPTION"}
           </div>
+          {composerMode === "note" && (
+            <input
+              className="note-title-input"
+              type="text"
+              placeholder="Title — e.g. Sprint planning, Interviews (optional)"
+              value={personalNoteTitle}
+              onChange={(event) => setPersonalNoteTitle(event.target.value)}
+              aria-label="Personal note title"
+            />
+          )}
           <textarea
             className="note-textarea"
             placeholder={
@@ -375,7 +389,7 @@ export const TodayView = ({
                           <PenLine size={12} strokeWidth={1.9} />
                           LOCAL
                         </span>
-                        <span className="entry-summary">{note.text}</span>
+                        <span className="entry-summary">{note.title?.trim() || note.text}</span>
                         <span className="entry-leader" />
                         <span className="entry-range">
                           {formatHm24(start)}–{formatHm24(end)}
@@ -393,6 +407,12 @@ export const TodayView = ({
                           </button>
                         </span>
                       </div>
+                      {note.title?.trim() && note.text.trim() && (
+                        <div className="entry-note">
+                          <MessageSquare size={13} stroke="#4b515c" strokeWidth={1.7} />
+                          <span>{note.text}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

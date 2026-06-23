@@ -27,8 +27,18 @@ interface AddTimeModalProps {
   onLog: (payload: LogPayload) => Promise<boolean>;
   onDelete?: () => Promise<boolean>;
   onSearchTickets?: TicketSearchHandler;
-  onAddPersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
-  onUpdatePersonalNote?: (payload: { text: string; timeSpentSeconds: number; startedISO: string }) => Promise<boolean>;
+  onAddPersonalNote?: (payload: {
+    title?: string;
+    text: string;
+    timeSpentSeconds: number;
+    startedISO: string;
+  }) => Promise<boolean>;
+  onUpdatePersonalNote?: (payload: {
+    title?: string;
+    text: string;
+    timeSpentSeconds: number;
+    startedISO: string;
+  }) => Promise<boolean>;
 }
 
 const PRESETS: Array<{ label: string; seconds: number }> = [
@@ -247,6 +257,7 @@ export const AddTimeModal = ({
   const [dateStr, setDateStr] = useState(preferredDateKey);
   const [timeStr, setTimeStr] = useState(`${pad(initialStart.getHours())}:${pad(initialStart.getMinutes())}`);
   const [note, setNote] = useState(editingWorklog?.comment ?? "");
+  const [personalNoteTitle, setPersonalNoteTitle] = useState(editingPersonalNote?.title ?? "");
   const [personalNote, setPersonalNote] = useState(editingPersonalNote?.text ?? "");
   const [personalNoteSeconds, setPersonalNoteSeconds] = useState(initialPersonalSeconds);
   const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>(initialPersonalPreset ? "preset" : "custom");
@@ -299,11 +310,13 @@ export const AddTimeModal = ({
         return;
       }
       const ok = await savePersonalNote({
+        title: personalNoteTitle,
         text: personalNote,
         timeSpentSeconds: personalNoteSeconds,
         startedISO
       });
       if (ok) {
+        setPersonalNoteTitle("");
         setPersonalNote("");
         onClose();
       }
@@ -361,6 +374,7 @@ export const AddTimeModal = ({
     setDateStr(chooseWorkingDateKey(toLocalDateKey(start), dateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
     setNote(editingWorklog?.comment ?? "");
+    setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
     setPersonalNoteSeconds(localNoteSeconds);
     setPersonalDurationMode(hasPersonalPreset ? "preset" : "custom");
@@ -551,6 +565,14 @@ export const AddTimeModal = ({
                   LOCAL
                 </em>
               </div>
+              <input
+                className="note-title-input"
+                type="text"
+                placeholder="Title — e.g. Sprint planning, Interviews (optional)"
+                value={personalNoteTitle}
+                onChange={(event) => setPersonalNoteTitle(event.target.value)}
+                aria-label="Personal note title"
+              />
               <textarea
                 className="note-textarea"
                 placeholder="What did you spend time on? e.g. interviews, planning, mentoring, ops"

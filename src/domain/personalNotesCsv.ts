@@ -20,7 +20,9 @@ const escapeCsvField = (value: string | number) => {
 };
 
 export const buildWeekCsv = (weekState: WeekState) => {
-  const rows: Array<Array<string | number>> = [["Date", "Weekday", "Issue", "Summary", "Hours"]];
+  // Title is appended last so older importers (and existing exports without it)
+  // keep working — columns are matched by header name, not position.
+  const rows: Array<Array<string | number>> = [["Date", "Weekday", "Issue", "Summary", "Hours", "Title"]];
 
   for (const day of weekState.days) {
     if (day.issues.length === 0 && day.personalNotes.length === 0) {
@@ -28,11 +30,18 @@ export const buildWeekCsv = (weekState: WeekState) => {
     }
 
     for (const issue of day.issues) {
-      rows.push([day.dateKey, day.weekdayName, issue.key, issue.summary, (issue.loggedSeconds / 3600).toFixed(2)]);
+      rows.push([day.dateKey, day.weekdayName, issue.key, issue.summary, (issue.loggedSeconds / 3600).toFixed(2), ""]);
     }
 
     for (const note of day.personalNotes) {
-      rows.push([day.dateKey, day.weekdayName, "LOCAL-NOTE", note.text, (note.timeSpentSeconds / 3600).toFixed(2)]);
+      rows.push([
+        day.dateKey,
+        day.weekdayName,
+        "LOCAL-NOTE",
+        note.text,
+        (note.timeSpentSeconds / 3600).toFixed(2),
+        note.title ?? ""
+      ]);
     }
   }
 
@@ -134,6 +143,7 @@ export const parsePersonalNotesCsv = (
   const issueIndex = getColumnIndex(header, "issue");
   const summaryIndex = getColumnIndex(header, "summary");
   const hoursIndex = getColumnIndex(header, "hours");
+  const titleIndex = getColumnIndex(header, "title");
 
   if ([dateIndex, issueIndex, summaryIndex, hoursIndex].some((index) => index < 0)) {
     throw new Error("CSV must include Date, Issue, Summary, and Hours columns.");
@@ -158,6 +168,7 @@ export const parsePersonalNotesCsv = (
     const dateKey = (row[dateIndex] ?? "").trim();
     const date = parseDateKey(dateKey, rowNumber);
     const text = (row[summaryIndex] ?? "").trim();
+    const title = titleIndex >= 0 ? (row[titleIndex] ?? "").trim() : "";
     const hours = Number((row[hoursIndex] ?? "").trim());
 
     if (!text) {
@@ -175,6 +186,7 @@ export const parsePersonalNotesCsv = (
       id: `${idPrefix}-${rowNumber}`,
       weekKey: toLocalDateKey(startOfWeekMonday(date)),
       dateKey,
+      title: title || undefined,
       text,
       timeSpentSeconds: Math.round(hours * 3600),
       startedISO: createStartedAt(dateKey, noteIndexForDate),
