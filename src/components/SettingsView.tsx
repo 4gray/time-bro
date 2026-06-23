@@ -2,6 +2,8 @@ import {
   Bell,
   BadgeInfo,
   CalendarDays,
+  Database,
+  Download,
   ExternalLink,
   Eye,
   EyeOff,
@@ -13,9 +15,10 @@ import {
   Save,
   ShieldCheck,
   SunMedium,
-  TestTube2
+  TestTube2,
+  Upload
 } from "lucide-react";
-import { useState } from "react";
+import { type ChangeEvent, useRef, useState } from "react";
 import type { AppSettings, AppUpdateInfo, WeekdayNumber } from "../../shared/types";
 import type { ThemeMode } from "./Sidebar";
 
@@ -31,6 +34,10 @@ interface SettingsViewProps {
   isCheckingUpdates: boolean;
   onCheckForUpdates: () => void;
   onOpenReleasePage: (url?: string) => void;
+  weekRangeLabel: string;
+  onExportWeekCsv: () => void;
+  onImportPersonalNotes: (file: File) => Promise<void> | void;
+  isImportingPersonalNotes: boolean;
 }
 
 const WEEKDAYS: Array<{ value: WeekdayNumber; label: string }> = [
@@ -90,9 +97,14 @@ export const SettingsView = ({
   updateInfo,
   isCheckingUpdates,
   onCheckForUpdates,
-  onOpenReleasePage
+  onOpenReleasePage,
+  weekRangeLabel,
+  onExportWeekCsv,
+  onImportPersonalNotes,
+  isImportingPersonalNotes
 }: SettingsViewProps) => {
   const [showJiraApiToken, setShowJiraApiToken] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
@@ -107,6 +119,14 @@ export const SettingsView = ({
       : [...draft.workingDays, day].sort();
 
     updateField("workingDays", workingDays as WeekdayNumber[]);
+  };
+
+  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (file) {
+      void onImportPersonalNotes(file);
+    }
   };
 
   return (
@@ -306,6 +326,47 @@ export const SettingsView = ({
             >
               <Moon size={14} />
               DARK
+            </button>
+          </div>
+        </div>
+
+        <div className="settings-panel">
+          <div className="section-title">
+            <Database size={16} />
+            <span>Data</span>
+          </div>
+
+          <div className="data-transfer-row">
+            <div>
+              <strong>Current week CSV</strong>
+              <small>{weekRangeLabel}</small>
+            </div>
+            <button className="secondary-button" type="button" onClick={onExportWeekCsv}>
+              <Download size={16} />
+              Export CSV
+            </button>
+          </div>
+
+          <div className="data-transfer-row">
+            <div>
+              <strong>Personal notes</strong>
+              <small>Imports local notes from exported weekly CSV files.</small>
+            </div>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              hidden
+              onChange={handleImportFileChange}
+            />
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => importInputRef.current?.click()}
+              disabled={isImportingPersonalNotes}
+            >
+              {isImportingPersonalNotes ? <Loader2 className="spin" size={16} /> : <Upload size={16} />}
+              {isImportingPersonalNotes ? "Importing" : "Import CSV"}
             </button>
           </div>
         </div>

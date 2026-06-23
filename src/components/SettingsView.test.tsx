@@ -37,6 +37,10 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       isCheckingUpdates={false}
       onCheckForUpdates={() => undefined}
       onOpenReleasePage={() => undefined}
+      weekRangeLabel="Jun 15 - 21, 2026"
+      onExportWeekCsv={() => undefined}
+      onImportPersonalNotes={() => undefined}
+      isImportingPersonalNotes={false}
       {...overrides}
     />
   );
@@ -60,5 +64,16 @@ describe("SettingsView", () => {
     expect(markup).toContain("v1.1.0");
     expect(markup).toContain("v1.1.0 is available.");
     expect(markup).toContain("GitHub Releases");
+  });
+
+  it("renders import and export controls in the data panel", () => {
+    const markup = renderSettings();
+
+    expect(markup).toContain("Data");
+    expect(markup).toContain("Current week CSV");
+    expect(markup).toContain("Jun 15 - 21, 2026");
+    expect(markup).toContain("Export CSV");
+    expect(markup).toContain("Personal notes");
+    expect(markup).toContain("Import CSV");
   });
 });

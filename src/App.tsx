@@ -25,6 +25,7 @@ import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeVie
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
+import { buildWeekCsv, parsePersonalNotesCsv } from "./domain/personalNotesCsv";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import {
   getFavoriteKeys,
@@ -132,6 +133,37 @@ const updateVisiblePersonalNotes = (
   return sortPersonalNotes([...withoutPrevious, nextNote]);
 };
 
+const getPersonalNoteImportFingerprint = (note: PersonalNote) =>
+  [note.dateKey, note.text.trim(), note.timeSpentSeconds].join("\u0000");
+
+const mergeImportedPersonalNotes = (currentNotes: PersonalNote[], importedNotes: PersonalNote[]) => {
+  const seen = new Set(currentNotes.map(getPersonalNoteImportFingerprint));
+  const additions = importedNotes.filter((note) => {
+    const fingerprint = getPersonalNoteImportFingerprint(note);
+    if (seen.has(fingerprint)) {
+      return false;
+    }
+    seen.add(fingerprint);
+    return true;
+  });
+
+  return {
+    notes: sortPersonalNotes([...currentNotes, ...additions]),
+    addedCount: additions.length
+  };
+};
+
+const groupPersonalNotesByWeek = (notes: PersonalNote[]) => {
+  return notes.reduce<Map<string, PersonalNote[]>>((groups, note) => {
+    const group = groups.get(note.weekKey) ?? [];
+    group.push(note);
+    groups.set(note.weekKey, group);
+    return groups;
+  }, new Map());
+};
+
+const formatPersonalNoteCount = (count: number) => `${count} personal ${count === 1 ? "note" : "notes"}`;
+
 const createDemoUpdateInfo = (): AppUpdateInfo => ({
   currentVersion: "1.0.0",
   latestVersion: "1.0.0",
@@ -163,6 +195,7 @@ export const App = () => {
     demoScenario ? createDemoUpdateInfo() : undefined
   );
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
   const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | undefined>();
@@ -315,6 +348,7 @@ export const App = () => {
 
   const showSuccess = useCallback((message: string) => showSnackbar("success", message), [showSnackbar]);
   const showError = useCallback((message: string) => showSnackbar("error", message), [showSnackbar]);
+  const showInfo = useCallback((message: string) => showSnackbar("info", message), [showSnackbar]);
 
   const openReleasePage = useCallback(
     (url?: string) => {
@@ -761,6 +795,82 @@ export const App = () => {
     setSettings(cleanedSettings);
     setSettingsDraft(cleanedSettings);
     showSuccess(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
+  };
+
+  const handleExportWeekCsv = () => {
+    const blob = new Blob([buildWeekCsv(weekState)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `timebro-week-${weekState.weekKey}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showSuccess(`Exported ${weekState.weekRangeLabel} CSV.`);
+  };
+
+  const handleImportPersonalNotes = async (file: File) => {
+    setIsImportingPersonalNotes(true);
+
+    try {
+      const importResult = parsePersonalNotesCsv(await file.text());
+
+      if (importResult.notes.length === 0) {
+        showError("No personal notes found. Import reads LOCAL-NOTE rows from exported weekly CSV files.");
+        return;
+      }
+
+      const notesByWeek = groupPersonalNotesByWeek(importResult.notes);
+
+      if (demoScenario) {
+        const visibleImportedNotes = notesByWeek.get(weekState.weekKey) ?? [];
+        if (visibleImportedNotes.length === 0) {
+          showInfo("The CSV has no personal notes for this demo week.");
+          return;
+        }
+
+        const merged = mergeImportedPersonalNotes(personalNotes, visibleImportedNotes);
+        setPersonalNotes(merged.notes);
+        if (merged.addedCount > 0) {
+          showSuccess(`Imported ${formatPersonalNoteCount(merged.addedCount)} into this demo week.`);
+        } else {
+          showInfo("No new personal notes imported; this demo week already has matching notes.");
+        }
+        return;
+      }
+
+      let addedCount = 0;
+      let visibleWeekNotes: PersonalNote[] | undefined;
+
+      for (const [weekKey, importedWeekNotes] of notesByWeek) {
+        const storedWeekNotes = weekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(weekKey);
+        const merged = mergeImportedPersonalNotes(storedWeekNotes, importedWeekNotes);
+        addedCount += merged.addedCount;
+
+        if (merged.addedCount > 0) {
+          await savePersonalNotes(weekKey, merged.notes);
+        }
+
+        if (weekKey === weekState.weekKey) {
+          visibleWeekNotes = merged.notes;
+        }
+      }
+
+      if (visibleWeekNotes) {
+        setPersonalNotes(visibleWeekNotes);
+      }
+
+      if (addedCount > 0) {
+        showSuccess(`Imported ${formatPersonalNoteCount(addedCount)} from ${file.name}.`);
+      } else {
+        showInfo("No new personal notes imported; stored notes already match that CSV.");
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to import personal notes from that CSV.");
+    } finally {
+      setIsImportingPersonalNotes(false);
+    }
   };
 
   const handleWelcomeConnect = async (payload: WelcomeConnectPayload): Promise<JiraConnectionResult> => {
@@ -1249,6 +1359,10 @@ export const App = () => {
                 void checkForUpdates({ notifyWhenCurrent: true });
               }}
               onOpenReleasePage={openReleasePage}
+              weekRangeLabel={weekState.weekRangeLabel}
+              onExportWeekCsv={handleExportWeekCsv}
+              onImportPersonalNotes={handleImportPersonalNotes}
+              isImportingPersonalNotes={isImportingPersonalNotes}
             />
           )}
         </main>

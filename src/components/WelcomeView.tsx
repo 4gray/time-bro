@@ -10,6 +10,7 @@ import {
   Loader2,
   LockKeyhole,
   ShieldCheck,
+  Upload,
   Zap
 } from "lucide-react";
 import type { AppSettings, JiraConnectionResult } from "../../shared/types";
@@ -121,6 +122,15 @@ export const WelcomeView = ({
             <span>
               <strong>Your notes, your eyes only</strong>
               <small>Off-ticket notes stay right here on your machine.</small>
+            </span>
+          </div>
+          <div>
+            <span className="welcome-value-icon is-blue">
+              <Upload size={14} />
+            </span>
+            <span>
+              <strong>Coming from an older version?</strong>
+              <small>Personal notes can be imported later from Settings.</small>
             </span>
           </div>
         </div>

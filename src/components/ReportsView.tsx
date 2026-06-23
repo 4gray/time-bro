@@ -13,24 +13,6 @@ interface ReportsViewProps {
 
 const clampPct = (value: number) => `${Math.min(Math.max(value, 0), 100)}%`;
 
-const buildCsv = (weekState: WeekState) => {
-  const rows: string[] = ["Date,Weekday,Issue,Summary,Hours"];
-  for (const day of weekState.days) {
-    if (day.issues.length === 0 && day.personalNotes.length === 0) {
-      continue;
-    }
-    for (const issue of day.issues) {
-      const summary = `"${issue.summary.replace(/"/g, '""')}"`;
-      rows.push([day.dateKey, day.weekdayName, issue.key, summary, (issue.loggedSeconds / 3600).toFixed(2)].join(","));
-    }
-    for (const note of day.personalNotes) {
-      const summary = `"${note.text.replace(/"/g, '""')}"`;
-      rows.push([day.dateKey, day.weekdayName, "LOCAL-NOTE", summary, (note.timeSpentSeconds / 3600).toFixed(2)].join(","));
-    }
-  }
-  return rows.join("\n");
-};
-
 export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWeek }: ReportsViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
@@ -106,16 +88,6 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
   const remaining = weekState.weeklyTargetHours - total;
   const billablePct = total > 0 ? Math.round((weekState.jiraTrackedWeekHours / total) * 100) : 0;
 
-  const handleExport = () => {
-    const blob = new Blob([buildCsv(weekState)], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `stint-week-${weekState.weekKey}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="view view-scroll">
       <div className="reports-header">
@@ -143,9 +115,6 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
             onCurrentWeek={onCurrentWeek}
             onNextWeek={onNextWeek}
           />
-          <button type="button" className="pill" onClick={handleExport}>
-            EXPORT CSV
-          </button>
         </div>
       </div>
 
