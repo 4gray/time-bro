@@ -4888,6 +4888,11 @@ input:focus {
   font-weight: 700;
 }
 
+.quicklog-custom {
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
 .quicklog-comment {
   width: 100%;
   margin-top: 9px;
