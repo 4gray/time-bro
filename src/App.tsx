@@ -22,6 +22,7 @@ import { useLiveDate } from "./app/useLiveDate";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
+import { useMonthState } from "./app/useMonthState";
 import { usePersonalNotes } from "./app/usePersonalNotes";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
@@ -47,7 +48,7 @@ import { buildWeekCsv } from "./domain/personalNotesCsv";
 import { getBitbucketRepositorySlugs, isBitbucketConfigured } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
-import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
+import { getMonthAnchor } from "./domain/month";
 import {
   getFavoriteKeys,
   getBitbucketReviewResult,
@@ -75,7 +76,6 @@ export const App = () => {
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [weekStart, setWeekStart] = useState(() => demoScenario?.weekStart ?? getWeekBounds(currentDate).weekStart);
   const [monthAnchor, setMonthAnchor] = useState(() => getMonthAnchor(currentDate));
-  const [monthState, setMonthState] = useState<MonthState | undefined>();
   const [weekOverride, setWeekOverride] = useState<WeekOverride>(() => ({
     ...(demoScenario?.weekOverride ?? {
       weekKey: toLocalDateKey(getWeekBounds(currentDate).weekStart),
@@ -157,6 +157,20 @@ export const App = () => {
 
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
+  const monthState = useMonthState({
+    isMonthView: view === "month",
+    isBooting,
+    monthAnchor,
+    currentDate,
+    settings,
+    visibleWeekState: weekState,
+    recurringEvents,
+    recurringOccurrences,
+    demoWeekStart: demoScenario?.weekStart,
+    demoWeekOverride: demoScenario?.weekOverride,
+    demoSyncResult: demoScenario?.syncResult,
+    onError: showError
+  });
 
   const {
     bitbucketReviewResult,
@@ -396,89 +410,6 @@ export const App = () => {
       isMounted = false;
     };
   }, [demoScenario, isBooting, showError, weekStart]);
-
-  // Build the month grid by aggregating every Monday-week that overlaps the
-  // anchored month. The visible week reuses the in-memory weekState (freshest,
-  // includes unsaved demo notes); the rest load from local storage.
-  useEffect(() => {
-    if (view !== "month" || isBooting) {
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadMonth = async () => {
-      const weekStarts = getMonthWeekStarts(monthAnchor);
-      const weekStates = await Promise.all(
-        weekStarts.map(async (start) => {
-          const weekKey = toLocalDateKey(start);
-          if (weekKey === weekState.weekKey) {
-            return weekState;
-          }
-
-          if (demoScenario) {
-            const isDemoWeek = weekKey === toLocalDateKey(demoScenario.weekStart);
-            return buildWeekState(
-              start,
-              settings,
-              isDemoWeek ? demoScenario.weekOverride : { weekKey, skippedDates: [] },
-              isDemoWeek ? demoScenario.syncResult : undefined,
-              [],
-              currentDate,
-              recurringEvents,
-              isDemoWeek ? recurringOccurrences : []
-            );
-          }
-
-          const [storedOverride, storedSyncResult, storedPersonalNotes, storedRecurringOccurrences] =
-            await Promise.all([
-              getWeekOverride(weekKey),
-              getSyncResult(weekKey),
-              getPersonalNotes(weekKey),
-              getRecurringOccurrences(weekKey)
-            ]);
-          return buildWeekState(
-            start,
-            settings,
-            storedOverride,
-            storedSyncResult,
-            storedPersonalNotes,
-            currentDate,
-            recurringEvents,
-            storedRecurringOccurrences
-          );
-        })
-      );
-
-      if (!isMounted) {
-        return;
-      }
-
-      setMonthState(buildMonthState(monthAnchor, currentDate, settings, weekStates));
-    };
-
-    loadMonth().catch((error) => {
-      console.error(error);
-      if (isMounted) {
-        showError("Unable to load the selected month.");
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [
-    currentDate,
-    demoScenario,
-    isBooting,
-    monthAnchor,
-    recurringEvents,
-    recurringOccurrences,
-    settings,
-    showError,
-    view,
-    weekState
-  ]);
 
   useEffect(() => {
     if (demoScenario || isBooting || startupSyncCheckedRef.current) {

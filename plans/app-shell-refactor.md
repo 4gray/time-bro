@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-The broad app-shell refactor is at a reasonable stopping point. `App.tsx` is now mostly orchestration and JSX wiring, the extracted behavior lives behind focused hooks with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, month aggregation lives behind a focused hook with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -25,7 +25,8 @@ The broad app-shell refactor is at a reasonable stopping point. `App.tsx` is now
 13. Done: extract recurring modal/action state into `useRecurringActions` with event definition, confirm, skip, delete, candidate, demo, storage, and error coverage.
 14. Done: split `src/styles.css` mechanically into imported files under `src/styles/`.
 15. Done: extract Bitbucket review sync state/action into `useBitbucketReviewSync` with demo, guard, merge, persistence, override-settings, and error coverage.
-16. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around bootstrap/week storage or month loading if those areas need changes.
+16. Done: extract month aggregation/loading into `useMonthState` with visible-week reuse, demo, persisted storage, idle, and error coverage.
+17. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around bootstrap/week storage, settings connection actions, or add-time modal selection if those areas need changes.
 
 ## Verification
 
@@ -116,3 +117,11 @@ Phase 14:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: browser smoke for demo week sync refresh and review route rendering without document overflow or console issues
+
+Phase 15:
+
+- Passed: `npm run test -- src/app/useMonthState.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: browser/Playwright smoke for demo month view at desktop and mobile viewports without document overflow or console issues
