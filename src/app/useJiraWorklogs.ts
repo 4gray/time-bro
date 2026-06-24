@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 import type {
   AddWorklogRequest,
   AddWorklogResult,
@@ -43,7 +43,7 @@ interface UseJiraWorklogsOptions {
   ) => Promise<SyncResult | undefined>;
   loadTickets: (settingsForLoad?: AppSettings) => Promise<unknown>;
   onSyncResult: (result: SyncResult) => void;
-  onClearEditingWorklog: () => void;
+  setEditingWorklog: Dispatch<SetStateAction<JiraWorklog | undefined>>;
   showSuccess: (message: string) => void;
   showError: (message: string) => void;
 }
@@ -58,7 +58,7 @@ export const useJiraWorklogs = ({
   runSync,
   loadTickets,
   onSyncResult,
-  onClearEditingWorklog,
+  setEditingWorklog,
   showSuccess,
   showError
 }: UseJiraWorklogsOptions) => {
@@ -158,7 +158,7 @@ export const useJiraWorklogs = ({
     try {
       if (isDemo) {
         showSuccess(`Demo deleted worklog from ${editingWorklog.issueKey}.`);
-        onClearEditingWorklog();
+        setEditingWorklog(undefined);
         return true;
       }
 
@@ -179,7 +179,7 @@ export const useJiraWorklogs = ({
     } finally {
       setIsDeletingWorklog(false);
     }
-  }, [client, editingWorklog, isDemo, loadTickets, onClearEditingWorklog, runSync, settings, showError, showSuccess]);
+  }, [client, editingWorklog, isDemo, loadTickets, runSync, setEditingWorklog, settings, showError, showSuccess]);
 
   return {
     isLogging,

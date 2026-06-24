@@ -21,7 +21,7 @@ export interface SettingsActionsClient {
 interface UseSettingsActionsOptions {
   settingsDraft: AppSettings;
   isDemo: boolean;
-  demoJiraResult?: JiraConnectionResult;
+  demoSyncResult?: SyncResult;
   client?: SettingsActionsClient;
   saveSettings?: (settings: AppSettings) => Promise<void>;
   runSync: (settingsForSync?: AppSettings) => Promise<SyncResult | undefined>;
@@ -66,7 +66,7 @@ const cleanBitbucketSettings = (settingsDraft: AppSettings): AppSettings => ({
 export const useSettingsActions = ({
   settingsDraft,
   isDemo,
-  demoJiraResult,
+  demoSyncResult,
   client = nativeApi,
   saveSettings = saveSettingsToStorage,
   runSync,
@@ -128,8 +128,9 @@ export const useSettingsActions = ({
     setIsTesting(true);
 
     try {
-      if (isDemo && demoJiraResult) {
-        showSuccess(demoJiraResult.message);
+      if (isDemo && demoSyncResult) {
+        const displayName = demoSyncResult.displayName ?? "Demo Timekeeper";
+        showSuccess(`Connected as ${displayName}.`);
         return;
       }
 
@@ -146,7 +147,7 @@ export const useSettingsActions = ({
     } finally {
       setIsTesting(false);
     }
-  }, [client, demoJiraResult, isDemo, settingsDraft, showError, showSuccess]);
+  }, [client, demoSyncResult, isDemo, settingsDraft, showError, showSuccess]);
 
   const handleTestBitbucketConnection = useCallback(async () => {
     setIsTestingBitbucket(true);

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
@@ -239,18 +239,6 @@ export const App = () => {
     showSuccess,
     showError
   });
-  const demoJiraResult = useMemo(
-    () =>
-      demoScenario
-        ? {
-            ok: true,
-            accountId: demoScenario.syncResult.accountId,
-            displayName: demoScenario.syncResult.displayName,
-            message: `Connected as ${demoScenario.syncResult.displayName}.`
-          }
-        : undefined,
-    [demoScenario]
-  );
   const {
     isTesting,
     isTestingBitbucket,
@@ -261,7 +249,7 @@ export const App = () => {
   } = useSettingsActions({
     settingsDraft,
     isDemo,
-    demoJiraResult,
+    demoSyncResult: demoScenario?.syncResult,
     runSync,
     loadTickets,
     setSettings,
@@ -270,7 +258,6 @@ export const App = () => {
     showSuccess,
     showError
   });
-  const clearEditingWorklog = useCallback(() => setEditingWorklog(undefined), []);
   const {
     isLogging,
     isDeletingWorklog,
@@ -288,7 +275,7 @@ export const App = () => {
     runSync,
     loadTickets,
     onSyncResult: setSyncResult,
-    onClearEditingWorklog: clearEditingWorklog,
+    setEditingWorklog,
     showSuccess,
     showError
   });

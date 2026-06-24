@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings, JiraTicket, JiraWorklog, SyncResult } from "../../shared/types";
@@ -74,6 +74,7 @@ type JiraWorklogsApi = ReturnType<typeof useJiraWorklogs>;
 let container: HTMLDivElement;
 let root: Root;
 let api: JiraWorklogsApi | undefined;
+let activeEditingWorklog: JiraWorklog | undefined;
 let addWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["addWorklog"]>>;
 let updateWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["updateWorklog"]>>;
 let deleteWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["deleteWorklog"]>>;
@@ -81,7 +82,6 @@ let saveSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => Promise<void
 let runSync: ReturnType<typeof vi.fn<(settingsForSync?: AppSettings, options?: { queueAfterCurrent?: boolean }) => Promise<SyncResult | undefined>>>;
 let loadTickets: ReturnType<typeof vi.fn<(settingsForLoad?: AppSettings) => Promise<void>>>;
 let onSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => void>>;
-let onClearEditingWorklog: ReturnType<typeof vi.fn<() => void>>;
 let showSuccess: ReturnType<typeof vi.fn<(message: string) => void>>;
 let showError: ReturnType<typeof vi.fn<(message: string) => void>>;
 let client: JiraWorklogsClient;
@@ -95,17 +95,22 @@ function Harness({
   currentSyncResult?: SyncResult;
   currentEditingWorklog?: JiraWorklog | null;
 }) {
+  const [editingWorklogValue, setEditingWorklog] = useState<JiraWorklog | undefined>(
+    currentEditingWorklog ?? undefined
+  );
+
+  activeEditingWorklog = editingWorklogValue;
   api = useJiraWorklogs({
     settings,
     syncResult: currentSyncResult,
-    editingWorklog: currentEditingWorklog ?? undefined,
+    editingWorklog: editingWorklogValue,
     isDemo,
     client,
     saveSyncResult,
     runSync,
     loadTickets,
     onSyncResult,
-    onClearEditingWorklog,
+    setEditingWorklog,
     showSuccess,
     showError
   });
@@ -127,6 +132,7 @@ const renderHarness = (props: Parameters<typeof Harness>[0] = {}) => {
 
 beforeEach(() => {
   api = undefined;
+  activeEditingWorklog = undefined;
   addWorklog = vi.fn();
   updateWorklog = vi.fn();
   deleteWorklog = vi.fn();
@@ -134,7 +140,6 @@ beforeEach(() => {
   runSync = vi.fn(async () => syncResult());
   loadTickets = vi.fn(async () => undefined);
   onSyncResult = vi.fn();
-  onClearEditingWorklog = vi.fn();
   showSuccess = vi.fn();
   showError = vi.fn();
   client = {
@@ -302,7 +307,7 @@ describe("useJiraWorklogs", () => {
     });
 
     expect(deleteWorklog).not.toHaveBeenCalled();
-    expect(onClearEditingWorklog).toHaveBeenCalledTimes(1);
+    expect(activeEditingWorklog).toBeUndefined();
     expect(showSuccess).toHaveBeenCalledWith("Demo deleted worklog from TB-22.");
     expect(getApi().isDeletingWorklog).toBe(false);
   });

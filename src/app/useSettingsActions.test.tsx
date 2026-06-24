@@ -75,16 +75,16 @@ let client: SettingsActionsClient;
 function Harness({
   settingsDraft = settings,
   isDemo = false,
-  demoJiraResult
+  demoSyncResult
 }: {
   settingsDraft?: AppSettings;
   isDemo?: boolean;
-  demoJiraResult?: JiraConnectionResult;
+  demoSyncResult?: SyncResult;
 }) {
   api = useSettingsActions({
     settingsDraft,
     isDemo,
-    demoJiraResult,
+    demoSyncResult,
     client,
     saveSettings,
     runSync,
@@ -264,14 +264,13 @@ describe("useSettingsActions", () => {
     expect(getApi().isTesting).toBe(false);
   });
 
-  it("uses the demo Jira result without calling the native client", async () => {
+  it("uses the demo sync identity without calling the native client", async () => {
     renderHarness({
       isDemo: true,
-      demoJiraResult: {
-        ok: true,
+      demoSyncResult: {
+        ...syncResult(),
         accountId: "demo-account",
-        displayName: "Demo Timekeeper",
-        message: "Connected as Demo Timekeeper."
+        displayName: "Demo Timekeeper"
       }
     });
 
