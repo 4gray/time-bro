@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with narrow hooks from `App.tsx` only when their behavior can be covered independently. Jira sync, Jira worklog writes, Bitbucket review logging, local-note actions, and recurring actions now have hook-level coverage; the remaining large-file work is the styles split.
+Continue with narrow refactors only when behavior is covered independently. The app shell behavior now lives behind focused hooks with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -23,7 +23,8 @@ Continue with narrow hooks from `App.tsx` only when their behavior can be covere
 11. Done: extract `useBitbucketReviewLogging` from `App.tsx` with demo, Jira target, review-bucket, persistence, no-target, and partial-failure coverage.
 12. Done: extract local-note action/import state into `usePersonalNotes` with storage, demo, move-between-weeks, import, and error coverage.
 13. Done: extract recurring modal/action state into `useRecurringActions` with event definition, confirm, skip, delete, candidate, demo, storage, and error coverage.
-14. Next: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+14. Done: split `src/styles.css` mechanically into imported files under `src/styles/`.
+15. Next: audit final file sizes and decide whether any further `App.tsx` extraction is worth the additional indirection.
 
 ## Verification
 
@@ -98,3 +99,11 @@ Phase 12:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo recurring quick-log, edit-form hydration, and desktop/mobile overflow
+
+Phase 13:
+
+- Passed: exact concatenation diff of imported style files against the original `src/styles.css`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: browser smoke for demo week/settings views, Add Time modal, desktop/mobile overflow, and console health

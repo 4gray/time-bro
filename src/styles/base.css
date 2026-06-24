@@ -1,0 +1,168 @@
+:root {
+  color-scheme: dark;
+
+  /* surfaces — warm sepia dark */
+  --bg: #191816;
+  --bg-sidebar: #131210;
+  --bg-sunken: #131210;
+  --bg-raised: #201e1b;
+  --bg-card: #262320;
+  --bg-active: #2a2723;
+  --bg-hover: #211f1c;
+  --line: #2c2a26;
+  --line-soft: #201e1b;
+  --border: #3a3731;
+  --border-strong: #45423b;
+  --leader: #34312c;
+
+  /* text */
+  --text: #e9e7e3;
+  --text-bright: #f5f3f0;
+  --text-strong: #cfccc6;
+  --muted: #9d9b95;
+  --dim: #75726c;
+  --dim-2: #67645e;
+  --faint: #54514b;
+  --fainter: #3e3b36;
+
+  /* accents — the blue/green/amber accents hold across themes */
+  --blue: #4f7cff;
+  --blue-soft: #8fb0ff;
+  --green: #3ecf8e;
+  --amber: #e0a44a;
+  --amber-soft: #edc488;
+  --purple: #bda6f5;
+
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Helvetica Neue",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
+
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* light theme — by system preference (when no explicit choice) … */
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark) {
+    color-scheme: light;
+    --bg: #eef0f3;
+    --bg-sidebar: #e7e9ee;
+    --bg-sunken: #e4e7ec;
+    --bg-raised: #ffffff;
+    --bg-card: #ffffff;
+    --bg-active: #e3e7ef;
+    --bg-hover: #e9ecf1;
+    --line: #e1e4e9;
+    --line-soft: #eaecf0;
+    --border: #d4d8df;
+    --border-strong: #c9ced6;
+    --leader: #d4d8df;
+    --text: #1b1e25;
+    --text-bright: #0c0d11;
+    --text-strong: #3c414b;
+    --muted: #5a606b;
+    --dim: #757b87;
+    --dim-2: #7c828f;
+    --faint: #a3a9b3;
+    --fainter: #c2c6ce;
+    --blue-soft: #3b63d6;
+    --amber-soft: #9a6a16;
+    --purple: #7a52d6;
+  }
+}
+
+/* … or by explicit toggle (overrides system) */
+:root.theme-light {
+  color-scheme: light;
+  --bg: #eef0f3;
+  --bg-sidebar: #e7e9ee;
+  --bg-sunken: #e4e7ec;
+  --bg-raised: #ffffff;
+  --bg-card: #ffffff;
+  --bg-active: #e3e7ef;
+  --bg-hover: #e9ecf1;
+  --line: #e1e4e9;
+  --line-soft: #eaecf0;
+  --border: #d4d8df;
+  --border-strong: #c9ced6;
+  --leader: #d4d8df;
+  --text: #1b1e25;
+  --text-bright: #0c0d11;
+  --text-strong: #3c414b;
+  --muted: #5a606b;
+  --dim: #757b87;
+  --dim-2: #7c828f;
+  --faint: #a3a9b3;
+  --fainter: #c2c6ce;
+  --blue-soft: #3b63d6;
+  --amber-soft: #9a6a16;
+  --purple: #7a52d6;
+}
+
+:root.theme-dark {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+}
+
+#root {
+  height: 100vh;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+input,
+textarea,
+select,
+a,
+label {
+  -webkit-app-region: no-drag;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::-webkit-scrollbar {
+  height: 11px;
+  width: 11px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+  border: 3px solid var(--bg);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+

@@ -1,0 +1,400 @@
+/* ============================ responsive ============================ */
+@media (max-width: 1100px) {
+  .topnav {
+    padding: 0 24px;
+    gap: 20px;
+  }
+
+  .today-body {
+    flex-direction: column;
+  }
+
+  .composer {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .today-rail {
+    width: auto;
+  }
+
+  .welcome-shell {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .welcome-copy {
+    width: auto;
+    min-height: auto;
+    padding: 36px 32px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .welcome-headline {
+    margin-top: 44px;
+    padding-top: 0;
+  }
+
+  .welcome-connect {
+    padding: 36px 32px;
+  }
+
+  .reports-body {
+    flex-direction: column;
+  }
+
+  .chart-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+@media (max-height: 640px) {
+  .week-header {
+    padding-top: 18px;
+    padding-bottom: 16px;
+  }
+
+  .day-col {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .day-col-head {
+    padding-bottom: 8px;
+  }
+
+  .day-date {
+    font-size: 38px;
+  }
+
+  .day-hours {
+    margin-top: 8px;
+  }
+
+  .day-hours .tracked {
+    font-size: 22px;
+  }
+
+  .seg-bar {
+    height: 8px;
+    margin-top: 6px;
+  }
+
+  .day-logs {
+    min-height: 72px;
+    margin-top: 10px;
+  }
+
+  .day-skip {
+    left: 18px;
+    bottom: 10px;
+  }
+}
+
+@media (max-width: 860px) {
+  .week-grid {
+    flex-wrap: wrap;
+  }
+
+  .day-col {
+    flex: 1 1 33%;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .kpi-row {
+    flex-wrap: wrap;
+  }
+
+  .kpi {
+    flex: 1 1 50%;
+  }
+
+  .review-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .review-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .review-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-kpi {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .review-kpi:nth-child(2n) {
+    border-right: none;
+  }
+
+  .review-target-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .review-filter-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .review-filter-hint {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .review-target-hint {
+    justify-self: start;
+  }
+
+  .settings-body {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+
+  .settings-content {
+    padding: 22px 28px 40px;
+  }
+}
+
+@media (max-width: 700px) {
+  .shell-body {
+    flex-direction: column;
+  }
+
+  .sidebar,
+  .sidebar.collapsed {
+    width: 100%;
+    height: 58px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .sidebar::before {
+    display: none;
+  }
+
+  .sb-nav {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .sb-spacer {
+    flex: 1 0 8px;
+  }
+
+  .nav-item {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    gap: 0;
+    padding: 9px 10px;
+  }
+
+  .nav-item .nav-label,
+  .sidebar.collapsed .nav-label {
+    display: none;
+  }
+
+  .sb-collapse {
+    display: none;
+  }
+
+  .sb-synced {
+    min-width: 32px;
+    justify-content: center;
+    padding: 10px 7px;
+  }
+
+  .sb-dot {
+    margin: 0;
+  }
+
+  .settings-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px 18px 18px;
+  }
+
+  .settings-title {
+    font-size: 34px;
+    line-height: 0.98;
+  }
+
+  .settings-subtitle {
+    max-width: 34ch;
+  }
+
+  .settings-body {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-rail {
+    flex-direction: row;
+    gap: 4px;
+    padding: 10px 14px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .settings-rail-item {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .settings-rail-text small {
+    display: none;
+  }
+
+  .settings-content {
+    padding: 20px 18px 36px;
+  }
+
+  .review-header {
+    padding: 28px 30px 24px;
+  }
+
+  .review-header .big-figure {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 52px;
+  }
+
+  .review-header .big-figure .unit {
+    font-size: 20px;
+  }
+
+  .review-figure-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .review-figure-row .sub {
+    max-width: 24ch;
+    line-height: 1.45;
+  }
+
+  .review-actions .sync-button,
+  .review-actions .review-log-button {
+    flex: 1 1 142px;
+    justify-content: center;
+  }
+
+  .review-kpi {
+    min-width: 0;
+    padding: 22px 24px;
+  }
+
+  .review-target-row,
+  .review-filter-row,
+  .review-list {
+    padding-left: 30px;
+    padding-right: 30px;
+  }
+
+  .review-filter-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-filter-toggle button {
+    padding: 0 10px;
+    white-space: normal;
+  }
+
+  .review-target-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .review-target-toggle button {
+    padding: 0 10px;
+    white-space: normal;
+  }
+
+  .review-session {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .review-session-time {
+    grid-column: 2;
+    justify-items: start;
+  }
+
+  .review-dialog-item {
+    grid-template-columns: 1fr;
+  }
+
+  .review-dialog-item-meta {
+    justify-items: start;
+  }
+
+  .review-duration-editor-controls {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .review-duration-editor-controls button,
+  .review-duration-apply {
+    padding: 0 6px;
+  }
+
+  .settings-panel {
+    padding: 18px;
+  }
+
+  .inline-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .data-transfer-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .inline-actions .primary-button,
+  .inline-actions .secondary-button,
+  .data-transfer-row .secondary-button {
+    justify-content: center;
+  }
+
+  .snackbar-stack {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 24px);
+  }
+
+  .snackbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .snackbar-actions {
+    grid-column: 2 / -1;
+    justify-content: stretch;
+    flex-wrap: wrap;
+  }
+
+  .snackbar-action {
+    flex: 1 1 130px;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  .snackbar-dismiss {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
