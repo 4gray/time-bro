@@ -13,9 +13,10 @@ Start with low-risk pure helpers from `App.tsx`, add focused unit tests, and kee
 1. Done: extract pure app helpers into `src/app/appHelpers.ts`.
 2. Done: add unit coverage for URL normalization, ticket sorting, personal-note merging/grouping, and demo update metadata.
 3. Done: extract `useSnackbars` from `App.tsx` with hook-level coverage.
-4. Next: extract the remaining small hooks (theme persistence, live date, update checks).
-5. Later: split larger data/action orchestration only after the helper and hook seams are covered.
-6. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+4. Done: extract `useThemeMode` from `App.tsx` with storage, system preference, and demo-mode coverage.
+5. Next: extract the remaining small hooks (live date, update checks).
+6. Later: split larger data/action orchestration only after the helper and hook seams are covered.
+7. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -30,3 +31,9 @@ Phase 2:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo settings snackbar after saving settings
+
+Phase 3:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo settings theme switching without demo localStorage writes

@@ -33,6 +33,7 @@ import {
   updateVisiblePersonalNotes
 } from "./app/appHelpers";
 import { useSnackbars } from "./app/useSnackbars";
+import { useThemeMode } from "./app/useThemeMode";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import type { RecurringEventDraft } from "./components/SettingsView";
@@ -40,7 +41,7 @@ import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { ReviewView } from "./components/ReviewView";
 import { SettingsView } from "./components/SettingsView";
-import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
+import { Sidebar, type AppView } from "./components/Sidebar";
 import { SnackbarStack } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
@@ -83,8 +84,6 @@ import {
 } from "./storage/db";
 import { addDays, formatClock, formatDuration, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
 
-const THEME_STORAGE_KEY = "timebro-theme";
-const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 
@@ -147,27 +146,14 @@ export const App = () => {
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
   const [editingPersonalNote, setEditingPersonalNote] = useState<PersonalNote | undefined>();
   const [welcomeConnected, setWelcomeConnected] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode | null>(() => {
-    if (demoConfig?.theme) {
-      return demoConfig.theme;
-    }
-
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-      return stored === "light" || stored === "dark" ? stored : null;
-    } catch {
-      return null;
-    }
+  const { effectiveTheme, selectTheme } = useThemeMode({
+    initialTheme: demoConfig?.theme,
+    persist: !demoScenario
   });
-  const [systemLight, setSystemLight] = useState(
-    () => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: light)").matches === true
-  );
   const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
   const updateSnackbarShownForRef = useRef<string | undefined>();
-
-  const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
   const weekState = useMemo(
     () =>
@@ -893,38 +879,6 @@ export const App = () => {
     const id = setInterval(() => setLiveDate(new Date()), 60_000);
     return () => clearInterval(id);
   }, [demoScenario]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("theme-light", "theme-dark");
-    if (theme === "light") {
-      root.classList.add("theme-light");
-    } else if (theme === "dark") {
-      root.classList.add("theme-dark");
-    }
-  }, [theme]);
-
-  useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-color-scheme: light)");
-    if (!mq) {
-      return;
-    }
-    const onChange = () => setSystemLight(mq.matches);
-    mq.addEventListener?.("change", onChange);
-    return () => mq.removeEventListener?.("change", onChange);
-  }, []);
-
-  const selectTheme = (next: ThemeMode) => {
-    if (!demoScenario) {
-      try {
-        localStorage.setItem(THEME_STORAGE_KEY, next);
-        localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
-      } catch {
-        /* ignore persistence failures */
-      }
-    }
-    setTheme(next);
-  };
 
   const goToWeek = (date: Date) => {
     setWeekStart(getWeekBounds(date).weekStart);
