@@ -9,6 +9,7 @@ import type {
   SyncResult,
   WeekOverride
 } from "../shared/types";
+import { AppMainView } from "./app/AppMainView";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
@@ -33,19 +34,11 @@ import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
-import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
-import { ReviewView } from "./components/ReviewView";
-import { LoadingView } from "./components/LoadingView";
-import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView } from "./components/Sidebar";
 import { SnackbarStack } from "./components/SnackbarStack";
-import { TicketsView } from "./components/TicketsView";
 import { TimeEntryModalLayer } from "./components/TimeEntryModalLayer";
-import { TodayView } from "./components/TodayView";
-import { MonthView } from "./components/MonthView";
 import { WelcomeView } from "./components/WelcomeView";
-import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
@@ -408,134 +401,84 @@ export const App = () => {
           showReview={isBitbucketReady}
         />
 
-        <main className="main-area">
-          {isBooting ? (
-            <LoadingView />
-          ) : view === "today" ? (
-            <TodayView
-              date={currentDate}
-              selectedTicket={selectedTicket}
-              ticketOptions={ticketOptions}
-              todayWorklogs={todayWorklogs}
-              personalNotes={todayPersonalNotes}
-              issueUrlsByKey={issueUrlsByKey}
-              issueTypesByKey={issueTypesByKey}
-              todayTrackedHours={todayTrackedHours}
-              dailyTargetHours={weekState.dailyTargetHours}
-              touchedNotLogged={touchedNotLogged}
-              reminderTime={settings.reminderTime}
-              remindersEnabled={settings.remindersEnabled}
-              isConfigured={isConfigured}
-              isLogging={isLogging}
-              onLog={handleAddWorklog}
-              onAddPersonalNote={handleAddPersonalNote}
-              onEditWorklog={addTimeModalActions.openEditWorklog}
-              onEditPersonalNote={addTimeModalActions.openEditPersonalNote}
-              onSelectTicket={setSelectedTicket}
-              onSearchTickets={searchTickets}
-            />
-          ) : view === "week" ? (
-            <WeekView
-              weekState={weekState}
-              syncResult={syncResult}
-              currentDate={currentDate}
-              isSyncing={isSyncing || isSyncingReviews}
-              isConfigured={isConfigured}
-              dockTickets={dockTickets}
-              activeTicketCount={activeTicketCount}
-              isLogging={isLogging}
-              onSync={handleSync}
-              onPreviousWeek={goToPreviousWeek}
-              onCurrentWeek={goToCurrentWeek}
-              onNextWeek={goToNextWeek}
-              onAddTime={addTimeModalActions.openAddTime}
-              onEditWorklog={addTimeModalActions.openEditWorklog}
-              onEditPersonalNote={addTimeModalActions.openEditPersonalNote}
-              onToggleSkipped={handleToggleSkipped}
-              onDockLog={handleAddWorklog}
-              onConfirmRecurring={handleConfirmRecurring}
-              onSkipRecurring={handleSkipRecurring}
-              onDeleteRecurring={handleDeleteRecurringOccurrence}
-            />
-          ) : view === "month" ? (
-            monthState ? (
-              <MonthView
-                monthState={monthState}
-                onSelectWeek={openWeekFromMonth}
-                onPreviousMonth={goToPreviousMonth}
-                onCurrentMonth={goToCurrentMonth}
-                onNextMonth={goToNextMonth}
-              />
-            ) : (
-              <LoadingView />
-            )
-          ) : view === "review" ? (
-            <ReviewView
-              weekKey={weekState.weekKey}
-              weekStartISO={weekState.weekStartISO}
-              settings={settings}
-              result={visibleBitbucketReviewResult}
-              issueUrlsByKey={issueUrlsByKey}
-              issueTypesByKey={issueTypesByKey}
-              isConfigured={isBitbucketReady}
-              isSyncing={isSyncingReviews}
-              isLogging={isLoggingReview}
-              targetMode={reviewTargetMode}
-              onTargetModeChange={setReviewTargetMode}
-              onSync={handleReviewSync}
-              onLogSessions={handleLogReviewSessions}
-              onPreviousWeek={goToPreviousWeek}
-              onCurrentWeek={goToCurrentWeek}
-              onNextWeek={goToNextWeek}
-            />
-          ) : view === "tickets" ? (
-            <TicketsView
-              inProgress={tickets?.inProgress ?? []}
-              recentlyClosed={tickets?.recentlyClosed ?? []}
-              favoriteKeys={favoriteKeys}
-              hoursByKey={hoursByKey}
-              weekHoursLogged={weekState.trackedWeekHours}
-              isConfigured={isConfigured}
-              isLoading={ticketsLoading}
-              error={ticketsError}
-              onToggleFavorite={toggleFavorite}
-              onLog={handleLogTicket}
-            />
-          ) : view === "reports" ? (
-            <ReportsView
-              weekState={weekState}
-              onPreviousWeek={goToPreviousWeek}
-              onCurrentWeek={goToCurrentWeek}
-              onNextWeek={goToNextWeek}
-            />
-          ) : (
-            <SettingsView
-              draft={settingsDraft}
-              onDraftChange={setSettingsDraft}
-              onSave={handleSaveSettings}
-              onTestConnection={handleTestConnection}
-              onTestBitbucketConnection={handleTestBitbucketConnection}
-              isTesting={isTesting}
-              isTestingBitbucket={isTestingBitbucket}
-              effectiveTheme={effectiveTheme}
-              onSelectTheme={selectTheme}
-              updateInfo={updateInfo}
-              isCheckingUpdates={isCheckingUpdates}
-              onCheckForUpdates={checkForUpdatesFromSettings}
-              onShowReleaseNotes={openCurrentReleaseNotes}
-              onDownloadUpdate={openCurrentUpdateDownload}
-              onOpenReleasePage={openReleasePage}
-              weekRangeLabel={weekState.weekRangeLabel}
-              onExportWeekCsv={handleExportWeekCsv}
-              onImportPersonalNotes={handleImportPersonalNotes}
-              isImportingPersonalNotes={isImportingPersonalNotes}
-              recurringEvents={recurringEvents}
-              onSaveRecurringEvent={handleSaveRecurringEvent}
-              onDeleteRecurringEvent={handleDeleteRecurringEvent}
-              onToggleRecurringEvent={handleToggleRecurringEvent}
-            />
-          )}
-        </main>
+        <AppMainView
+          view={view}
+          isBooting={isBooting}
+          currentDate={currentDate}
+          selectedTicket={selectedTicket}
+          ticketOptions={ticketOptions}
+          todayWorklogs={todayWorklogs}
+          todayPersonalNotes={todayPersonalNotes}
+          issueUrlsByKey={issueUrlsByKey}
+          issueTypesByKey={issueTypesByKey}
+          todayTrackedHours={todayTrackedHours}
+          touchedNotLogged={touchedNotLogged}
+          settings={settings}
+          settingsDraft={settingsDraft}
+          weekState={weekState}
+          syncResult={syncResult}
+          monthState={monthState}
+          visibleBitbucketReviewResult={visibleBitbucketReviewResult}
+          tickets={tickets}
+          favoriteKeys={favoriteKeys}
+          hoursByKey={hoursByKey}
+          dockTickets={dockTickets}
+          activeTicketCount={activeTicketCount}
+          reviewTargetMode={reviewTargetMode}
+          isConfigured={isConfigured}
+          isBitbucketReady={isBitbucketReady}
+          isSyncing={isSyncing}
+          isSyncingReviews={isSyncingReviews}
+          isLogging={isLogging}
+          isLoggingReview={isLoggingReview}
+          ticketsLoading={ticketsLoading}
+          ticketsError={ticketsError}
+          isTesting={isTesting}
+          isTestingBitbucket={isTestingBitbucket}
+          effectiveTheme={effectiveTheme}
+          updateInfo={updateInfo}
+          isCheckingUpdates={isCheckingUpdates}
+          recurringEvents={recurringEvents}
+          isImportingPersonalNotes={isImportingPersonalNotes}
+          handleAddWorklog={handleAddWorklog}
+          handleAddPersonalNote={handleAddPersonalNote}
+          handleSync={handleSync}
+          goToPreviousWeek={goToPreviousWeek}
+          goToCurrentWeek={goToCurrentWeek}
+          goToNextWeek={goToNextWeek}
+          goToPreviousMonth={goToPreviousMonth}
+          goToCurrentMonth={goToCurrentMonth}
+          goToNextMonth={goToNextMonth}
+          openWeekFromMonth={openWeekFromMonth}
+          handleReviewSync={handleReviewSync}
+          handleLogReviewSessions={handleLogReviewSessions}
+          setReviewTargetMode={setReviewTargetMode}
+          toggleFavorite={toggleFavorite}
+          handleLogTicket={handleLogTicket}
+          setSettingsDraft={setSettingsDraft}
+          handleSaveSettings={handleSaveSettings}
+          handleTestConnection={handleTestConnection}
+          handleTestBitbucketConnection={handleTestBitbucketConnection}
+          selectTheme={selectTheme}
+          checkForUpdatesFromSettings={checkForUpdatesFromSettings}
+          openCurrentReleaseNotes={openCurrentReleaseNotes}
+          openCurrentUpdateDownload={openCurrentUpdateDownload}
+          openReleasePage={openReleasePage}
+          handleExportWeekCsv={handleExportWeekCsv}
+          handleImportPersonalNotes={handleImportPersonalNotes}
+          handleSaveRecurringEvent={handleSaveRecurringEvent}
+          handleDeleteRecurringEvent={handleDeleteRecurringEvent}
+          handleToggleRecurringEvent={handleToggleRecurringEvent}
+          setSelectedTicket={setSelectedTicket}
+          searchTickets={searchTickets}
+          openAddTime={addTimeModalActions.openAddTime}
+          openEditWorklog={addTimeModalActions.openEditWorklog}
+          openEditPersonalNote={addTimeModalActions.openEditPersonalNote}
+          handleToggleSkipped={handleToggleSkipped}
+          handleConfirmRecurring={handleConfirmRecurring}
+          handleSkipRecurring={handleSkipRecurring}
+          handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
+        />
       </div>
 
       <TimeEntryModalLayer
