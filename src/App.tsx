@@ -1,7 +1,6 @@
 import { useState } from "react";
 import type {
   BitbucketReviewTargetMode,
-  JiraWorklog,
   PersonalNote,
   SyncResult
 } from "../shared/types";
@@ -13,6 +12,7 @@ import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
 import { useAppShellState } from "./app/useAppShellState";
+import { useAppTimeEntryModalState } from "./app/useAppTimeEntryModalState";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
@@ -58,8 +58,7 @@ export const App = () => {
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
-  const [addModalDate, setAddModalDate] = useState<Date | undefined>();
-  const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
+  const { addModalDate, setAddModalDate, editingWorklog, setEditingWorklog } = useAppTimeEntryModalState();
   const { effectiveTheme, selectTheme } = useThemeMode({
     initialTheme: demoConfig?.theme,
     persist: !isDemo
