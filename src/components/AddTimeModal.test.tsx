@@ -67,4 +67,78 @@ describe("AddTimeModal", () => {
     expect(markup).toContain("Save note");
     expect(markup).not.toContain("Connect Jira to choose a ticket");
   });
+
+  it("offers a delete action when editing a local note with an onDelete handler", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date("2026-06-18T10:00:00.000Z")}
+        dateOptions={["2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={false}
+        isLogging={false}
+        editingPersonalNote={{
+          id: "note-1",
+          weekKey: "2026-06-15",
+          dateKey: "2026-06-18",
+          text: "Mentoring and planning",
+          timeSpentSeconds: 2 * 3600,
+          startedISO: "2026-06-18T10:00:00.000Z",
+          createdAt: "2026-06-18T10:00:00.000Z",
+          updatedAt: "2026-06-18T10:00:00.000Z"
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onDelete={async () => true}
+        onUpdatePersonalNote={async () => true}
+      />
+    );
+
+    expect(markup).toContain("Delete note");
+  });
+
+  it("offers a Recurring tab when recurring handlers are provided", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 5, 18, 10, 30)}
+        dateOptions={["2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onAddPersonalNote={async () => true}
+        getRecurringCandidates={() => []}
+        onLogRecurring={async () => true}
+      />
+    );
+
+    expect(markup).toContain(">Recurring</button>");
+  });
+
+  it("hides the Recurring tab while editing an existing worklog", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 5, 18, 10, 30)}
+        dateOptions={["2026-06-18", "2026-06-19"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        editingWorklog={{
+          id: "wl-1",
+          issueId: "133470",
+          issueKey: "FTDM-397",
+          issueSummary: "Restructure the access domain in nx monorepo",
+          authorAccountId: "account-1",
+          started: "2026-06-18T08:00:00.000Z",
+          timeSpentSeconds: 2 * 3600
+        }}
+        onClose={() => undefined}
+        onLog={async () => true}
+        getRecurringCandidates={() => []}
+        onLogRecurring={async () => true}
+      />
+    );
+
+    expect(markup).not.toContain(">Recurring</button>");
+  });
 });

@@ -12,17 +12,30 @@ import {
   LockKeyhole,
   Loader2,
   Moon,
+  Pencil,
+  Plus,
   RefreshCw,
+  Repeat2,
   Save,
   ShieldCheck,
   SunMedium,
   TestTube2,
+  Trash2,
   Upload,
   type LucideIcon
 } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
-import type { AppSettings, AppUpdateInfo, WeekdayNumber } from "../../shared/types";
+import type { AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
 import type { ThemeMode } from "./Sidebar";
+
+export interface RecurringEventDraft {
+  id?: string;
+  title: string;
+  daysOfWeek: WeekdayNumber[];
+  localTime: string;
+  durationMinutes: number;
+  defaultNote: string;
+}
 
 interface SettingsViewProps {
   draft: AppSettings;
@@ -42,9 +55,32 @@ interface SettingsViewProps {
   onExportWeekCsv: () => void;
   onImportPersonalNotes: (file: File) => Promise<void> | void;
   isImportingPersonalNotes: boolean;
+  recurringEvents: RecurringEvent[];
+  onSaveRecurringEvent: (draft: RecurringEventDraft) => void | Promise<void>;
+  onDeleteRecurringEvent: (id: string) => void | Promise<void>;
+  onToggleRecurringEvent: (id: string) => void | Promise<void>;
 }
 
-type SettingsSection = "jira" | "bitbucket" | "tracking" | "appearance" | "data" | "about";
+type SettingsSection = "jira" | "bitbucket" | "tracking" | "recurring" | "appearance" | "data" | "about";
+
+const RECURRING_DURATION_MINUTES = [10, 15, 30, 45, 60, 90] as const;
+
+const recurringMinutesLabel = (minutes: number) => {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${String(rest).padStart(2, "0")}m`;
+};
+
+const EMPTY_RECURRING_FORM: RecurringEventDraft = {
+  title: "",
+  daysOfWeek: [1, 2, 3, 4, 5],
+  localTime: "09:15",
+  durationMinutes: 15,
+  defaultNote: ""
+};
 
 interface SectionMeta {
   id: SettingsSection;
@@ -79,6 +115,14 @@ const SECTIONS: SectionMeta[] = [
     title: "Tracking",
     subtitle: "Set weekly expectations and schedule local reminders.",
     icon: CalendarDays
+  },
+  {
+    id: "recurring",
+    label: "Recurring",
+    hint: "Local rituals",
+    title: "Recurring local time",
+    subtitle: "Regular rituals that never get a Jira ticket — offered each day as a soft local suggestion.",
+    icon: Repeat2
   },
   {
     id: "appearance",
@@ -177,12 +221,19 @@ export const SettingsView = ({
   weekRangeLabel,
   onExportWeekCsv,
   onImportPersonalNotes,
-  isImportingPersonalNotes
+  isImportingPersonalNotes,
+  recurringEvents,
+  onSaveRecurringEvent,
+  onDeleteRecurringEvent,
+  onToggleRecurringEvent
 }: SettingsViewProps) => {
   const [activeSection, setActiveSection] = useState<SettingsSection>("jira");
   const [showJiraApiToken, setShowJiraApiToken] = useState(false);
   const [showBitbucketApiToken, setShowBitbucketApiToken] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [recurringFormOpen, setRecurringFormOpen] = useState(false);
+  const [recurringEditingId, setRecurringEditingId] = useState<string | undefined>();
+  const [recurringForm, setRecurringForm] = useState<RecurringEventDraft>(EMPTY_RECURRING_FORM);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
@@ -205,6 +256,48 @@ export const SettingsView = ({
     if (file) {
       void onImportPersonalNotes(file);
     }
+  };
+
+  const openNewRecurring = () => {
+    setRecurringEditingId(undefined);
+    setRecurringForm(EMPTY_RECURRING_FORM);
+    setRecurringFormOpen(true);
+  };
+
+  const openEditRecurring = (event: RecurringEvent) => {
+    setRecurringEditingId(event.id);
+    setRecurringForm({
+      id: event.id,
+      title: event.title,
+      daysOfWeek: [...event.daysOfWeek],
+      localTime: event.localTime,
+      durationMinutes: event.durationMinutes,
+      defaultNote: event.defaultNote
+    });
+    setRecurringFormOpen(true);
+  };
+
+  const closeRecurringForm = () => {
+    setRecurringFormOpen(false);
+    setRecurringEditingId(undefined);
+  };
+
+  const toggleRecurringDay = (day: WeekdayNumber) => {
+    setRecurringForm((current) => {
+      const daysOfWeek = current.daysOfWeek.includes(day)
+        ? current.daysOfWeek.filter((value) => value !== day)
+        : ([...current.daysOfWeek, day].sort() as WeekdayNumber[]);
+      return { ...current, daysOfWeek };
+    });
+  };
+
+  const submitRecurringForm = async () => {
+    const title = recurringForm.title.trim();
+    if (!title || recurringForm.daysOfWeek.length === 0) {
+      return;
+    }
+    await onSaveRecurringEvent({ ...recurringForm, title });
+    closeRecurringForm();
   };
 
   const active = SECTIONS.find((section) => section.id === activeSection) ?? SECTIONS[0];
@@ -632,6 +725,170 @@ export const SettingsView = ({
     </div>
   );
 
+  const renderRecurring = () => {
+    const saveLabel = recurringEditingId ? "Save event" : "Add event";
+
+    return (
+      <div className="settings-panel">
+        <div className="section-title">
+          <Repeat2 size={16} />
+          <span>Recurring local time</span>
+          <span className="recurring-count">{recurringEvents.length}</span>
+          <span className="settings-panel-spacer" />
+          <button type="button" className="recurring-new" onClick={openNewRecurring}>
+            <Plus size={14} strokeWidth={2.4} />
+            NEW EVENT
+          </button>
+        </div>
+
+        <p className="recurring-intro">
+          Regular rituals that never get a Jira ticket — daily, planning, refinement. Each working day TimeBro offers
+          them as a soft suggestion you confirm, skip or adjust. Confirmed time counts as local tracked time only and
+          is never synced to Jira.
+        </p>
+
+        {recurringFormOpen && (
+          <div className="recurring-editor">
+            <div className="recurring-editor-grid">
+              <label className="recurring-field grow">
+                <span>TITLE</span>
+                <input
+                  type="text"
+                  placeholder="e.g. Daily Standup"
+                  value={recurringForm.title}
+                  onChange={(event) => setRecurringForm((current) => ({ ...current, title: event.target.value }))}
+                  autoFocus
+                />
+              </label>
+              <label className="recurring-field">
+                <span>TIME</span>
+                <input
+                  type="time"
+                  value={recurringForm.localTime}
+                  onChange={(event) => setRecurringForm((current) => ({ ...current, localTime: event.target.value }))}
+                />
+              </label>
+            </div>
+
+            <div className="recurring-field-block">
+              <span className="recurring-field-label">DAYS OF WEEK</span>
+              <div className="recurring-day-picker">
+                {WEEKDAYS.map((day) => (
+                  <button
+                    key={day.value}
+                    type="button"
+                    className={recurringForm.daysOfWeek.includes(day.value) ? "active" : ""}
+                    aria-pressed={recurringForm.daysOfWeek.includes(day.value)}
+                    onClick={() => toggleRecurringDay(day.value)}
+                  >
+                    {day.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="recurring-field-block">
+              <span className="recurring-field-label">
+                DURATION <em>{recurringMinutesLabel(recurringForm.durationMinutes)}</em>
+              </span>
+              <div className="recurring-duration-picker">
+                {RECURRING_DURATION_MINUTES.map((minutes) => (
+                  <button
+                    key={minutes}
+                    type="button"
+                    className={recurringForm.durationMinutes === minutes ? "active" : ""}
+                    onClick={() => setRecurringForm((current) => ({ ...current, durationMinutes: minutes }))}
+                  >
+                    {recurringMinutesLabel(minutes)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="recurring-field-block">
+              <span className="recurring-field-label">DEFAULT NOTE</span>
+              <textarea
+                className="note-textarea"
+                placeholder="Pre-filled note for each logged occurrence…"
+                value={recurringForm.defaultNote}
+                onChange={(event) => setRecurringForm((current) => ({ ...current, defaultNote: event.target.value }))}
+                rows={2}
+              />
+            </label>
+
+            <div className="recurring-editor-actions">
+              <button
+                type="button"
+                className="primary-button is-recurring"
+                onClick={submitRecurringForm}
+                disabled={!recurringForm.title.trim() || recurringForm.daysOfWeek.length === 0}
+              >
+                {saveLabel}
+              </button>
+              <button type="button" className="secondary-button" onClick={closeRecurringForm}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {recurringEvents.length === 0 ? (
+          <div className="recurring-empty-list">
+            No recurring events yet. Add one to have TimeBro suggest it each working day.
+          </div>
+        ) : (
+          <div className="recurring-list">
+            {recurringEvents.map((event) => (
+              <div className={`recurring-row ${event.active ? "" : "is-inactive"}`} key={event.id}>
+                <button
+                  type="button"
+                  className={`switch ${event.active ? "on" : ""}`}
+                  aria-pressed={event.active}
+                  aria-label={event.active ? `Disable ${event.title}` : `Enable ${event.title}`}
+                  onClick={() => void onToggleRecurringEvent(event.id)}
+                >
+                  <span />
+                </button>
+                <div className="recurring-row-body">
+                  <div className="recurring-row-head">
+                    <strong>{event.title}</strong>
+                    <span className="recurring-row-time">{event.localTime}</span>
+                    <span className="recurring-row-sep" />
+                    <span className="recurring-row-dur">{recurringMinutesLabel(event.durationMinutes)}</span>
+                  </div>
+                  <div className="recurring-row-days">
+                    {WEEKDAYS.map((day) => (
+                      <span
+                        key={day.value}
+                        className={event.daysOfWeek.includes(day.value) ? "active" : ""}
+                      >
+                        {day.label}
+                      </span>
+                    ))}
+                  </div>
+                  {event.defaultNote.trim() && <div className="recurring-row-note">{event.defaultNote}</div>}
+                </div>
+                <div className="recurring-row-actions">
+                  <button type="button" onClick={() => openEditRecurring(event)} title="Edit" aria-label={`Edit ${event.title}`}>
+                    <Pencil size={14} strokeWidth={1.9} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteRecurringEvent(event.id)}
+                    title="Delete"
+                    aria-label={`Delete ${event.title}`}
+                  >
+                    <Trash2 size={14} strokeWidth={1.9} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderSection = () => {
     switch (activeSection) {
       case "jira":
@@ -640,6 +897,8 @@ export const SettingsView = ({
         return renderBitbucket();
       case "tracking":
         return renderTracking();
+      case "recurring":
+        return renderRecurring();
       case "appearance":
         return renderAppearance();
       case "data":

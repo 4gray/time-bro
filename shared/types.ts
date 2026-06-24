@@ -89,6 +89,10 @@ export interface DayTrackingSummary {
   missingHours: number;
   issues: JiraIssueSummary[];
   personalNotes: PersonalNote[];
+  /** Confirmed recurring local-time occurrences logged on this day. */
+  recurringEntries: RecurringEntry[];
+  /** Scheduled recurring events not yet confirmed or skipped for this day. */
+  pendingRecurring: PendingRecurringOccurrence[];
 }
 
 export interface WeekState {
@@ -105,6 +109,8 @@ export interface WeekState {
   activeWorkingDates: string[];
   skippedDates: string[];
   days: DayTrackingSummary[];
+  /** Confirmed recurring local-time hours folded into local/tracked totals. */
+  recurringTrackedHours: number;
 }
 
 export interface JiraConnectionResult {
@@ -210,6 +216,65 @@ export interface PersonalNote {
   startedISO: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * A recurring local-time ritual (standup, planning, refinement…) that never
+ * gets a Jira ticket. Definitions are global; each working day the matching
+ * events are offered as a soft suggestion the user confirms, skips or adjusts.
+ * Stored locally only — confirmed time counts as local tracked time and is
+ * never synced to Jira.
+ */
+export interface RecurringEvent {
+  id: string;
+  title: string;
+  /** ISO weekdays the event recurs on (1 = Monday … 5 = Friday). */
+  daysOfWeek: WeekdayNumber[];
+  /** Local clock time the event happens at, "HH:MM". */
+  localTime: string;
+  durationMinutes: number;
+  defaultNote: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RecurringOccurrenceStatus = "confirmed" | "skipped";
+
+/**
+ * Per-date resolution of a {@link RecurringEvent}. Stored per week (like
+ * personal notes). A confirmed occurrence may override the event's default
+ * duration and note for that single day.
+ */
+export interface RecurringOccurrence {
+  eventId: string;
+  weekKey: string;
+  dateKey: string;
+  status: RecurringOccurrenceStatus;
+  timeSpentSeconds?: number;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A confirmed recurring occurrence resolved against its event, for rendering. */
+export interface RecurringEntry {
+  eventId: string;
+  dateKey: string;
+  title: string;
+  localTime: string;
+  timeSpentSeconds: number;
+  note?: string;
+}
+
+/** A recurring event scheduled on a day but not yet confirmed or skipped. */
+export interface PendingRecurringOccurrence {
+  eventId: string;
+  dateKey: string;
+  title: string;
+  localTime: string;
+  defaultDurationMinutes: number;
+  defaultNote: string;
 }
 
 export interface TicketsRequest {

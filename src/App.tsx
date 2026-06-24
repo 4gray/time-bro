@@ -10,14 +10,18 @@ import type {
   JiraTicket,
   JiraWorklog,
   PersonalNote,
+  RecurringEvent,
+  RecurringOccurrence,
   SyncResult,
   TicketSortMode,
   TicketsResult,
+  WeekdayNumber,
   WeekOverride
 } from "../shared/types";
 import { GITHUB_RELEASES_URL } from "../shared/releases";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
+import type { RecurringEventDraft } from "./components/SettingsView";
 import { ReportsView } from "./components/ReportsView";
 import { ReviewView } from "./components/ReviewView";
 import { SettingsView } from "./components/SettingsView";
@@ -41,22 +45,27 @@ import {
 } from "./domain/bitbucketReview";
 import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
+import { buildDefaultRecurringEvents, getRecurringCandidates, indexOccurrences } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
 import {
   getFavoriteKeys,
   getBitbucketReviewResult,
   getPersonalNotes,
+  getRecurringEvents,
+  getRecurringOccurrences,
   getSettings,
   getSyncResult,
   getWeekOverride,
   saveBitbucketReviewResult,
   saveFavoriteKeys,
   savePersonalNotes,
+  saveRecurringEvents,
+  saveRecurringOccurrences,
   saveSettings,
   saveSyncResult,
   saveWeekOverride
 } from "./storage/db";
-import { addDays, formatDuration, fromLocalDateKey, toLocalDateKey } from "./utils/date";
+import { addDays, formatClock, formatDuration, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
 
 const isJiraConfigured = (settings: AppSettings) =>
   Boolean(settings.jiraBaseUrl.trim() && settings.jiraEmail.trim() && settings.jiraApiToken.trim());
@@ -207,6 +216,10 @@ export const App = () => {
   }));
   const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoScenario?.syncResult);
   const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
+  const [recurringEvents, setRecurringEvents] = useState<RecurringEvent[]>(() =>
+    demoScenario ? buildDefaultRecurringEvents() : []
+  );
+  const [recurringOccurrences, setRecurringOccurrences] = useState<RecurringOccurrence[]>([]);
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -260,8 +273,18 @@ export const App = () => {
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
 
   const weekState = useMemo(
-    () => buildWeekState(weekStart, settings, weekOverride, syncResult, personalNotes, currentDate),
-    [currentDate, personalNotes, settings, syncResult, weekOverride, weekStart]
+    () =>
+      buildWeekState(
+        weekStart,
+        settings,
+        weekOverride,
+        syncResult,
+        personalNotes,
+        currentDate,
+        recurringEvents,
+        recurringOccurrences
+      ),
+    [currentDate, personalNotes, recurringEvents, recurringOccurrences, settings, syncResult, weekOverride, weekStart]
   );
 
   const visibleSyncResult = syncResult?.weekKey === weekState.weekKey ? syncResult : undefined;
@@ -689,18 +712,30 @@ export const App = () => {
         storedSyncResult,
         storedFavorites,
         storedPersonalNotes,
-        storedBitbucketReviewResult
+        storedBitbucketReviewResult,
+        storedRecurringEvents,
+        storedRecurringOccurrences
       ] = await Promise.all([
         getSettings(),
         getWeekOverride(weekKey),
         getSyncResult(weekKey),
         getFavoriteKeys(),
         getPersonalNotes(weekKey),
-        getBitbucketReviewResult(weekKey)
+        getBitbucketReviewResult(weekKey),
+        getRecurringEvents(),
+        getRecurringOccurrences(weekKey)
       ]);
 
       if (!isMounted) {
         return;
+      }
+
+      // Seed the prototype defaults the first time the feature is opened so it
+      // is discoverable rather than empty; persist so the seed is stable.
+      let recurringEventsToUse = storedRecurringEvents;
+      if (!recurringEventsToUse) {
+        recurringEventsToUse = buildDefaultRecurringEvents();
+        await saveRecurringEvents(recurringEventsToUse);
       }
 
       setSettings(storedSettings);
@@ -710,6 +745,8 @@ export const App = () => {
       setFavoriteKeys(storedFavorites);
       setPersonalNotes(storedPersonalNotes);
       setBitbucketReviewResult(storedBitbucketReviewResult);
+      setRecurringEvents(recurringEventsToUse);
+      setRecurringOccurrences(storedRecurringOccurrences);
       skipInitialWeekReloadRef.current = true;
       setIsBooting(false);
     };
@@ -739,11 +776,18 @@ export const App = () => {
     const weekKey = toLocalDateKey(weekStart);
 
     const loadWeek = async () => {
-      const [storedOverride, storedSyncResult, storedPersonalNotes, storedBitbucketReviewResult] = await Promise.all([
+      const [
+        storedOverride,
+        storedSyncResult,
+        storedPersonalNotes,
+        storedBitbucketReviewResult,
+        storedRecurringOccurrences
+      ] = await Promise.all([
         getWeekOverride(weekKey),
         getSyncResult(weekKey),
         getPersonalNotes(weekKey),
-        getBitbucketReviewResult(weekKey)
+        getBitbucketReviewResult(weekKey),
+        getRecurringOccurrences(weekKey)
       ]);
 
       if (!isMounted) {
@@ -754,6 +798,7 @@ export const App = () => {
       setSyncResult(storedSyncResult);
       setPersonalNotes(storedPersonalNotes);
       setBitbucketReviewResult(storedBitbucketReviewResult);
+      setRecurringOccurrences(storedRecurringOccurrences);
     };
 
     loadWeek().catch((error) => {
@@ -793,16 +838,29 @@ export const App = () => {
               isDemoWeek ? demoScenario.weekOverride : { weekKey, skippedDates: [] },
               isDemoWeek ? demoScenario.syncResult : undefined,
               [],
-              currentDate
+              currentDate,
+              recurringEvents,
+              isDemoWeek ? recurringOccurrences : []
             );
           }
 
-          const [storedOverride, storedSyncResult, storedPersonalNotes] = await Promise.all([
-            getWeekOverride(weekKey),
-            getSyncResult(weekKey),
-            getPersonalNotes(weekKey)
-          ]);
-          return buildWeekState(start, settings, storedOverride, storedSyncResult, storedPersonalNotes, currentDate);
+          const [storedOverride, storedSyncResult, storedPersonalNotes, storedRecurringOccurrences] =
+            await Promise.all([
+              getWeekOverride(weekKey),
+              getSyncResult(weekKey),
+              getPersonalNotes(weekKey),
+              getRecurringOccurrences(weekKey)
+            ]);
+          return buildWeekState(
+            start,
+            settings,
+            storedOverride,
+            storedSyncResult,
+            storedPersonalNotes,
+            currentDate,
+            recurringEvents,
+            storedRecurringOccurrences
+          );
         })
       );
 
@@ -823,7 +881,18 @@ export const App = () => {
     return () => {
       isMounted = false;
     };
-  }, [currentDate, demoScenario, isBooting, monthAnchor, settings, showError, view, weekState]);
+  }, [
+    currentDate,
+    demoScenario,
+    isBooting,
+    monthAnchor,
+    recurringEvents,
+    recurringOccurrences,
+    settings,
+    showError,
+    view,
+    weekState
+  ]);
 
   useEffect(() => {
     if (demoScenario || isBooting || startupSyncCheckedRef.current) {
@@ -1550,6 +1619,223 @@ export const App = () => {
     }
   };
 
+  const handleDeletePersonalNote = async () => {
+    if (!editingPersonalNote) {
+      return false;
+    }
+    const note = editingPersonalNote;
+    const remove = (list: PersonalNote[]) => list.filter((candidate) => candidate.id !== note.id);
+
+    try {
+      if (demoScenario) {
+        setPersonalNotes((current) => remove(current));
+        showSuccess("Deleted the local note.");
+        return true;
+      }
+
+      const current = note.weekKey === weekState.weekKey ? personalNotes : await getPersonalNotes(note.weekKey);
+      const next = remove(current);
+      await savePersonalNotes(note.weekKey, next);
+      if (note.weekKey === weekState.weekKey) {
+        setPersonalNotes(next);
+      }
+      showSuccess("Deleted the local note.");
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete the personal note locally.";
+      setLogError(message);
+      showError(message);
+      return false;
+    }
+  };
+
+  const persistRecurringEvents = async (next: RecurringEvent[]) => {
+    setRecurringEvents(next);
+    if (!demoScenario) {
+      await saveRecurringEvents(next);
+    }
+  };
+
+  const handleSaveRecurringEvent = async (draft: RecurringEventDraft) => {
+    const title = draft.title.trim();
+    if (!title || draft.daysOfWeek.length === 0) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const next = draft.id
+      ? recurringEvents.map((event) =>
+          event.id === draft.id
+            ? {
+                ...event,
+                title,
+                daysOfWeek: [...draft.daysOfWeek],
+                localTime: draft.localTime,
+                durationMinutes: draft.durationMinutes,
+                defaultNote: draft.defaultNote,
+                updatedAt: now
+              }
+            : event
+        )
+      : [
+          ...recurringEvents,
+          {
+            id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title,
+            daysOfWeek: [...draft.daysOfWeek],
+            localTime: draft.localTime,
+            durationMinutes: draft.durationMinutes,
+            defaultNote: draft.defaultNote,
+            active: true,
+            createdAt: now,
+            updatedAt: now
+          }
+        ];
+
+    try {
+      await persistRecurringEvents(next);
+      showSuccess(draft.id ? "Updated recurring event." : "Added recurring event.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to save the recurring event.");
+    }
+  };
+
+  const handleDeleteRecurringEvent = async (id: string) => {
+    const next = recurringEvents.filter((event) => event.id !== id);
+    try {
+      await persistRecurringEvents(next);
+      showSuccess("Removed recurring event.");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to remove the recurring event.");
+    }
+  };
+
+  const handleToggleRecurringEvent = async (id: string) => {
+    const now = new Date().toISOString();
+    const next = recurringEvents.map((event) =>
+      event.id === id ? { ...event, active: !event.active, updatedAt: now } : event
+    );
+    try {
+      await persistRecurringEvents(next);
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to update the recurring event.");
+    }
+  };
+
+  // Confirm/skip writes the per-day resolution; the dateKey always belongs to a
+  // single week, so we scope the occurrence to that week (like personal notes).
+  const upsertRecurringOccurrence = async (occurrence: RecurringOccurrence) => {
+    const replace = (list: RecurringOccurrence[]) => [
+      ...list.filter(
+        (item) => !(item.eventId === occurrence.eventId && item.dateKey === occurrence.dateKey)
+      ),
+      occurrence
+    ];
+
+    if (demoScenario) {
+      setRecurringOccurrences((current) => replace(current));
+      return true;
+    }
+
+    try {
+      const current =
+        occurrence.weekKey === weekState.weekKey
+          ? recurringOccurrences
+          : await getRecurringOccurrences(occurrence.weekKey);
+      const next = replace(current);
+      await saveRecurringOccurrences(occurrence.weekKey, next);
+      if (occurrence.weekKey === weekState.weekKey) {
+        setRecurringOccurrences(next);
+      }
+      return true;
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to save the recurring entry locally.");
+      return false;
+    }
+  };
+
+  const handleConfirmRecurring = async (payload: {
+    eventId: string;
+    dateKey: string;
+    timeSpentSeconds: number;
+    note?: string;
+  }) => {
+    const event = recurringEvents.find((candidate) => candidate.id === payload.eventId);
+    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(payload.dateKey)).weekStart);
+    const existing = recurringOccurrences.find(
+      (item) => item.eventId === payload.eventId && item.dateKey === payload.dateKey
+    );
+    const now = new Date().toISOString();
+    const ok = await upsertRecurringOccurrence({
+      eventId: payload.eventId,
+      weekKey,
+      dateKey: payload.dateKey,
+      status: "confirmed",
+      timeSpentSeconds: Math.round(payload.timeSpentSeconds),
+      note: payload.note?.trim() || undefined,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    });
+    if (ok) {
+      showSuccess(`Logged ${formatClock(payload.timeSpentSeconds)} to ${event?.title ?? "recurring event"} locally.`);
+    }
+    return ok;
+  };
+
+  const handleSkipRecurring = async (eventId: string, dateKey: string) => {
+    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(dateKey)).weekStart);
+    const existing = recurringOccurrences.find(
+      (item) => item.eventId === eventId && item.dateKey === dateKey
+    );
+    const now = new Date().toISOString();
+    return upsertRecurringOccurrence({
+      eventId,
+      weekKey,
+      dateKey,
+      status: "skipped",
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now
+    });
+  };
+
+  // Removes a logged/skipped occurrence record entirely so the day reverts to a
+  // pending suggestion — the forgiving "undo" for an accidental confirm.
+  const handleDeleteRecurringOccurrence = async (eventId: string, dateKey: string) => {
+    const weekKey = toLocalDateKey(getWeekBounds(fromLocalDateKey(dateKey)).weekStart);
+    const event = recurringEvents.find((candidate) => candidate.id === eventId);
+    const remove = (list: RecurringOccurrence[]) =>
+      list.filter((item) => !(item.eventId === eventId && item.dateKey === dateKey));
+
+    if (demoScenario) {
+      setRecurringOccurrences((current) => remove(current));
+      showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
+      return true;
+    }
+
+    try {
+      const current =
+        weekKey === weekState.weekKey ? recurringOccurrences : await getRecurringOccurrences(weekKey);
+      const next = remove(current);
+      await saveRecurringOccurrences(weekKey, next);
+      if (weekKey === weekState.weekKey) {
+        setRecurringOccurrences(next);
+      }
+      showSuccess(`Removed ${event?.title ?? "recurring entry"} — it's a suggestion again.`);
+      return true;
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "Unable to remove the recurring entry locally.");
+      return false;
+    }
+  };
+
+  const recurringCandidatesForDate = useCallback(
+    (dateKey: string) => {
+      const weekday = isoWeekday(fromLocalDateKey(dateKey)) as WeekdayNumber;
+      return getRecurringCandidates(recurringEvents, indexOccurrences(recurringOccurrences), dateKey, weekday);
+    },
+    [recurringEvents, recurringOccurrences]
+  );
+
   const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);
 
@@ -1700,6 +1986,9 @@ export const App = () => {
               onEditPersonalNote={openEditPersonalNote}
               onToggleSkipped={handleToggleSkipped}
               onDockLog={handleAddWorklog}
+              onConfirmRecurring={handleConfirmRecurring}
+              onSkipRecurring={handleSkipRecurring}
+              onDeleteRecurring={handleDeleteRecurringOccurrence}
             />
           ) : view === "month" ? (
             monthState ? (
@@ -1777,6 +2066,10 @@ export const App = () => {
               onExportWeekCsv={handleExportWeekCsv}
               onImportPersonalNotes={handleImportPersonalNotes}
               isImportingPersonalNotes={isImportingPersonalNotes}
+              recurringEvents={recurringEvents}
+              onSaveRecurringEvent={handleSaveRecurringEvent}
+              onDeleteRecurringEvent={handleDeleteRecurringEvent}
+              onToggleRecurringEvent={handleToggleRecurringEvent}
             />
           )}
         </main>
@@ -1794,6 +2087,8 @@ export const App = () => {
           onLog={handleAddWorklog}
           onSearchTickets={handleSearchTickets}
           onAddPersonalNote={handleAddPersonalNote}
+          getRecurringCandidates={recurringCandidatesForDate}
+          onLogRecurring={handleConfirmRecurring}
         />
       )}
 
@@ -1826,6 +2121,7 @@ export const App = () => {
           editingPersonalNote={editingPersonalNote}
           onClose={() => setEditingPersonalNote(undefined)}
           onLog={handleAddWorklog}
+          onDelete={handleDeletePersonalNote}
           onSearchTickets={handleSearchTickets}
           onAddPersonalNote={handleAddPersonalNote}
           onUpdatePersonalNote={handleUpdatePersonalNote}

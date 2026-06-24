@@ -60,9 +60,12 @@ const weekState: WeekState = {
           createdAt: "2026-06-18T13:00:00.000Z",
           updatedAt: "2026-06-18T13:00:00.000Z"
         }
-      ]
+      ],
+      recurringEntries: [],
+      pendingRecurring: []
     }
-  ]
+  ],
+  recurringTrackedHours: 0
 };
 
 describe("ReportsView", () => {

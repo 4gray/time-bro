@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
-import { Ban, Loader2, MessageSquare, Pencil, PenLine, Plus, RotateCw } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Ban, Check, Loader2, MessageSquare, Pencil, PenLine, Plus, Repeat2, RotateCw, Trash2, X } from "lucide-react";
 import type {
   DayTrackingSummary,
   JiraTicket,
   JiraWorklog,
+  PendingRecurringOccurrence,
   PersonalNote,
+  RecurringEntry,
   SyncResult,
   WeekState
 } from "../../shared/types";
@@ -37,6 +40,15 @@ export interface DockLogPayload {
   comment?: string;
 }
 
+export interface RecurringConfirmPayload {
+  eventId: string;
+  dateKey: string;
+  timeSpentSeconds: number;
+  note?: string;
+}
+
+const RECURRING_PRESET_MINUTES = [10, 15, 30, 45, 60] as const;
+
 interface WeekViewProps {
   weekState: WeekState;
   syncResult?: SyncResult;
@@ -55,6 +67,9 @@ interface WeekViewProps {
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
   onDockLog?: (payload: DockLogPayload) => Promise<boolean>;
+  onConfirmRecurring?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
+  onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
 }
 
 const readDockOpen = () => {
@@ -81,6 +96,248 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 const pad = (value: number) => String(value).padStart(2, "0");
 const hm = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 
+const minutesLabel = (minutes: number) => {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${pad(rest)}m`;
+};
+
+const PendingRecurringCard = ({
+  pending,
+  onConfirm,
+  onSkip
+}: {
+  pending: PendingRecurringOccurrence;
+  onConfirm: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  onSkip: (eventId: string, dateKey: string) => Promise<boolean> | void;
+}) => {
+  const [editing, setEditing] = useState(false);
+  const [minutes, setMinutes] = useState(pending.defaultDurationMinutes);
+  const [note, setNote] = useState(pending.defaultNote);
+
+  const confirm = () => {
+    void onConfirm({
+      eventId: pending.eventId,
+      dateKey: pending.dateKey,
+      timeSpentSeconds: minutes * 60,
+      note: note.trim() || undefined
+    });
+  };
+
+  const durLabel = minutesLabel(minutes);
+
+  return (
+    <div className="rec-pending">
+      <div className="rec-pending-head">
+        <Repeat2 className="rec-pending-icon" size={12} strokeWidth={1.9} />
+        <span className="rec-pending-title">{pending.title}</span>
+      </div>
+
+      {editing ? (
+        <>
+          <div className="rec-pending-chips">
+            {RECURRING_PRESET_MINUTES.map((value) => (
+              <button
+                type="button"
+                key={value}
+                className={`rec-chip ${minutes === value ? "active" : ""}`}
+                onClick={() => setMinutes(value)}
+              >
+                {minutesLabel(value)}
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="rec-pending-note"
+            placeholder="Note for this entry…"
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            rows={2}
+          />
+          <div className="rec-pending-bar">
+            <span className="rec-pending-meta">{pending.localTime}</span>
+            <span className="rec-pending-actions">
+              <button
+                type="button"
+                className="rec-icon-btn is-confirm"
+                onClick={confirm}
+                title={`Log ${durLabel} locally`}
+                aria-label={`Log ${durLabel} locally`}
+              >
+                <Check size={14} strokeWidth={2.4} />
+              </button>
+              <button
+                type="button"
+                className="rec-icon-btn"
+                onClick={() => setEditing(false)}
+                title="Cancel"
+                aria-label="Cancel editing"
+              >
+                <X size={14} strokeWidth={2.2} />
+              </button>
+            </span>
+          </div>
+        </>
+      ) : (
+        <div className="rec-pending-bar">
+          <span className="rec-pending-meta">
+            {pending.localTime} · {durLabel}
+          </span>
+          <span className="rec-pending-actions">
+            <button
+              type="button"
+              className="rec-icon-btn is-confirm"
+              onClick={confirm}
+              title={`Log ${durLabel} locally`}
+              aria-label={`Log ${durLabel} locally`}
+            >
+              <Check size={14} strokeWidth={2.4} />
+            </button>
+            <button
+              type="button"
+              className="rec-icon-btn"
+              onClick={() => setEditing(true)}
+              title="Adjust duration & note"
+              aria-label="Adjust duration and note"
+            >
+              <Pencil size={13} strokeWidth={1.9} />
+            </button>
+            <button
+              type="button"
+              className="rec-icon-btn"
+              onClick={() => void onSkip(pending.eventId, pending.dateKey)}
+              title="Skip today"
+              aria-label="Skip today"
+            >
+              <X size={14} strokeWidth={2.2} />
+            </button>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// A confirmed recurring occurrence — rendered like a personal note (dim icon +
+// EVENT eyebrow + title + text, dashed "local" border). Supports inline editing
+// of duration/note and deleting (which un-logs it back to a pending suggestion).
+const RecurringEntryRow = ({
+  entry,
+  onSave,
+  onDelete
+}: {
+  entry: RecurringEntry;
+  onSave?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  onDelete?: (eventId: string, dateKey: string) => Promise<boolean> | void;
+}) => {
+  const initialMinutes = Math.round(entry.timeSpentSeconds / 60);
+  const [editing, setEditing] = useState(false);
+  const [minutes, setMinutes] = useState(initialMinutes);
+  const [note, setNote] = useState(entry.note ?? "");
+
+  const cancel = () => {
+    setMinutes(initialMinutes);
+    setNote(entry.note ?? "");
+    setEditing(false);
+  };
+
+  const save = () => {
+    void onSave?.({
+      eventId: entry.eventId,
+      dateKey: entry.dateKey,
+      timeSpentSeconds: minutes * 60,
+      note: note.trim() || undefined
+    });
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="day-note-row day-rec-entry is-editing">
+        <div className="day-log-head">
+          <Repeat2 size={12} stroke="var(--dim)" strokeWidth={1.9} />
+          <span className="local-note-label">EVENT</span>
+        </div>
+        <div className="rec-pending-chips">
+          {RECURRING_PRESET_MINUTES.map((value) => (
+            <button
+              type="button"
+              key={value}
+              className={`rec-chip ${minutes === value ? "active" : ""}`}
+              onClick={() => setMinutes(value)}
+            >
+              {minutesLabel(value)}
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="rec-pending-note"
+          placeholder="Note for this entry…"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          rows={2}
+        />
+        <div className="rec-pending-bar">
+          {onDelete && (
+            <button
+              type="button"
+              className="rec-icon-btn is-danger"
+              onClick={() => void onDelete(entry.eventId, entry.dateKey)}
+              title="Delete this entry"
+              aria-label={`Delete ${entry.title}`}
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+          )}
+          <span className="rec-pending-actions">
+            <button
+              type="button"
+              className="rec-icon-btn is-confirm"
+              onClick={save}
+              title={`Save ${minutesLabel(minutes)}`}
+              aria-label={`Save ${minutesLabel(minutes)}`}
+            >
+              <Check size={14} strokeWidth={2.4} />
+            </button>
+            <button type="button" className="rec-icon-btn" onClick={cancel} title="Cancel" aria-label="Cancel editing">
+              <X size={14} strokeWidth={2.2} />
+            </button>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="day-note-row day-rec-entry">
+      <div className="day-log-head">
+        <Repeat2 size={12} stroke="var(--dim)" strokeWidth={1.9} />
+        <span className="local-note-label">EVENT</span>
+        <span className="day-log-spacer" />
+        <span className="day-log-dur">{minutesLabel(initialMinutes)}</span>
+        <span className="day-log-action-slot">
+          {onSave && (
+            <button
+              type="button"
+              className="day-log-edit"
+              onClick={() => setEditing(true)}
+              title="Adjust duration & note"
+              aria-label={`Edit ${entry.title}`}
+            >
+              <Pencil size={12} strokeWidth={2} />
+            </button>
+          )}
+        </span>
+      </div>
+      <div className="day-note-title">{entry.title}</div>
+      {entry.note?.trim() && <div className="day-note-text">{entry.note}</div>}
+    </div>
+  );
+};
+
 // Stable color per ticket key, assigned in order of first appearance this week.
 const buildColorMap = (days: DayTrackingSummary[]) => {
   const map = new Map<string, (typeof PALETTE)[number]>();
@@ -104,7 +361,10 @@ const DayColumn = ({
   onAddTime,
   onEditWorklog,
   onEditPersonalNote,
-  onToggleSkipped
+  onToggleSkipped,
+  onConfirmRecurring,
+  onSkipRecurring,
+  onDeleteRecurring
 }: {
   day: DayTrackingSummary;
   todayKey: string;
@@ -114,14 +374,20 @@ const DayColumn = ({
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
+  onConfirmRecurring?: (payload: RecurringConfirmPayload) => Promise<boolean> | void;
+  onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
+  onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
 }) => {
   const date = fromLocalDateKey(day.dateKey);
   const isFuture = day.dateKey > todayKey;
   const noteHours = day.personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
+  const recurringHours = day.recurringEntries.reduce((sum, entry) => sum + entry.timeSpentSeconds / 3600, 0);
   const totalLogged = day.trackedHours;
   const remaining = Math.max(day.targetHours - totalLogged, 0);
   const emptyColor = isFuture ? "var(--line-soft)" : "var(--line)";
-  const hasRows = day.issues.length > 0 || day.personalNotes.length > 0;
+  const canConfirmRecurring = Boolean(onConfirmRecurring && onSkipRecurring);
+  const pendingRecurring = canConfirmRecurring ? day.pendingRecurring : [];
+  const hasRows = day.issues.length > 0 || day.personalNotes.length > 0 || day.recurringEntries.length > 0;
   const canAddTime = day.isConfiguredWorkingDay && !day.isSkipped;
 
   const trackedClass =
@@ -132,6 +398,33 @@ const DayColumn = ({
         : isFuture
           ? "is-future"
           : "is-empty";
+
+  // Resolve each issue row's worklog/comment detail once so the hover popover
+  // (rendered in a fixed portal to escape the scrollable log list) can look it up.
+  const logEntries = day.issues.map((issue) => {
+    const color = colorOf(issue.key);
+    const logs = worklogsByKey.get(issue.key) ?? [];
+    const comments = issue.comments?.length
+      ? issue.comments
+      : Array.from(new Set(logs.map((log) => log.comment).filter((comment): comment is string => Boolean(comment))));
+    const range = logs.length
+      ? `${hm(new Date(Math.min(...logs.map((log) => new Date(log.started).getTime()))))} — ${hm(
+          new Date(Math.max(...logs.map((log) => new Date(log.started).getTime() + log.timeSpentSeconds * 1000)))
+        )}`
+      : undefined;
+    return { issue, color, logs, comments, range, hasPop: comments.length > 0 || logs.length > 1 };
+  });
+
+  const [pop, setPop] = useState<{ key: string; left: number; bottom: number } | null>(null);
+  const openPop = (key: string, anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const width = 248;
+    const left = Math.min(Math.max(rect.left, 10), window.innerWidth - width - 10);
+    const bottom = window.innerHeight - rect.top + 9;
+    setPop({ key, left, bottom });
+  };
+  const closePop = () => setPop(null);
+  const activeEntry = pop ? logEntries.find((entry) => entry.issue.key === pop.key && entry.hasPop) : undefined;
 
   return (
     <div
@@ -177,105 +470,67 @@ const DayColumn = ({
               />
             ))}
             {noteHours > 0.01 && <span className="seg is-local-note" style={{ flexGrow: noteHours }} />}
+            {recurringHours > 0.01 && <span className="seg is-recurring" style={{ flexGrow: recurringHours }} />}
             {remaining > 0.01 && <span className="seg" style={{ flexGrow: remaining, background: emptyColor }} />}
             {totalLogged < 0.01 && <span className="seg" style={{ flexGrow: day.targetHours || 8, background: emptyColor }} />}
           </div>
 
+          {pendingRecurring.length > 0 && onConfirmRecurring && onSkipRecurring && (
+            <div className="rec-pending-list">
+              {pendingRecurring.map((pending) => (
+                <PendingRecurringCard
+                  key={`${pending.eventId}-${pending.dateKey}`}
+                  pending={pending}
+                  onConfirm={onConfirmRecurring}
+                  onSkip={onSkipRecurring}
+                />
+              ))}
+            </div>
+          )}
+
           {hasRows ? (
             <div className="day-logs">
-              {day.issues.map((issue) => {
-                const color = colorOf(issue.key);
-                const logs = worklogsByKey.get(issue.key) ?? [];
-                const comments = issue.comments?.length
-                  ? issue.comments
-                  : Array.from(new Set(logs.map((log) => log.comment).filter((comment): comment is string => Boolean(comment))));
-                const range = logs.length
-                  ? `${hm(new Date(Math.min(...logs.map((log) => new Date(log.started).getTime()))))} — ${hm(
-                      new Date(
-                        Math.max(...logs.map((log) => new Date(log.started).getTime() + log.timeSpentSeconds * 1000))
-                      )
-                    )}`
-                  : undefined;
-
-                return (
-                  <div className={`wl day-log ${comments.length ? "has-pop" : ""}`} key={issue.key}>
-                    <div className="day-log-head">
-                      <span className="seg-dot" style={{ background: color.seg }} />
-                      <TicketKeyLink
-                        issueKey={issue.key}
-                        url={issue.url}
-                        issueType={issue.issueType}
-                        keyClassName="day-log-key"
-                        style={{ color: color.text }}
-                      />
-                      <span className="day-log-spacer" />
-                      {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
-                      <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
-                      <span className="day-log-action-slot">
-                        {logs.length === 1 && (
-                          <button
-                            type="button"
-                            className="day-log-edit"
-                            onClick={() => onEditWorklog(logs[0])}
-                            title="Edit worklog"
-                            aria-label={`Edit worklog for ${issue.key}`}
-                          >
-                            <Pencil size={12} strokeWidth={2} />
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                    <div className="day-log-summary">{issue.summary}</div>
-
-                    {(comments.length > 0 || logs.length > 1) && (
-                      <div className="wl-pop">
-                        <div className="wl-pop-head">
-                          <span className="seg-dot" style={{ background: color.seg }} />
-                          <TicketKeyLink
-                            issueKey={issue.key}
-                            url={issue.url}
-                            issueType={issue.issueType}
-                            showJiraLink={false}
-                            keyClassName="day-log-key"
-                            style={{ color: color.text }}
-                          />
-                          <span className="day-log-spacer" />
-                          <span className="wl-pop-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
-                        </div>
-                        <div className="wl-pop-summary">{issue.summary}</div>
-                        {range && <div className="wl-pop-range">{range}</div>}
-                        {logs.length > 0
-                          ? logs.map((log) => {
-                              const start = new Date(log.started);
-                              const end = new Date(start.getTime() + log.timeSpentSeconds * 1000);
-
-                              return (
-                                <div className="wl-pop-worklog" key={log.id}>
-                                  <div className="wl-pop-worklog-head">
-                                    <span>
-                                      {hm(start)}–{hm(end)} · {formatHours(log.timeSpentSeconds / 3600)}
-                                    </span>
-                                  </div>
-                                  {log.comment && (
-                                    <div className="wl-pop-comment">
-                                      <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
-                                      <span>{log.comment}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })
-                          : comments.map((comment, index) => (
-                              <div className="wl-pop-comment" key={`${issue.key}-comment-${index}`}>
-                                <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
-                                <span>{comment}</span>
-                              </div>
-                            ))}
-                      </div>
-                    )}
+              {logEntries.map(({ issue, color, logs, comments, hasPop }) => (
+                <div
+                  className={`wl day-log ${comments.length ? "has-pop" : ""} ${
+                    pop?.key === issue.key ? "is-popped" : ""
+                  }`}
+                  key={issue.key}
+                  tabIndex={hasPop ? 0 : undefined}
+                  onMouseEnter={hasPop ? (event) => openPop(issue.key, event.currentTarget) : undefined}
+                  onMouseLeave={hasPop ? closePop : undefined}
+                  onFocus={hasPop ? (event) => openPop(issue.key, event.currentTarget) : undefined}
+                  onBlur={hasPop ? closePop : undefined}
+                >
+                  <div className="day-log-head">
+                    <span className="seg-dot" style={{ background: color.seg }} />
+                    <TicketKeyLink
+                      issueKey={issue.key}
+                      url={issue.url}
+                      issueType={issue.issueType}
+                      keyClassName="day-log-key"
+                      style={{ color: color.text }}
+                    />
+                    <span className="day-log-spacer" />
+                    {comments.length > 0 && <MessageSquare size={12} stroke="#6b7280" strokeWidth={1.8} />}
+                    <span className="day-log-dur">{formatHours(issue.loggedSeconds / 3600)}</span>
+                    <span className="day-log-action-slot">
+                      {logs.length === 1 && (
+                        <button
+                          type="button"
+                          className="day-log-edit"
+                          onClick={() => onEditWorklog(logs[0])}
+                          title="Edit worklog"
+                          aria-label={`Edit worklog for ${issue.key}`}
+                        >
+                          <Pencil size={12} strokeWidth={2} />
+                        </button>
+                      )}
+                    </span>
                   </div>
-                );
-              })}
+                  <div className="day-log-summary">{issue.summary}</div>
+                </div>
+              ))}
               {day.personalNotes.map((note) => (
                 <div className="day-note-row" key={note.id}>
                   <div className="day-log-head">
@@ -299,8 +554,18 @@ const DayColumn = ({
                   <div className="day-note-text">{note.text}</div>
                 </div>
               ))}
+              {day.recurringEntries.map((entry) => (
+                <RecurringEntryRow
+                  key={`${entry.eventId}-${entry.dateKey}`}
+                  entry={entry}
+                  onSave={onConfirmRecurring}
+                  onDelete={onDeleteRecurring}
+                />
+              ))}
               <div className="day-spacer" />
             </div>
+          ) : pendingRecurring.length > 0 ? (
+            <div className="day-spacer" />
           ) : day.isToday && day.isConfiguredWorkingDay ? (
             <>
               <div className="day-spacer" />
@@ -334,6 +599,56 @@ const DayColumn = ({
           {day.isSkipped ? "↩ Restore day" : "+ Mark vacation"}
         </button>
       )}
+
+      {activeEntry &&
+        pop &&
+        createPortal(
+          <div className="wl-pop wl-pop-fixed" style={{ left: pop.left, bottom: pop.bottom }}>
+            <div className="wl-pop-head">
+              <span className="seg-dot" style={{ background: activeEntry.color.seg }} />
+              <TicketKeyLink
+                issueKey={activeEntry.issue.key}
+                url={activeEntry.issue.url}
+                issueType={activeEntry.issue.issueType}
+                showJiraLink={false}
+                keyClassName="day-log-key"
+                style={{ color: activeEntry.color.text }}
+              />
+              <span className="day-log-spacer" />
+              <span className="wl-pop-dur">{formatHours(activeEntry.issue.loggedSeconds / 3600)}</span>
+            </div>
+            <div className="wl-pop-summary">{activeEntry.issue.summary}</div>
+            {activeEntry.range && <div className="wl-pop-range">{activeEntry.range}</div>}
+            {activeEntry.logs.length > 0
+              ? activeEntry.logs.map((log) => {
+                  const start = new Date(log.started);
+                  const end = new Date(start.getTime() + log.timeSpentSeconds * 1000);
+
+                  return (
+                    <div className="wl-pop-worklog" key={log.id}>
+                      <div className="wl-pop-worklog-head">
+                        <span>
+                          {hm(start)}–{hm(end)} · {formatHours(log.timeSpentSeconds / 3600)}
+                        </span>
+                      </div>
+                      {log.comment && (
+                        <div className="wl-pop-comment">
+                          <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                          <span>{log.comment}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              : activeEntry.comments.map((comment, index) => (
+                  <div className="wl-pop-comment" key={`${activeEntry.issue.key}-comment-${index}`}>
+                    <MessageSquare size={12} stroke="#5d636f" strokeWidth={1.7} />
+                    <span>{comment}</span>
+                  </div>
+                ))}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
@@ -355,7 +670,10 @@ export const WeekView = ({
   onEditWorklog,
   onEditPersonalNote,
   onToggleSkipped,
-  onDockLog
+  onDockLog,
+  onConfirmRecurring,
+  onSkipRecurring,
+  onDeleteRecurring
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const weekNumber = getIsoWeekNumber(weekStart);
@@ -539,6 +857,9 @@ export const WeekView = ({
               onEditWorklog={onEditWorklog}
               onEditPersonalNote={onEditPersonalNote}
               onToggleSkipped={onToggleSkipped}
+              onConfirmRecurring={onConfirmRecurring}
+              onSkipRecurring={onSkipRecurring}
+              onDeleteRecurring={onDeleteRecurring}
             />
           );
         })}

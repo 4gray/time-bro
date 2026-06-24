@@ -48,6 +48,10 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       onExportWeekCsv={() => undefined}
       onImportPersonalNotes={() => undefined}
       isImportingPersonalNotes={false}
+      recurringEvents={[]}
+      onSaveRecurringEvent={() => undefined}
+      onDeleteRecurringEvent={() => undefined}
+      onToggleRecurringEvent={() => undefined}
       {...overrides}
     />
   );

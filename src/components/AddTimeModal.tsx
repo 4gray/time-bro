@@ -1,9 +1,27 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Repeat2, Trash2, X } from "lucide-react";
+import type { JiraTicket, JiraWorklog, PersonalNote, RecurringEvent } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import type { JiraDurationUnit } from "../utils/date";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
+
+export interface LogRecurringPayload {
+  eventId: string;
+  dateKey: string;
+  timeSpentSeconds: number;
+  note?: string;
+}
+
+const RECURRING_PRESET_MINUTES = [10, 15, 30, 45, 60] as const;
+
+const minutesLabel = (minutes: number) => {
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h ${String(rest).padStart(2, "0")}m`;
+};
 
 interface LogPayload {
   issueKey: string;
@@ -39,6 +57,9 @@ interface AddTimeModalProps {
     timeSpentSeconds: number;
     startedISO: string;
   }) => Promise<boolean>;
+  /** Returns the recurring events scheduled on a day that are not yet logged. */
+  getRecurringCandidates?: (dateKey: string) => RecurringEvent[];
+  onLogRecurring?: (payload: LogRecurringPayload) => Promise<boolean>;
 }
 
 const PRESETS: Array<{ label: string; seconds: number }> = [
@@ -235,7 +256,9 @@ export const AddTimeModal = ({
   onDelete,
   onSearchTickets,
   onAddPersonalNote,
-  onUpdatePersonalNote
+  onUpdatePersonalNote,
+  getRecurringCandidates,
+  onLogRecurring
 }: AddTimeModalProps) => {
   const isEditingWorklog = Boolean(editingWorklog);
   const isEditingPersonalNote = Boolean(editingPersonalNote);
@@ -247,7 +270,10 @@ export const AddTimeModal = ({
   const initialPersonalPreset = PERSONAL_NOTE_PRESETS.some((preset) => preset.seconds === initialPersonalSeconds);
   const preferredDateKey = chooseWorkingDateKey(toLocalDateKey(initialStart), dateOptions);
   const dateOptionsKey = dateOptions.join("|");
-  const [mode, setMode] = useState<"ticket" | "note">(isEditingPersonalNote ? "note" : "ticket");
+  const [mode, setMode] = useState<"ticket" | "note" | "recurring">(isEditingPersonalNote ? "note" : "ticket");
+  const [recSelectedId, setRecSelectedId] = useState<string | undefined>();
+  const [recMinutes, setRecMinutes] = useState(15);
+  const [recNote, setRecNote] = useState("");
   const [activeKey, setActiveKey] = useState<string | undefined>(editingWorklog?.issueKey ?? ticketOptions[0]?.key);
   const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>();
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
@@ -285,17 +311,32 @@ export const AddTimeModal = ({
       : undefined);
   const selectedDate = fromLocalDateKey(dateStr);
   const hasWorkingDate = dateOptions.includes(dateStr);
-  const isNoteMode = mode === "note" || isEditingPersonalNote;
-  const modalTitle = isEditingWorklog ? "Edit time" : isEditingPersonalNote ? "Edit note" : mode === "note" ? "Personal note" : "Log time";
-  const canSubmit = isNoteMode && !isEditingWorklog
-    ? Boolean(
-        hasWorkingDate &&
-          (isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote) &&
-          personalNote.trim() &&
-          personalNoteSeconds > 0 &&
-          !isLogging
-      )
-    : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
+  const recurringTabEnabled = Boolean(getRecurringCandidates && onLogRecurring && !isEditing);
+  const isRecurringView = mode === "recurring" && !isEditing;
+  const isTicketView = (mode === "ticket" && !isEditingPersonalNote) || isEditingWorklog;
+  const isNoteMode = !isTicketView && !isRecurringView;
+  const recurringCandidates = isRecurringView && getRecurringCandidates ? getRecurringCandidates(dateStr) : [];
+  const recEvent = recurringCandidates.find((event) => event.id === recSelectedId) ?? recurringCandidates[0];
+  const modalTitle = isEditingWorklog
+    ? "Edit time"
+    : isEditingPersonalNote
+      ? "Edit note"
+      : isRecurringView
+        ? "Recurring event"
+        : mode === "note"
+          ? "Personal note"
+          : "Log time";
+  const canSubmit = isRecurringView
+    ? Boolean(hasWorkingDate && recEvent && recMinutes > 0 && !isLogging)
+    : isNoteMode
+      ? Boolean(
+          hasWorkingDate &&
+            (isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote) &&
+            personalNote.trim() &&
+            personalNoteSeconds > 0 &&
+            !isLogging
+        )
+      : Boolean(hasWorkingDate && isConfigured && activeTicket && durationSeconds > 0 && !isLogging && !isDeleting);
 
   const handleSubmit = async () => {
     if (!hasWorkingDate) {
@@ -303,6 +344,22 @@ export const AddTimeModal = ({
     }
 
     const startedISO = new Date(`${dateStr}T${timeStr}`).toISOString();
+
+    if (isRecurringView) {
+      if (!recEvent || recMinutes <= 0 || !onLogRecurring) {
+        return;
+      }
+      const ok = await onLogRecurring({
+        eventId: recEvent.id,
+        dateKey: dateStr,
+        timeSpentSeconds: recMinutes * 60,
+        note: recNote.trim() || undefined
+      });
+      if (ok) {
+        onClose();
+      }
+      return;
+    }
 
     if (isNoteMode && !isEditingWorklog) {
       const savePersonalNote = isEditingPersonalNote ? onUpdatePersonalNote : onAddPersonalNote;
@@ -339,12 +396,14 @@ export const AddTimeModal = ({
   };
 
   const handleDelete = async () => {
-    if (!editingWorklog || !onDelete || isDeleting) {
+    if (!onDelete || isDeleting) {
       return;
     }
 
     const confirmed = window.confirm(
-      `Delete ${formatClock(editingWorklog.timeSpentSeconds)} from ${editingWorklog.issueKey}? This removes the Jira worklog.`
+      editingWorklog
+        ? `Delete ${formatClock(editingWorklog.timeSpentSeconds)} from ${editingWorklog.issueKey}? This removes the Jira worklog.`
+        : "Delete this local note? It will be removed from this device."
     );
 
     if (!confirmed) {
@@ -387,6 +446,28 @@ export const AddTimeModal = ({
       setActiveKey(ticketOptions[0].key);
     }
   }, [activeKey, isEditing, ticketOptions]);
+
+  // Re-seed the recurring selection (and its default duration/note) whenever the
+  // recurring tab opens or the chosen day changes, dropping selections that no
+  // longer match a candidate for the day.
+  useEffect(() => {
+    if (mode !== "recurring" || !getRecurringCandidates) {
+      return;
+    }
+    const candidates = getRecurringCandidates(dateStr);
+    const current = candidates.find((event) => event.id === recSelectedId) ?? candidates[0];
+    setRecSelectedId(current?.id);
+    setRecMinutes(current ? current.durationMinutes : 15);
+    setRecNote(current ? current.defaultNote : "");
+    // recSelectedId intentionally omitted: manual selection is handled inline.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, dateStr]);
+
+  const selectRecurring = (event: RecurringEvent) => {
+    setRecSelectedId(event.id);
+    setRecMinutes(event.durationMinutes);
+    setRecNote(event.defaultNote);
+  };
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -466,18 +547,6 @@ export const AddTimeModal = ({
             <span className="modal-day">{dayLabel(selectedDate)}</span>
           </div>
           <div className="modal-head-actions">
-            {isEditingWorklog && onDelete && (
-              <button
-                type="button"
-                className="modal-delete"
-                onClick={handleDelete}
-                disabled={isLogging || isDeleting}
-                title="Delete worklog"
-                aria-label="Delete worklog"
-              >
-                {isDeleting ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} strokeWidth={2} />}
-              </button>
-            )}
             <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
               <X size={14} strokeWidth={2.2} />
             </button>
@@ -492,11 +561,97 @@ export const AddTimeModal = ({
             <button type="button" className={mode === "note" ? "active" : ""} onClick={() => setMode("note")}>
               Personal note
             </button>
+            {recurringTabEnabled && (
+              <button
+                type="button"
+                className={mode === "recurring" ? "active" : ""}
+                onClick={() => setMode("recurring")}
+              >
+                Recurring
+              </button>
+            )}
           </div>
         )}
 
         <div className="modal-body">
-          {mode === "ticket" || isEditingWorklog ? (
+          {isRecurringView ? (
+            <div className="recurring-form">
+              <div className="personal-note-title recurring-title">
+                <Repeat2 size={14} />
+                <span>RECURRING EVENT</span>
+                <em className="is-purple">
+                  <LockKeyhole size={9} />
+                  LOCAL
+                </em>
+              </div>
+
+              {recurringCandidates.length > 0 ? (
+                <>
+                  <div className="modal-label">SCHEDULED THIS DAY — NOT YET LOGGED</div>
+                  <div className="recurring-picker" role="radiogroup" aria-label="Recurring event">
+                    {recurringCandidates.map((event) => {
+                      const isSelected = event.id === recEvent?.id;
+                      return (
+                        <button
+                          key={event.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          className={`recurring-option ${isSelected ? "active" : ""}`}
+                          onClick={() => selectRecurring(event)}
+                        >
+                          <span className="recurring-radio">{isSelected && <span />}</span>
+                          <span className="recurring-option-title">{event.title}</span>
+                          <span className="recurring-option-time">{event.localTime}</span>
+                          <span className="recurring-option-dur">{minutesLabel(event.durationMinutes)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="personal-note-duration">
+                    <div className="modal-label">TIME SPENT</div>
+                    <div className="duration-picker">
+                      <div className="personal-note-time">{minutesLabel(recMinutes)}</div>
+                      <div className="modal-presets">
+                        {RECURRING_PRESET_MINUTES.map((value) => (
+                          <button
+                            type="button"
+                            key={value}
+                            className={`preset ${recMinutes === value ? "active" : ""}`}
+                            onClick={() => setRecMinutes(value)}
+                          >
+                            {minutesLabel(value)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-label" style={{ marginTop: 18 }}>
+                    NOTE
+                  </div>
+                  <textarea
+                    className="note-textarea"
+                    placeholder="Note for this entry…"
+                    value={recNote}
+                    onChange={(event) => setRecNote(event.target.value)}
+                    rows={2}
+                  />
+
+                  <div className="local-note-callout">
+                    <LockKeyhole size={13} />
+                    <span>One per event per day · stays on this device and is not synced to Jira.</span>
+                  </div>
+                </>
+              ) : (
+                <div className="recurring-empty">
+                  <p>No recurring events scheduled for this day — or all are already logged.</p>
+                  <small>Manage recurring events in Settings.</small>
+                </div>
+              )}
+            </div>
+          ) : isTicketView ? (
             <>
               <div className="modal-label">TICKET</div>
               <TicketPicker
@@ -623,25 +778,47 @@ export const AddTimeModal = ({
         </div>
 
         <div className="modal-foot">
-          <span className="modal-foot-hint">⌘⏎ TO SAVE · ESC TO CANCEL</span>
+          {(isEditingWorklog || isEditingPersonalNote) && onDelete ? (
+            <button
+              type="button"
+              className="modal-delete-action"
+              onClick={handleDelete}
+              disabled={isLogging || isDeleting}
+              title={isEditingPersonalNote ? "Delete note" : "Delete worklog"}
+            >
+              {isDeleting ? <Loader2 className="spin" size={14} /> : <Trash2 size={14} strokeWidth={2} />}
+              Delete
+            </button>
+          ) : (
+            <span className="modal-foot-hint">⌘⏎ TO SAVE · ESC TO CANCEL</span>
+          )}
           <div className="modal-foot-actions">
             <button type="button" className="modal-cancel" onClick={onClose}>
               CANCEL
             </button>
-            <button type="button" className="primary-button" onClick={handleSubmit} disabled={!canSubmit}>
-              {((mode === "ticket" || isEditingWorklog) && isLogging) || (isEditingPersonalNote && isLogging) ? (
-                <Loader2 className="spin" size={15} />
-              ) : null}
-              {isEditingWorklog
-                ? `Save ${formatClock(durationSeconds)}`
-                : isEditingPersonalNote
-                  ? "Save note"
-                : mode === "note"
-                  ? "Save note"
-                  : activeTicket
-                    ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
-                    : "Log time"}
-            </button>
+            {(!isRecurringView || recurringCandidates.length > 0) && (
+              <button
+                type="button"
+                className={`primary-button ${isRecurringView ? "is-recurring" : ""}`}
+                onClick={handleSubmit}
+                disabled={!canSubmit}
+              >
+                {isLogging && (isTicketView || isNoteMode || isRecurringView) ? (
+                  <Loader2 className="spin" size={15} />
+                ) : null}
+                {isEditingWorklog
+                  ? `Save ${formatClock(durationSeconds)}`
+                  : isEditingPersonalNote
+                    ? "Save note"
+                    : isRecurringView
+                      ? `Log ${minutesLabel(recMinutes)} locally`
+                      : mode === "note"
+                        ? "Save note"
+                        : activeTicket
+                          ? `Log ${formatClock(durationSeconds)} to ${activeTicket.key}`
+                          : "Log time"}
+              </button>
+            )}
           </div>
         </div>
       </div>

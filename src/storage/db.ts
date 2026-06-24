@@ -1,10 +1,19 @@
-import type { AppSettings, BitbucketReviewSyncResult, PersonalNote, SyncResult, WeekOverride } from "../../shared/types";
+import type {
+  AppSettings,
+  BitbucketReviewSyncResult,
+  PersonalNote,
+  RecurringEvent,
+  RecurringOccurrence,
+  SyncResult,
+  WeekOverride
+} from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
+const RECURRING_EVENTS_KEY = "default";
 
 type StoreName =
   | "settings"
@@ -12,7 +21,9 @@ type StoreName =
   | "syncResults"
   | "favorites"
   | "personalNotes"
-  | "bitbucketReviewResults";
+  | "bitbucketReviewResults"
+  | "recurringEvents"
+  | "recurringOccurrences";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -49,6 +60,14 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("bitbucketReviewResults")) {
         db.createObjectStore("bitbucketReviewResults", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("recurringEvents")) {
+        db.createObjectStore("recurringEvents", { keyPath: "id" });
+      }
+
+      if (!db.objectStoreNames.contains("recurringOccurrences")) {
+        db.createObjectStore("recurringOccurrences", { keyPath: "weekKey" });
       }
     };
 
@@ -139,4 +158,28 @@ export const getPersonalNotes = async (weekKey: string): Promise<PersonalNote[]>
 
 export const savePersonalNotes = (weekKey: string, notes: PersonalNote[]) => {
   return writeStore("personalNotes", { weekKey, notes });
+};
+
+export const getRecurringEvents = async (): Promise<RecurringEvent[] | undefined> => {
+  const stored = await readStore<{ id: string; events: RecurringEvent[] }>(
+    "recurringEvents",
+    RECURRING_EVENTS_KEY
+  );
+  return stored?.events;
+};
+
+export const saveRecurringEvents = (events: RecurringEvent[]) => {
+  return writeStore("recurringEvents", { id: RECURRING_EVENTS_KEY, events });
+};
+
+export const getRecurringOccurrences = async (weekKey: string): Promise<RecurringOccurrence[]> => {
+  const stored = await readStore<{ weekKey: string; occurrences: RecurringOccurrence[] }>(
+    "recurringOccurrences",
+    weekKey
+  );
+  return stored?.occurrences ?? [];
+};
+
+export const saveRecurringOccurrences = (weekKey: string, occurrences: RecurringOccurrence[]) => {
+  return writeStore("recurringOccurrences", { weekKey, occurrences });
 };

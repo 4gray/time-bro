@@ -49,9 +49,12 @@ const weekState: WeekState = {
           createdAt: "2026-06-18T12:00:00.000Z",
           updatedAt: "2026-06-18T12:00:00.000Z"
         }
-      ]
+      ],
+      recurringEntries: [],
+      pendingRecurring: []
     }
-  ]
+  ],
+  recurringTrackedHours: 0
 };
 
 const syncResult: SyncResult = {
@@ -117,5 +120,112 @@ describe("WeekView", () => {
     expect(markup).toContain("Edit personal note");
     expect(markup).toContain(">2h</span>");
     expect(markup).not.toContain("2h 00m");
+  });
+
+  it("renders confirmed recurring entries as LOCAL rows and unresolved ones as pending suggestions", () => {
+    const recurringWeek: WeekState = {
+      ...weekState,
+      recurringTrackedHours: 0.25,
+      days: [
+        {
+          ...weekState.days[0],
+          recurringEntries: [
+            {
+              eventId: "rec-daily",
+              dateKey: "2026-06-18",
+              title: "Daily Standup",
+              localTime: "09:15",
+              timeSpentSeconds: 15 * 60,
+              note: "Daily sync — blockers"
+            }
+          ],
+          pendingRecurring: [
+            {
+              eventId: "rec-sync",
+              dateKey: "2026-06-18",
+              title: "Weekly Team Sync",
+              localTime: "15:00",
+              defaultDurationMinutes: 30,
+              defaultNote: "Team weekly"
+            }
+          ]
+        }
+      ]
+    };
+
+    const markup = renderToStaticMarkup(
+      <WeekView
+        weekState={recurringWeek}
+        syncResult={syncResult}
+        isSyncing={false}
+        isConfigured={true}
+        onSync={() => undefined}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+        onAddTime={() => undefined}
+        onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
+        onToggleSkipped={() => undefined}
+        onConfirmRecurring={async () => true}
+        onSkipRecurring={async () => true}
+        onDeleteRecurring={async () => true}
+      />
+    );
+
+    // Confirmed occurrence renders like a note: EVENT eyebrow + title + text +
+    // a minute-aware duration, plus edit/delete affordances.
+    expect(markup).toContain("EVENT");
+    expect(markup).toContain("Daily Standup");
+    expect(markup).toContain("Daily sync — blockers");
+    expect(markup).toContain(">15m</span>");
+    expect(markup).toContain("Edit Daily Standup");
+    expect(markup).not.toContain("LOCAL");
+    // Unresolved occurrence renders as a pending suggestion with icon actions
+    // that explain themselves via tooltips / aria-labels.
+    expect(markup).toContain("Weekly Team Sync");
+    expect(markup).toContain("Log 30m locally");
+    expect(markup).toContain("Skip today");
+    expect(markup).toContain("Adjust duration and note");
+  });
+
+  it("omits recurring pending cards when no confirm handlers are wired", () => {
+    const pendingOnly: WeekState = {
+      ...weekState,
+      days: [
+        {
+          ...weekState.days[0],
+          pendingRecurring: [
+            {
+              eventId: "rec-sync",
+              dateKey: "2026-06-18",
+              title: "Weekly Team Sync",
+              localTime: "15:00",
+              defaultDurationMinutes: 30,
+              defaultNote: "Team weekly"
+            }
+          ]
+        }
+      ]
+    };
+
+    const markup = renderToStaticMarkup(
+      <WeekView
+        weekState={pendingOnly}
+        syncResult={syncResult}
+        isSyncing={false}
+        isConfigured={true}
+        onSync={() => undefined}
+        onPreviousWeek={() => undefined}
+        onCurrentWeek={() => undefined}
+        onNextWeek={() => undefined}
+        onAddTime={() => undefined}
+        onEditWorklog={() => undefined}
+        onEditPersonalNote={() => undefined}
+        onToggleSkipped={() => undefined}
+      />
+    );
+
+    expect(markup).not.toContain("Weekly Team Sync");
   });
 });

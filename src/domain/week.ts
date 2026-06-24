@@ -1,4 +1,13 @@
-import type { AppSettings, PersonalNote, SyncResult, WeekOverride, WeekState, WeekdayNumber } from "../../shared/types";
+import type {
+  AppSettings,
+  PersonalNote,
+  RecurringEvent,
+  RecurringOccurrence,
+  SyncResult,
+  WeekOverride,
+  WeekState,
+  WeekdayNumber
+} from "../../shared/types";
 import {
   addDays,
   formatShortDate,
@@ -8,6 +17,7 @@ import {
   toLocalDateKey,
   WEEKDAY_LABELS
 } from "../utils/date";
+import { buildDayRecurring, indexOccurrences } from "./recurring";
 
 export const DEFAULT_SETTINGS: AppSettings = {
   jiraBaseUrl: "",
@@ -41,13 +51,16 @@ export const buildWeekState = (
   override: WeekOverride,
   syncResult?: SyncResult,
   personalNotesOrToday: PersonalNote[] | Date = [],
-  todayArg = new Date()
+  todayArg = new Date(),
+  recurringEvents: RecurringEvent[] = [],
+  recurringOccurrences: RecurringOccurrence[] = []
 ): WeekState => {
   const personalNotes = Array.isArray(personalNotesOrToday) ? personalNotesOrToday : [];
   const today = Array.isArray(personalNotesOrToday) ? todayArg : personalNotesOrToday;
   const weekEndExclusive = addDays(weekStart, 7);
   const weekKey = toLocalDateKey(weekStart);
   const todayKey = toLocalDateKey(today);
+  const occurrencesByKey = indexOccurrences(recurringOccurrences);
   const skippedDates = override.weekKey === weekKey ? override.skippedDates : [];
   const effectiveSyncResult = syncResult?.weekKey === weekKey ? syncResult : undefined;
   const workDates = Array.from({ length: 5 }, (_value, index) => addDays(weekStart, index));
@@ -68,6 +81,8 @@ export const buildWeekState = (
     .map(toLocalDateKey);
   const weeklyTargetHours = dailyTargetHours * activeWorkingDates.length;
 
+  let recurringConfirmedSeconds = 0;
+
   const days = workDates.map((date, index) => {
     const dateKey = toLocalDateKey(date);
     const weekday = isoWeekday(date) as WeekdayNumber;
@@ -79,7 +94,12 @@ export const buildWeekState = (
       (a, b) => new Date(a.startedISO).getTime() - new Date(b.startedISO).getTime()
     );
     const noteSeconds = dayNotes.reduce((sum, note) => sum + note.timeSpentSeconds, 0);
-    const trackedHours = ((bucket?.trackedSeconds ?? 0) + noteSeconds) / 3600;
+    const recurring = buildDayRecurring(recurringEvents, occurrencesByKey, dateKey, weekday, {
+      isWorkingDay: isConfiguredWorkingDay && !isSkipped,
+      isPastOrToday: dateKey <= todayKey
+    });
+    recurringConfirmedSeconds += recurring.confirmedSeconds;
+    const trackedHours = ((bucket?.trackedSeconds ?? 0) + noteSeconds + recurring.confirmedSeconds) / 3600;
 
     return {
       dateKey,
@@ -92,13 +112,16 @@ export const buildWeekState = (
       trackedHours,
       missingHours: Math.max(targetHours - trackedHours, 0),
       issues: bucket?.issues ?? [],
-      personalNotes: dayNotes
+      personalNotes: dayNotes,
+      recurringEntries: recurring.entries,
+      pendingRecurring: recurring.pending
     };
   });
 
   const jiraTrackedWeekHours = (effectiveSyncResult?.trackedSeconds ?? 0) / 3600;
   const personalNoteHours = personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
-  const trackedWeekHours = jiraTrackedWeekHours + personalNoteHours;
+  const recurringTrackedHours = recurringConfirmedSeconds / 3600;
+  const trackedWeekHours = jiraTrackedWeekHours + personalNoteHours + recurringTrackedHours;
 
   return {
     weekKey,
@@ -113,6 +136,7 @@ export const buildWeekState = (
     dailyTargetHours: activeWorkingDates.length > 0 ? dailyTargetHours : 0,
     activeWorkingDates,
     skippedDates,
-    days
+    days,
+    recurringTrackedHours
   };
 };
