@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
@@ -10,14 +10,10 @@ import type {
   WeekOverride
 } from "../shared/types";
 import {
-  canOpenTrackingShortcut,
-  createTrackingShortcutDate,
-  selectAddTimeDate
-} from "./app/addTimeModalState";
-import {
   formatSyncTime,
   isJiraConfigured
 } from "./app/appHelpers";
+import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
 import { useAppNavigation } from "./app/useAppNavigation";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
@@ -374,62 +370,21 @@ export const App = () => {
 
   const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";
   const syncLabel = isSyncing || isSyncingReviews ? "SYNCING…" : formatSyncTime(syncResult);
-
-  const openAddTime = (date?: Date) => {
-    setEditingWorklog(undefined);
-    setEditingPersonalNote(undefined);
-    setLogError(undefined);
-    setAddModalDate(selectAddTimeDate({ currentDate, requestedDate: date, weekState }));
-  };
-
-  const openTrackingShortcut = useCallback(() => {
-    if (
-      !canOpenTrackingShortcut({
-        isConfigured,
-        welcomeConnected,
-        isBooting,
-        hasAddModal: Boolean(addModalDate),
-        hasEditingWorklog: Boolean(editingWorklog),
-        hasEditingPersonalNote: Boolean(editingPersonalNote)
-      })
-    ) {
-      return;
-    }
-
-    setWeekStart(getWeekBounds(currentDate).weekStart);
-    setEditingWorklog(undefined);
-    setEditingPersonalNote(undefined);
-    setLogError(undefined);
-    setAddModalDate(createTrackingShortcutDate(currentDate));
-  }, [addModalDate, currentDate, editingPersonalNote, editingWorklog, isBooting, isConfigured, welcomeConnected]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.key.toLowerCase() !== "k" || (!event.metaKey && !event.ctrlKey)) {
-        return;
-      }
-
-      event.preventDefault();
-      openTrackingShortcut();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openTrackingShortcut]);
-
-  const openEditWorklog = (worklog: JiraWorklog) => {
-    setAddModalDate(undefined);
-    setLogError(undefined);
-    setEditingPersonalNote(undefined);
-    setEditingWorklog(worklog);
-  };
-
-  const openEditPersonalNote = (note: PersonalNote) => {
-    setAddModalDate(undefined);
-    setLogError(undefined);
-    setEditingWorklog(undefined);
-    setEditingPersonalNote(note);
-  };
+  const { openAddTime, openEditWorklog, openEditPersonalNote } = useAddTimeModalActions({
+    currentDate,
+    weekState,
+    isConfigured,
+    welcomeConnected,
+    isBooting,
+    addModalDate,
+    editingWorklog,
+    editingPersonalNote,
+    setWeekStart,
+    setAddModalDate,
+    setEditingWorklog,
+    setEditingPersonalNote,
+    setLogError
+  });
 
   if (!demoScenario && !isBooting && (!isConfigured || welcomeConnected)) {
     return (

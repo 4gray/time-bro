@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, Add Time date/shortcut decisions, app navigation handlers, startup/reminder lifecycle effects, and week skip/export actions live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, Add Time date/shortcut decisions and modal action handlers, app navigation handlers, startup/reminder lifecycle effects, and week skip/export actions live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -32,7 +32,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 20. Done: extract app navigation handlers and review fallback into a focused hook with coverage.
 21. Done: extract startup sync and reminder scheduling effects into a focused lifecycle hook with coverage.
 22. Done: extract week skip/export actions into a focused hook with coverage.
-23. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+23. Done: extract Add Time modal open/edit/shortcut actions into a focused hook with coverage.
+24. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -179,3 +180,11 @@ Phase 21:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo vacation toggle, Settings Export CSV download, CSV header, document overflow, and console health
+
+Phase 22:
+
+- Passed: `npm run test -- src/app/useAddTimeModalActions.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Add Time open button, tracking shortcut, edit-worklog modal, desktop/mobile modal overflow, and console health
