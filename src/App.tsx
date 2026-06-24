@@ -11,6 +11,7 @@ import type {
 } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
+import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAddTimeModalActions } from "./app/useAddTimeModalActions";
 import { useAppLifecycleEffects } from "./app/useAppLifecycleEffects";
@@ -36,8 +37,6 @@ import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar, type AppView } from "./components/Sidebar";
-import { SnackbarStack } from "./components/SnackbarStack";
-import { WelcomeView } from "./components/WelcomeView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { isBitbucketConfigured } from "./domain/bitbucketReview";
@@ -368,16 +367,16 @@ export const App = () => {
 
   if (welcomeFlow.isWelcomeVisible) {
     return (
-      <div className="app-shell" data-theme={effectiveTheme} data-view="welcome">
-        <WelcomeView
-          initialSettings={settingsDraft}
-          isConnected={welcomeFlow.welcomeConnected}
-          connectedSettings={settings}
-          onConnect={handleWelcomeConnect}
-          onEnterApp={welcomeFlow.enterApp}
-        />
-        <SnackbarStack notifications={snackbars} onDismiss={dismissSnackbar} />
-      </div>
+      <AppWelcomeScreen
+        theme={effectiveTheme}
+        initialSettings={settingsDraft}
+        isConnected={welcomeFlow.welcomeConnected}
+        connectedSettings={settings}
+        onConnect={handleWelcomeConnect}
+        onEnterApp={welcomeFlow.enterApp}
+        notifications={snackbars}
+        onDismissNotification={dismissSnackbar}
+      />
     );
   }
 
