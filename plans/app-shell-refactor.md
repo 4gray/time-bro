@@ -19,8 +19,9 @@ Continue with narrow hooks from `App.tsx` only when their behavior can be covere
 7. Done: extract `useTickets` from `App.tsx` with loading, search, favorite, and derived-list coverage.
 8. Done: extract read-only issue metadata from `App.tsx` with visible-week scoping, issue maps, today worklog, and touched-ticket coverage.
 9. Done: extract `useJiraSync` from `App.tsx` with queueing, persistence, demo, success, and error coverage.
-10. Next: extract Jira worklog add/update/delete orchestration while preserving optimistic merge, ticket refresh, edit modal state, and demo behavior.
-11. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
+10. Done: extract `useJiraWorklogs` from `App.tsx` with add/update/delete, optimistic merge, ticket refresh, edit modal state, and demo/error coverage.
+11. Next: decide whether to extract Bitbucket review logging or local-note/recurring modal action state before splitting styles.
+12. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
 
@@ -71,3 +72,9 @@ Phase 8:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for demo sync action, success notifications, and desktop/mobile week overflow
+
+Phase 9:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo Add Time modal save, edit-worklog save, delete-worklog close, and desktop/mobile overflow

@@ -27,6 +27,7 @@ import {
 import { useLiveDate } from "./app/useLiveDate";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
+import { useJiraWorklogs } from "./app/useJiraWorklogs";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
@@ -56,7 +57,6 @@ import {
   markReviewSessionsLogged,
   mergeReviewSessionStates
 } from "./domain/bitbucketReview";
-import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents, getRecurringCandidates, indexOccurrences } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
@@ -74,7 +74,6 @@ import {
   saveRecurringEvents,
   saveRecurringOccurrences,
   saveSettings,
-  saveSyncResult,
   saveWeekOverride
 } from "./storage/db";
 import { addDays, formatClock, formatDuration, fromLocalDateKey, isoWeekday, toLocalDateKey } from "./utils/date";
@@ -108,10 +107,7 @@ export const App = () => {
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
   const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
-  const [isLogging, setIsLogging] = useState(false);
   const [isLoggingReview, setIsLoggingReview] = useState(false);
-  const [isDeletingWorklog, setIsDeletingWorklog] = useState(false);
-  const [logError, setLogError] = useState<string | undefined>();
   const [bitbucketReviewResult, setBitbucketReviewResult] = useState<BitbucketReviewSyncResult | undefined>(
     () => demoScenario?.bitbucketReviewResult
   );
@@ -212,6 +208,28 @@ export const App = () => {
     weekEndExclusiveISO: weekState.weekEndExclusiveISO,
     demoSyncResult: demoScenario?.syncResult,
     onSyncResult: setSyncResult,
+    showSuccess,
+    showError
+  });
+  const clearEditingWorklog = useCallback(() => setEditingWorklog(undefined), []);
+  const {
+    isLogging,
+    isDeletingWorklog,
+    logError,
+    setIsLogging,
+    setLogError,
+    handleAddWorklog,
+    handleUpdateWorklog,
+    handleDeleteWorklog
+  } = useJiraWorklogs({
+    settings,
+    syncResult,
+    editingWorklog,
+    isDemo: Boolean(demoScenario),
+    runSync,
+    loadTickets,
+    onSyncResult: setSyncResult,
+    onClearEditingWorklog: clearEditingWorklog,
     showSuccess,
     showError
   });
@@ -757,51 +775,6 @@ export const App = () => {
     }
   };
 
-  const handleAddWorklog = async (payload: {
-    issueKey: string;
-    ticket: JiraTicket;
-    timeSpentSeconds: number;
-    startedISO: string;
-    comment?: string;
-  }) => {
-    setIsLogging(true);
-    setLogError(undefined);
-
-    try {
-      if (demoScenario) {
-        showSuccess(`Demo logged ${formatDuration(payload.timeSpentSeconds / 3600)} to ${payload.issueKey}.`);
-        return true;
-      }
-
-      const { ticket, ...worklogPayload } = payload;
-      const result = await nativeApi.addWorklog({ settings, ...worklogPayload });
-      showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
-      const syncedResult = await runSync(settings, { queueAfterCurrent: true });
-      const mergedSyncResult = mergeCreatedWorklogIntoSyncResult(syncedResult ?? syncResult, {
-        ticket,
-        worklogId: result.worklogId,
-        startedISO: payload.startedISO,
-        timeSpentSeconds: result.timeSpentSeconds,
-        comment: payload.comment,
-        syncedAtISO: new Date().toISOString()
-      });
-
-      if (mergedSyncResult && mergedSyncResult !== syncedResult && mergedSyncResult !== syncResult) {
-        await saveSyncResult(mergedSyncResult);
-        setSyncResult(mergedSyncResult);
-      }
-      await loadTickets();
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to log time to Jira.";
-      setLogError(message);
-      showError(message);
-      return false;
-    } finally {
-      setIsLogging(false);
-    }
-  };
-
   const handleLogReviewSessions = async (
     sessionIds: string[],
     targetMode: BitbucketReviewTargetMode,
@@ -917,81 +890,6 @@ export const App = () => {
       return true;
     } finally {
       setIsLoggingReview(false);
-    }
-  };
-
-  const handleUpdateWorklog = async (payload: {
-    issueKey: string;
-    timeSpentSeconds: number;
-    startedISO: string;
-    comment?: string;
-  }) => {
-    if (!editingWorklog) {
-      return false;
-    }
-
-    setIsLogging(true);
-    setLogError(undefined);
-
-    try {
-      if (demoScenario) {
-        showSuccess(`Demo updated ${formatDuration(payload.timeSpentSeconds / 3600)} on ${editingWorklog.issueKey}.`);
-        return true;
-      }
-
-      const result = await nativeApi.updateWorklog({
-        settings,
-        issueKey: editingWorklog.issueKey,
-        worklogId: editingWorklog.id,
-        timeSpentSeconds: payload.timeSpentSeconds,
-        startedISO: payload.startedISO,
-        comment: payload.comment
-      });
-      showSuccess(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
-      await runSync(settings, { queueAfterCurrent: true });
-      await loadTickets();
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to update Jira worklog.";
-      setLogError(message);
-      showError(message);
-      return false;
-    } finally {
-      setIsLogging(false);
-    }
-  };
-
-  const handleDeleteWorklog = async () => {
-    if (!editingWorklog) {
-      return false;
-    }
-
-    setIsDeletingWorklog(true);
-    setLogError(undefined);
-
-    try {
-      if (demoScenario) {
-        showSuccess(`Demo deleted worklog from ${editingWorklog.issueKey}.`);
-        setEditingWorklog(undefined);
-        return true;
-      }
-
-      const result = await nativeApi.deleteWorklog({
-        settings,
-        issueKey: editingWorklog.issueKey,
-        worklogId: editingWorklog.id
-      });
-      showSuccess(`Deleted worklog from ${result.issueKey}.`);
-      await runSync(settings, { queueAfterCurrent: true });
-      await loadTickets();
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to delete Jira worklog.";
-      setLogError(message);
-      showError(message);
-      return false;
-    } finally {
-      setIsDeletingWorklog(false);
     }
   };
 
