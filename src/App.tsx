@@ -32,6 +32,7 @@ import {
   sortPersonalNotes,
   updateVisiblePersonalNotes
 } from "./app/appHelpers";
+import { useSnackbars } from "./app/useSnackbars";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import type { RecurringEventDraft } from "./components/SettingsView";
@@ -40,7 +41,7 @@ import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
 import { ReviewView } from "./components/ReviewView";
 import { SettingsView } from "./components/SettingsView";
 import { Sidebar, type AppView, type ThemeMode } from "./components/Sidebar";
-import { SnackbarStack, type SnackbarKind, type SnackbarNotification } from "./components/SnackbarStack";
+import { SnackbarStack } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
 import { MonthView } from "./components/MonthView";
@@ -86,9 +87,6 @@ const THEME_STORAGE_KEY = "timebro-theme";
 const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
-const MAX_SNACKBARS = 4;
-
-type SnackbarOptions = Pick<SnackbarNotification, "actionLabel" | "actions" | "onAction" | "autoDismiss">;
 
 export const App = () => {
   const demoConfig = useMemo(() => getDemoConfig(), []);
@@ -143,7 +141,7 @@ export const App = () => {
   );
   const [isSyncingReviews, setIsSyncingReviews] = useState(false);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
-  const [snackbars, setSnackbars] = useState<SnackbarNotification[]>([]);
+  const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
@@ -167,7 +165,6 @@ export const App = () => {
   const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
-  const snackbarIdRef = useRef(0);
   const updateSnackbarShownForRef = useRef<string | undefined>();
 
   const effectiveTheme: ThemeMode = theme ?? (systemLight ? "light" : "dark");
@@ -296,31 +293,6 @@ export const App = () => {
     const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
     return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
   }, [tickets, todayWorklogs]);
-
-  const dismissSnackbar = useCallback((id: number) => {
-    setSnackbars((current) => current.filter((notification) => notification.id !== id));
-  }, []);
-
-  const showSnackbar = useCallback((kind: SnackbarKind, message: string, options: SnackbarOptions = {}) => {
-    const trimmedMessage = message.trim();
-    if (!trimmedMessage) {
-      return;
-    }
-
-    snackbarIdRef.current += 1;
-    const notification: SnackbarNotification = {
-      id: snackbarIdRef.current,
-      kind,
-      message: trimmedMessage,
-      ...options
-    };
-
-    setSnackbars((current) => [...current, notification].slice(-MAX_SNACKBARS));
-  }, []);
-
-  const showSuccess = useCallback((message: string) => showSnackbar("success", message), [showSnackbar]);
-  const showError = useCallback((message: string) => showSnackbar("error", message), [showSnackbar]);
-  const showInfo = useCallback((message: string) => showSnackbar("info", message), [showSnackbar]);
 
   const openReleasePage = useCallback(
     (url?: string) => {
