@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, settings update callbacks, welcome gate flow, Add Time date/shortcut decisions and modal action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, settings update callbacks, review sync trigger, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -37,7 +37,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 25. Done: extract welcome gate and enter-app flow into a focused hook with coverage.
 26. Done: extract Add Time modal rendering layer into a focused component with coverage.
 27. Done: move Settings update callbacks into `useReleaseUpdates` with coverage.
-28. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+28. Done: move remaining modal/review inline callbacks into owning hooks with coverage.
+29. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -224,3 +225,11 @@ Phase 27:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Settings update controls, release notes dialog, update snackbar, mobile overflow, and console health
+
+Phase 28:
+
+- Passed: `npm run test -- src/app/useAddTimeModalActions.test.tsx src/app/useBitbucketReviewSync.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Add Time modal close, Review sync snackbar, mobile review overflow, and console health

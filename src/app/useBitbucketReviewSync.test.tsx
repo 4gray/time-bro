@@ -111,6 +111,14 @@ const renderHarness = (props: Parameters<typeof Harness>[0] = {}) => {
   });
 };
 
+const flushAsync = async () => {
+  for (let index = 0; index < 4; index += 1) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+};
+
 beforeEach(() => {
   api = undefined;
   syncBitbucketReviews = vi.fn();
@@ -208,6 +216,25 @@ describe("useBitbucketReviewSync", () => {
     });
 
     expect(syncBitbucketReviews).toHaveBeenCalledWith(expect.objectContaining({ settings: overrideSettings }));
+  });
+
+  it("exposes a view sync callback that runs review sync with current settings", async () => {
+    const result = buildResult([buildSession("s4")]);
+    syncBitbucketReviews.mockResolvedValue(result);
+    renderHarness();
+
+    act(() => getApi().handleReviewSync());
+    await flushAsync();
+
+    expect(syncBitbucketReviews).toHaveBeenCalledWith({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+    });
+    expect(saveBitbucketReviewResult).toHaveBeenCalledTimes(1);
+    expect(getApi().bitbucketReviewResult).toMatchObject({ sessionCount: 1 });
+    expect(getApi().isSyncingReviews).toBe(false);
   });
 
   it("reports sync failures and resets the syncing flag", async () => {

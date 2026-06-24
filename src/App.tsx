@@ -180,7 +180,8 @@ export const App = () => {
     bitbucketReviewResult,
     setBitbucketReviewResult,
     isSyncingReviews,
-    runReviewSync
+    runReviewSync,
+    handleReviewSync
   } = useBitbucketReviewSync({
     settings,
     weekKey: weekState.weekKey,
@@ -371,7 +372,7 @@ export const App = () => {
     runReviewSync
   });
 
-  const { openAddTime, openEditWorklog, openEditPersonalNote } = useAddTimeModalActions({
+  const addTimeModalActions = useAddTimeModalActions({
     currentDate,
     weekState,
     isConfigured,
@@ -444,8 +445,8 @@ export const App = () => {
               isLogging={isLogging}
               onLog={handleAddWorklog}
               onAddPersonalNote={handleAddPersonalNote}
-              onEditWorklog={openEditWorklog}
-              onEditPersonalNote={openEditPersonalNote}
+              onEditWorklog={addTimeModalActions.openEditWorklog}
+              onEditPersonalNote={addTimeModalActions.openEditPersonalNote}
               onSelectTicket={setSelectedTicket}
               onSearchTickets={searchTickets}
             />
@@ -463,9 +464,9 @@ export const App = () => {
               onPreviousWeek={goToPreviousWeek}
               onCurrentWeek={goToCurrentWeek}
               onNextWeek={goToNextWeek}
-              onAddTime={openAddTime}
-              onEditWorklog={openEditWorklog}
-              onEditPersonalNote={openEditPersonalNote}
+              onAddTime={addTimeModalActions.openAddTime}
+              onEditWorklog={addTimeModalActions.openEditWorklog}
+              onEditPersonalNote={addTimeModalActions.openEditPersonalNote}
               onToggleSkipped={handleToggleSkipped}
               onDockLog={handleAddWorklog}
               onConfirmRecurring={handleConfirmRecurring}
@@ -499,9 +500,7 @@ export const App = () => {
               isLogging={isLoggingReview}
               targetMode={reviewTargetMode}
               onTargetModeChange={setReviewTargetMode}
-              onSync={() => {
-                void runReviewSync();
-              }}
+              onSync={handleReviewSync}
               onLogSessions={handleLogReviewSessions}
               onPreviousWeek={goToPreviousWeek}
               onCurrentWeek={goToCurrentWeek}
@@ -567,9 +566,9 @@ export const App = () => {
         isLogging={isLogging}
         isDeletingWorklog={isDeletingWorklog}
         logError={logError}
-        onCloseAddTime={() => setAddModalDate(undefined)}
-        onCloseEditingWorklog={() => setEditingWorklog(undefined)}
-        onCloseEditingPersonalNote={() => setEditingPersonalNote(undefined)}
+        onCloseAddTime={addTimeModalActions.closeAddTime}
+        onCloseEditingWorklog={addTimeModalActions.closeEditingWorklog}
+        onCloseEditingPersonalNote={addTimeModalActions.closeEditingPersonalNote}
         onAddWorklog={handleAddWorklog}
         onUpdateWorklog={handleUpdateWorklog}
         onDeleteWorklog={handleDeleteWorklog}

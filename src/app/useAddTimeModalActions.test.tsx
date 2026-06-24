@@ -258,4 +258,32 @@ describe("useAddTimeModalActions", () => {
     expect(editingPersonalNote).toBe(personalNote);
     expect(logError).toBeUndefined();
   });
+
+  it("closes each modal state without changing the others", () => {
+    const existingModalDate = new Date(2026, 5, 16, 9);
+    renderHarness({
+      initialAddModalDate: existingModalDate,
+      initialEditingWorklog: worklog,
+      initialEditingPersonalNote: personalNote,
+      initialLogError: "Keep this error visible"
+    });
+
+    act(() => getApi().closeAddTime());
+
+    expect(addModalDate).toBeUndefined();
+    expect(editingWorklog).toBe(worklog);
+    expect(editingPersonalNote).toBe(personalNote);
+    expect(logError).toBe("Keep this error visible");
+
+    act(() => getApi().closeEditingWorklog());
+
+    expect(editingWorklog).toBeUndefined();
+    expect(editingPersonalNote).toBe(personalNote);
+    expect(logError).toBe("Keep this error visible");
+
+    act(() => getApi().closeEditingPersonalNote());
+
+    expect(editingPersonalNote).toBeUndefined();
+    expect(logError).toBe("Keep this error visible");
+  });
 });

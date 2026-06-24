@@ -88,10 +88,15 @@ export const useBitbucketReviewSync = ({
     ]
   );
 
+  const handleReviewSync = useCallback(() => {
+    void runReviewSync();
+  }, [runReviewSync]);
+
   return {
     bitbucketReviewResult,
     setBitbucketReviewResult,
     isSyncingReviews,
-    runReviewSync
+    runReviewSync,
+    handleReviewSync
   };
 };

@@ -116,10 +116,25 @@ export const useAddTimeModalActions = ({
     [setAddModalDate, setEditingPersonalNote, setEditingWorklog, setLogError]
   );
 
+  const closeAddTime = useCallback(() => {
+    setAddModalDate(undefined);
+  }, [setAddModalDate]);
+
+  const closeEditingWorklog = useCallback(() => {
+    setEditingWorklog(undefined);
+  }, [setEditingWorklog]);
+
+  const closeEditingPersonalNote = useCallback(() => {
+    setEditingPersonalNote(undefined);
+  }, [setEditingPersonalNote]);
+
   return {
     openAddTime,
     openTrackingShortcut,
     openEditWorklog,
-    openEditPersonalNote
+    openEditPersonalNote,
+    closeAddTime,
+    closeEditingWorklog,
+    closeEditingPersonalNote
   };
 };
