@@ -7,6 +7,7 @@ export interface DemoConfig {
   theme: ThemeMode;
   seed: string;
   today: Date;
+  updateAvailable: boolean;
 }
 
 const DEFAULT_SEED = "release";
@@ -51,12 +52,14 @@ export const getDemoConfig = (): DemoConfig | undefined => {
 
   const view = params.get("view");
   const theme = params.get("theme");
+  const update = params.get("update");
 
   return {
     enabled: true,
     view: isAppView(view) ? view : "week",
     theme: isThemeMode(theme) ? theme : "dark",
     seed: params.get("seed")?.trim() || DEFAULT_SEED,
-    today: parseDemoToday(params.get("today"))
+    today: parseDemoToday(params.get("today")),
+    updateAvailable: update === "available"
   };
 };

@@ -388,7 +388,11 @@ export interface AppUpdateInfo {
   currentVersion: string;
   latestVersion?: string;
   releaseName?: string;
+  releaseNotes?: string;
   releasePageUrl: string;
+  downloadUrl?: string;
+  downloadName?: string;
+  downloadPlatform?: "linux" | "macos" | "windows";
   publishedAt?: string;
   checkedAt: string;
   updateAvailable: boolean;

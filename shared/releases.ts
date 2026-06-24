@@ -43,9 +43,9 @@ export const isNewerReleaseVersion = (latestVersion: string, currentVersion: str
   return false;
 };
 
-export const getSafeReleaseUrl = (candidateUrl?: string) => {
+export const getSafeReleaseAssetUrl = (candidateUrl?: string) => {
   if (!candidateUrl) {
-    return GITHUB_RELEASES_URL;
+    return undefined;
   }
 
   try {
@@ -61,6 +61,15 @@ export const getSafeReleaseUrl = (candidateUrl?: string) => {
     }
   } catch {
     /* fall through to the public releases page */
+  }
+
+  return undefined;
+};
+
+export const getSafeReleaseUrl = (candidateUrl?: string) => {
+  const safeUrl = getSafeReleaseAssetUrl(candidateUrl);
+  if (safeUrl) {
+    return safeUrl;
   }
 
   return GITHUB_RELEASES_URL;

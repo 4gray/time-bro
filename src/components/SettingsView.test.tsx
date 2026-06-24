@@ -23,7 +23,11 @@ const updateInfo: AppUpdateInfo = {
   currentVersion: "1.0.0",
   latestVersion: "1.1.0",
   releaseName: "v1.1.0",
+  releaseNotes: "## Changed\n\n- Added the download button.",
   releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+  downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0-arm64.dmg",
+  downloadName: "TimeBro-1.1.0-arm64.dmg",
+  downloadPlatform: "macos",
   checkedAt: "2026-06-22T12:00:00.000Z",
   updateAvailable: true
 };
@@ -43,6 +47,8 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       updateInfo={updateInfo}
       isCheckingUpdates={false}
       onCheckForUpdates={() => undefined}
+      onShowReleaseNotes={() => undefined}
+      onDownloadUpdate={() => undefined}
       onOpenReleasePage={() => undefined}
       weekRangeLabel="Jun 15 - 21, 2026"
       onExportWeekCsv={() => undefined}
@@ -91,6 +97,8 @@ describe("SettingsView", () => {
     expect(markup).toContain("v1.1.0");
     expect(markup).toContain("v1.1.0 is available.");
     expect(markup).toContain("GitHub Releases");
+    expect(markup).toContain("Release notes");
+    expect(markup).toContain("Download");
   });
 
   it("renders import and export controls in the data panel", () => {

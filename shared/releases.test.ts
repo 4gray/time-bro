@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { GITHUB_RELEASES_URL, getSafeReleaseUrl, isNewerReleaseVersion, normalizeReleaseVersion } from "./releases";
+import {
+  GITHUB_RELEASES_URL,
+  getSafeReleaseAssetUrl,
+  getSafeReleaseUrl,
+  isNewerReleaseVersion,
+  normalizeReleaseVersion
+} from "./releases";
 
 describe("release helpers", () => {
   it("normalizes v-prefixed release tags", () => {
@@ -18,7 +24,17 @@ describe("release helpers", () => {
     expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases/tag/v1.1.0")).toBe(
       "https://github.com/4gray/time-bro/releases/tag/v1.1.0"
     );
+    expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.deb")).toBe(
+      "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.deb"
+    );
     expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases-preview")).toBe(GITHUB_RELEASES_URL);
     expect(getSafeReleaseUrl("https://example.com/4gray/time-bro/releases")).toBe(GITHUB_RELEASES_URL);
+  });
+
+  it("returns undefined for unsafe release asset URLs", () => {
+    expect(getSafeReleaseAssetUrl("https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.exe")).toBe(
+      "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.exe"
+    );
+    expect(getSafeReleaseAssetUrl("https://example.com/TimeBro.exe")).toBeUndefined();
   });
 });

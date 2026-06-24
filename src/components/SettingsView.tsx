@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  FileText,
   GitPullRequest,
   KeyRound,
   LockKeyhole,
@@ -50,6 +51,8 @@ interface SettingsViewProps {
   updateInfo?: AppUpdateInfo;
   isCheckingUpdates: boolean;
   onCheckForUpdates: () => void;
+  onShowReleaseNotes: () => void;
+  onDownloadUpdate: () => void;
   onOpenReleasePage: (url?: string) => void;
   weekRangeLabel: string;
   onExportWeekCsv: () => void;
@@ -219,6 +222,8 @@ export const SettingsView = ({
   updateInfo,
   isCheckingUpdates,
   onCheckForUpdates,
+  onShowReleaseNotes,
+  onDownloadUpdate,
   onOpenReleasePage,
   weekRangeLabel,
   onExportWeekCsv,
@@ -724,6 +729,23 @@ export const SettingsView = ({
           <ExternalLink size={16} />
           GitHub Releases
         </button>
+        {updateInfo?.updateAvailable ? (
+          <>
+            <button className="secondary-button" type="button" onClick={onShowReleaseNotes}>
+              <FileText size={16} />
+              Release notes
+            </button>
+            <button
+              className="primary-button"
+              type="button"
+              onClick={onDownloadUpdate}
+              disabled={!updateInfo.downloadUrl}
+            >
+              <Download size={16} />
+              Download
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );

@@ -24,4 +24,28 @@ describe("SnackbarStack", () => {
     expect(markup).toContain("Open releases");
     expect(markup).toContain("snackbar-action");
   });
+
+  it("renders multiple action buttons", () => {
+    const markup = renderToStaticMarkup(
+      <SnackbarStack
+        notifications={[
+          {
+            id: 1,
+            kind: "info",
+            message: "TimeBro v1.1.0 is available.",
+            actions: [
+              { label: "Release notes", icon: "notes", onAction: () => undefined },
+              { label: "Download", icon: "download", onAction: () => undefined }
+            ],
+            autoDismiss: false
+          }
+        ]}
+        onDismiss={() => undefined}
+      />
+    );
+
+    expect(markup).toContain("Release notes");
+    expect(markup).toContain("Download");
+    expect(markup).toContain("snackbar-actions");
+  });
 });
