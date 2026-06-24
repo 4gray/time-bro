@@ -59,6 +59,8 @@ interface SettingsViewProps {
   onSaveRecurringEvent: (draft: RecurringEventDraft) => void | Promise<void>;
   onDeleteRecurringEvent: (id: string) => void | Promise<void>;
   onToggleRecurringEvent: (id: string) => void | Promise<void>;
+  /** Section shown first; defaults to "jira". Primarily a test/deep-link seam. */
+  initialSection?: SettingsSection;
 }
 
 type SettingsSection = "jira" | "bitbucket" | "tracking" | "recurring" | "appearance" | "data" | "about";
@@ -225,9 +227,10 @@ export const SettingsView = ({
   recurringEvents,
   onSaveRecurringEvent,
   onDeleteRecurringEvent,
-  onToggleRecurringEvent
+  onToggleRecurringEvent,
+  initialSection = "jira"
 }: SettingsViewProps) => {
-  const [activeSection, setActiveSection] = useState<SettingsSection>("jira");
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
   const [showJiraApiToken, setShowJiraApiToken] = useState(false);
   const [showBitbucketApiToken, setShowBitbucketApiToken] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);

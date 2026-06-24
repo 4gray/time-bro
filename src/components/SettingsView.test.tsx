@@ -68,7 +68,7 @@ describe("SettingsView", () => {
   });
 
   it("renders optional Bitbucket review settings and required scope copy", () => {
-    const markup = renderSettings();
+    const markup = renderSettings({ initialSection: "bitbucket" });
 
     expect(markup).toContain("Bitbucket Cloud review");
     expect(markup).toContain("Choose Create API token with scopes");
@@ -84,7 +84,7 @@ describe("SettingsView", () => {
   });
 
   it("renders current and latest app versions", () => {
-    const markup = renderSettings();
+    const markup = renderSettings({ initialSection: "about" });
 
     expect(markup).toContain("Version");
     expect(markup).toContain("v1.0.0");
@@ -94,7 +94,7 @@ describe("SettingsView", () => {
   });
 
   it("renders import and export controls in the data panel", () => {
-    const markup = renderSettings();
+    const markup = renderSettings({ initialSection: "data" });
 
     expect(markup).toContain("Data");
     expect(markup).toContain("Current week CSV");
