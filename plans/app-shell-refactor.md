@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with narrow refactors only when behavior is covered independently. The app shell behavior now lives behind focused hooks with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+The broad app-shell refactor is at a reasonable stopping point. `App.tsx` is now mostly orchestration and JSX wiring, the extracted behavior lives behind focused hooks with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -24,7 +24,8 @@ Continue with narrow refactors only when behavior is covered independently. The 
 12. Done: extract local-note action/import state into `usePersonalNotes` with storage, demo, move-between-weeks, import, and error coverage.
 13. Done: extract recurring modal/action state into `useRecurringActions` with event definition, confirm, skip, delete, candidate, demo, storage, and error coverage.
 14. Done: split `src/styles.css` mechanically into imported files under `src/styles/`.
-15. Next: audit final file sizes and decide whether any further `App.tsx` extraction is worth the additional indirection.
+15. Done: extract Bitbucket review sync state/action into `useBitbucketReviewSync` with demo, guard, merge, persistence, override-settings, and error coverage.
+16. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around bootstrap/week storage or month loading if those areas need changes.
 
 ## Verification
 
@@ -107,3 +108,11 @@ Phase 13:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: browser smoke for demo week/settings views, Add Time modal, desktop/mobile overflow, and console health
+
+Phase 14:
+
+- Passed: `npm run test -- src/app/useBitbucketReviewSync.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: browser smoke for demo week sync refresh and review route rendering without document overflow or console issues

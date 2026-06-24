@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
-  BitbucketReviewSyncResult,
   BitbucketReviewTargetMode,
   JiraConnectionResult,
   JiraTicket,
@@ -18,6 +17,7 @@ import {
   normalizeJiraSiteInput
 } from "./app/appHelpers";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
+import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useLiveDate } from "./app/useLiveDate";
 import { useIssueMetadata } from "./app/useIssueMetadata";
 import { useJiraSync } from "./app/useJiraSync";
@@ -44,11 +44,7 @@ import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekCsv } from "./domain/personalNotesCsv";
-import {
-  getBitbucketRepositorySlugs,
-  isBitbucketConfigured,
-  mergeReviewSessionStates
-} from "./domain/bitbucketReview";
+import { getBitbucketRepositorySlugs, isBitbucketConfigured } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
@@ -61,7 +57,6 @@ import {
   getSettings,
   getSyncResult,
   getWeekOverride,
-  saveBitbucketReviewResult,
   saveRecurringEvents,
   saveSettings,
   saveWeekOverride
@@ -96,10 +91,6 @@ export const App = () => {
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
-  const [bitbucketReviewResult, setBitbucketReviewResult] = useState<BitbucketReviewSyncResult | undefined>(
-    () => demoScenario?.bitbucketReviewResult
-  );
-  const [isSyncingReviews, setIsSyncingReviews] = useState(false);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -166,6 +157,21 @@ export const App = () => {
 
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
+
+  const {
+    bitbucketReviewResult,
+    setBitbucketReviewResult,
+    isSyncingReviews,
+    runReviewSync
+  } = useBitbucketReviewSync({
+    settings,
+    weekKey: weekState.weekKey,
+    weekStartISO: weekState.weekStartISO,
+    weekEndExclusiveISO: weekState.weekEndExclusiveISO,
+    demoReviewResult: demoScenario?.bitbucketReviewResult,
+    showSuccess,
+    showError
+  });
 
   const {
     visibleSyncResult,
@@ -269,52 +275,6 @@ export const App = () => {
     showSuccess,
     showError
   });
-
-  const runReviewSync = useCallback(
-    async (settingsForSync: AppSettings = settings): Promise<BitbucketReviewSyncResult | undefined> => {
-      if (demoScenario) {
-        setBitbucketReviewResult(demoScenario.bitbucketReviewResult);
-        showSuccess("Demo Bitbucket reviews refreshed from seeded fixtures.");
-        return demoScenario.bitbucketReviewResult;
-      }
-
-      if (!isBitbucketConfigured(settingsForSync)) {
-        showError("Connect Bitbucket in Settings before syncing reviews.");
-        return undefined;
-      }
-
-      setIsSyncingReviews(true);
-
-      try {
-        const result = await nativeApi.syncBitbucketReviews({
-          settings: settingsForSync,
-          weekKey: weekState.weekKey,
-          weekStartISO: weekState.weekStartISO,
-          weekEndExclusiveISO: weekState.weekEndExclusiveISO
-        });
-        const merged = mergeReviewSessionStates(result, bitbucketReviewResult);
-        await saveBitbucketReviewResult(merged);
-        setBitbucketReviewResult(merged);
-        showSuccess(`Synced ${merged.sessionCount} Bitbucket review sessions.`);
-        return merged;
-      } catch (error) {
-        showError(error instanceof Error ? error.message : "Unable to sync Bitbucket review sessions.");
-        return undefined;
-      } finally {
-        setIsSyncingReviews(false);
-      }
-    },
-    [
-      bitbucketReviewResult,
-      demoScenario,
-      settings,
-      showError,
-      showSuccess,
-      weekState.weekEndExclusiveISO,
-      weekState.weekKey,
-      weekState.weekStartISO
-    ]
-  );
 
   const handleSync = useCallback(async () => {
     await runSync();
