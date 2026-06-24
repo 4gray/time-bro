@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewTargetMode,
-  JiraConnectionResult,
   JiraTicket,
   JiraWorklog,
   PersonalNote,
@@ -13,8 +12,7 @@ import type {
 } from "../shared/types";
 import {
   formatSyncTime,
-  isJiraConfigured,
-  normalizeJiraSiteInput
+  isJiraConfigured
 } from "./app/appHelpers";
 import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
@@ -26,6 +24,7 @@ import { useMonthState } from "./app/useMonthState";
 import { usePersonalNotes } from "./app/usePersonalNotes";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
+import { useSettingsActions } from "./app/useSettingsActions";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
@@ -40,12 +39,12 @@ import { SnackbarStack } from "./components/SnackbarStack";
 import { TicketsView } from "./components/TicketsView";
 import { TodayView } from "./components/TodayView";
 import { MonthView } from "./components/MonthView";
-import { WelcomeView, type WelcomeConnectPayload } from "./components/WelcomeView";
+import { WelcomeView } from "./components/WelcomeView";
 import { WeekView } from "./components/WeekView";
 import { getDemoConfig } from "./demo/config";
 import { createDemoScenario } from "./demo/fixtures";
 import { buildWeekCsv } from "./domain/personalNotesCsv";
-import { getBitbucketRepositorySlugs, isBitbucketConfigured } from "./domain/bitbucketReview";
+import { isBitbucketConfigured } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
@@ -59,7 +58,6 @@ import {
   getSyncResult,
   getWeekOverride,
   saveRecurringEvents,
-  saveSettings,
   saveWeekOverride
 } from "./storage/db";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "./utils/date";
@@ -89,8 +87,6 @@ export const App = () => {
   );
   const [recurringOccurrences, setRecurringOccurrences] = useState<RecurringOccurrence[]>([]);
   const [isBooting, setIsBooting] = useState(() => !demoScenario);
-  const [isTesting, setIsTesting] = useState(false);
-  const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -215,6 +211,37 @@ export const App = () => {
     weekEndExclusiveISO: weekState.weekEndExclusiveISO,
     demoSyncResult: demoScenario?.syncResult,
     onSyncResult: setSyncResult,
+    showSuccess,
+    showError
+  });
+  const demoJiraResult = useMemo(
+    () =>
+      demoScenario
+        ? {
+            ok: true,
+            accountId: demoScenario.syncResult.accountId,
+            displayName: demoScenario.syncResult.displayName,
+            message: `Connected as ${demoScenario.syncResult.displayName}.`
+          }
+        : undefined,
+    [demoScenario]
+  );
+  const {
+    isTesting,
+    isTestingBitbucket,
+    handleSaveSettings,
+    handleWelcomeConnect,
+    handleTestConnection,
+    handleTestBitbucketConnection
+  } = useSettingsActions({
+    settingsDraft,
+    isDemo: Boolean(demoScenario),
+    demoJiraResult,
+    runSync,
+    loadTickets,
+    setSettings,
+    setSettingsDraft,
+    setWelcomeConnected,
     showSuccess,
     showError
   });
@@ -519,28 +546,6 @@ export const App = () => {
     }
   };
 
-  const handleSaveSettings = async () => {
-    const cleanedSettings: AppSettings = {
-      ...settingsDraft,
-      jiraBaseUrl: normalizeJiraSiteInput(settingsDraft.jiraBaseUrl),
-      jiraEmail: settingsDraft.jiraEmail.trim(),
-      bitbucketEmail: settingsDraft.bitbucketEmail.trim(),
-      bitbucketApiToken: settingsDraft.bitbucketApiToken.trim(),
-      bitbucketWorkspace: settingsDraft.bitbucketWorkspace.trim(),
-      bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", "),
-      bitbucketReviewBucketIssueKey: settingsDraft.bitbucketReviewBucketIssueKey.trim().toUpperCase(),
-      weeklyTargetHours: Math.max(Number(settingsDraft.weeklyTargetHours) || 40, 1),
-      workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : [1, 2, 3, 4, 5]
-    };
-
-    if (!demoScenario) {
-      await saveSettings(cleanedSettings);
-    }
-    setSettings(cleanedSettings);
-    setSettingsDraft(cleanedSettings);
-    showSuccess(demoScenario ? "Demo settings updated for this preview." : "Settings saved locally.");
-  };
-
   const handleExportWeekCsv = () => {
     const blob = new Blob([buildWeekCsv(weekState)], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -552,91 +557,6 @@ export const App = () => {
     link.remove();
     URL.revokeObjectURL(url);
     showSuccess(`Exported ${weekState.weekRangeLabel} CSV.`);
-  };
-
-  const handleWelcomeConnect = async (payload: WelcomeConnectPayload): Promise<JiraConnectionResult> => {
-    const cleanedSettings: AppSettings = {
-      ...settingsDraft,
-      ...payload,
-      jiraBaseUrl: normalizeJiraSiteInput(payload.jiraBaseUrl),
-      jiraEmail: payload.jiraEmail.trim(),
-      weeklyTargetHours: settingsDraft.weeklyTargetHours || DEFAULT_SETTINGS.weeklyTargetHours,
-      workingDays: settingsDraft.workingDays.length ? settingsDraft.workingDays : DEFAULT_SETTINGS.workingDays
-    };
-
-    const result = await nativeApi.testJiraConnection(cleanedSettings);
-
-    if (result.ok) {
-      await saveSettings(cleanedSettings);
-      await runSync(cleanedSettings);
-      setSettings(cleanedSettings);
-      setSettingsDraft(cleanedSettings);
-      showSuccess(result.message);
-      setWelcomeConnected(true);
-      void loadTickets(cleanedSettings);
-    } else {
-      showError(result.message);
-    }
-
-    return result;
-  };
-
-  const handleTestConnection = async () => {
-    setIsTesting(true);
-
-    try {
-      if (demoScenario) {
-        const result: JiraConnectionResult = {
-          ok: true,
-          accountId: demoScenario.syncResult.accountId,
-          displayName: demoScenario.syncResult.displayName,
-          message: `Connected as ${demoScenario.syncResult.displayName}.`
-        };
-        showSuccess(result.message);
-        return;
-      }
-
-      const result = await nativeApi.testJiraConnection({
-        ...settingsDraft,
-        jiraBaseUrl: normalizeJiraSiteInput(settingsDraft.jiraBaseUrl),
-        jiraEmail: settingsDraft.jiraEmail.trim()
-      });
-      if (result.ok) {
-        showSuccess(result.message);
-      } else {
-        showError(result.message);
-      }
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
-  const handleTestBitbucketConnection = async () => {
-    setIsTestingBitbucket(true);
-
-    try {
-      const cleanedSettings: AppSettings = {
-        ...settingsDraft,
-        bitbucketEmail: settingsDraft.bitbucketEmail.trim(),
-        bitbucketApiToken: settingsDraft.bitbucketApiToken.trim(),
-        bitbucketWorkspace: settingsDraft.bitbucketWorkspace.trim(),
-        bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", ")
-      };
-
-      if (demoScenario) {
-        showSuccess("Connected to Bitbucket as Demo Reviewer; found Explorer Web.");
-        return;
-      }
-
-      const result = await nativeApi.testBitbucketConnection(cleanedSettings);
-      if (result.ok) {
-        showSuccess(result.message);
-      } else {
-        showError(result.message);
-      }
-    } finally {
-      setIsTestingBitbucket(false);
-    }
   };
 
   const syncState = isSyncing || isSyncingReviews ? "syncing" : syncResult ? "synced" : "stale";

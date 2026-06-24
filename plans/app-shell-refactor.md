@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, month aggregation lives behind a focused hook with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, month aggregation and settings connection actions live behind focused hooks with hook-level coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -26,7 +26,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 14. Done: split `src/styles.css` mechanically into imported files under `src/styles/`.
 15. Done: extract Bitbucket review sync state/action into `useBitbucketReviewSync` with demo, guard, merge, persistence, override-settings, and error coverage.
 16. Done: extract month aggregation/loading into `useMonthState` with visible-week reuse, demo, persisted storage, idle, and error coverage.
-17. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around bootstrap/week storage, settings connection actions, or add-time modal selection if those areas need changes.
+17. Done: extract settings save, Jira test, Bitbucket test, and welcome-connect actions into `useSettingsActions` with normalization, demo, native, and failure coverage.
+18. Next: avoid broad slicing for its own sake; future extractions should be feature-driven, likely around bootstrap/week storage or add-time modal selection if those areas need changes.
 
 ## Verification
 
@@ -125,3 +126,11 @@ Phase 15:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: browser/Playwright smoke for demo month view at desktop and mobile viewports without document overflow or console issues
+
+Phase 16:
+
+- Passed: `npm run test -- src/app/useSettingsActions.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo settings save, Jira test, Bitbucket test, and mobile settings layout without document overflow or console issues
