@@ -1,8 +1,10 @@
 node_modules
-dist
-dist-electron
-release
-coverage
+# Anchor build-output dirs to the repo root so the bare names don't also match
+# nested paths (e.g. the `release` skill under .claude/skills/release).
+/dist
+/dist-electron
+/release
+/coverage
 design/
 .DS_Store
 *.log

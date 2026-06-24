@@ -60,3 +60,13 @@ Use `npm run dev` for the full Electron app. Use `npm run dev:renderer` for a br
 - Run `npm audit` after dependency changes.
 - For frontend work, inspect the app in a browser or Electron window and check for clipping, overflow, console errors, and broken interaction states.
 - Document any intentionally skipped verification in the final response.
+
+## Releasing
+
+- Use the `/release` skill to cut a release; it is the canonical, end-to-end flow.
+- Commit your change first (`npm version` aborts on a dirty tree), then bump with `npm run release:patch` (or `release:minor` / `release:major`).
+- Push the release commit and the `vX.Y.Z` tag with `npm run release:push` (= `git push && git push --tags`).
+- Pushing a `v*.*.*` tag triggers `.github/workflows/release.yml`, which tests, builds, packages macOS/Windows/Linux, and creates a DRAFT GitHub Release; leave it as a draft unless the user asks to publish.
+- Run `npm run release:dry-run` before tagging to confirm `test`, renderer E2E, and the build pass.
+- Generate release media with `npm run screenshots` (or `screenshots:release`); PNGs land in `screenshots/v<package-version>/`.
+- See the README `## Release Automation` section for the full pipeline, local packaging (`npm run dist:*`), and code-signing secrets.
