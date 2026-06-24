@@ -253,7 +253,14 @@ const createDemoUpdateInfo = (updateAvailable = false): AppUpdateInfo => {
 export const App = () => {
   const demoConfig = useMemo(() => getDemoConfig(), []);
   const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
-  const currentDate = demoScenario?.today ?? new Date();
+  // A stable "now" that only advances on a slow tick. Calling `new Date()`
+  // directly in render handed back a fresh object every render, which rebuilt
+  // `weekState` (and its arrays) every render. Downstream that spun the app in a
+  // re-render loop and constantly changed the drag handlers' identities — which
+  // tore the live drag listeners off `document` mid-gesture, breaking dock
+  // drag-to-log in the packaged app. Demo mode keeps the clock frozen.
+  const [liveDate, setLiveDate] = useState(() => new Date());
+  const currentDate = demoScenario?.today ?? liveDate;
   const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
   const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
   const [settingsDraft, setSettingsDraft] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
@@ -1063,6 +1070,17 @@ export const App = () => {
       setView("week");
     }
   }, [isBitbucketReady, view]);
+
+  // Advance the live clock on a slow cadence so "today"/now stay fresh (day
+  // rollover, the now-marker) without re-rendering the whole app every frame.
+  // Pinned in demo mode so fixtures and screenshots stay deterministic.
+  useEffect(() => {
+    if (demoScenario) {
+      return;
+    }
+    const id = setInterval(() => setLiveDate(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, [demoScenario]);
 
   useEffect(() => {
     const root = document.documentElement;

@@ -43,6 +43,7 @@
     "concurrently": "^8.2.2",
     "electron": "^42.4.1",
     "electron-builder": "^26.15.3",
+    "jsdom": "^29.1.1",
     "playwright": "^1.61.0",
     "png-to-ico": "^3.0.1",
     "sharp": "^0.35.1",

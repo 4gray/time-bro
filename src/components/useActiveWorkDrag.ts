@@ -29,6 +29,16 @@ const DRAG_THRESHOLD_PX = 4;
  * threshold, so plain clicks never start a drag. While dragging we hit-test the
  * cursor against day columns (`data-drop-day`) and hour lanes (`data-drop-hours`)
  * and surface the hovered target for the overlay UI.
+ *
+ * Every handler below is identity-stable for the lifetime of the hook: the
+ * volatile inputs (`isDroppable`/`onDrop`) are read through refs rather than
+ * captured in `useCallback` deps. This matters because the host app rebuilds its
+ * week state on a steady cadence, so the consumer re-renders frequently — even
+ * mid-drag. If our handlers changed identity on those renders, the cleanup
+ * effect would fire and rip the `mousemove`/`mouseup` listeners off `document`
+ * while a drag was in flight, freezing the ghost and dropping the gesture. Stable
+ * handlers + a mount-only cleanup keep the listeners attached until the drag (or
+ * the component) actually ends.
  */
 export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOptions) => {
   const [dragging, setDragging] = useState<JiraTicket | null>(null);
@@ -43,6 +53,14 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
   const draggingRef = useRef<JiraTicket | null>(null);
   const hoverDayRef = useRef<string | null>(null);
   const hoverHoursRef = useRef<number | null>(null);
+
+  // Latest-ref mirrors of the per-render callbacks. Updated every render so the
+  // stable handlers always invoke the freshest `isDroppable`/`onDrop` without
+  // taking them as `useCallback` deps (see the hook doc comment above).
+  const isDroppableRef = useRef(isDroppable);
+  const onDropRef = useRef(onDrop);
+  isDroppableRef.current = isDroppable;
+  onDropRef.current = onDrop;
 
   const moveGhost = useCallback((x: number, y: number) => {
     const ghost = ghostRef.current;
@@ -117,10 +135,10 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     const hours = hoverHoursRef.current;
     endDrag();
 
-    if (ticket && dateKey && isDroppable(dateKey)) {
-      onDrop({ ticket, dateKey, hours: hours ?? 1 });
+    if (ticket && dateKey && isDroppableRef.current(dateKey)) {
+      onDropRef.current({ ticket, dateKey, hours: hours ?? 1 });
     }
-  }, [endDrag, handleDragMove, isDroppable, onDrop]);
+  }, [endDrag, handleDragMove]);
 
   const startDrag = useCallback(
     (ticket: JiraTicket, event: MouseEvent) => {
@@ -178,6 +196,11 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     [handlePreMove, handlePreUp]
   );
 
+  // Safety net for unmount-while-dragging only. The handlers are identity-stable,
+  // so empty deps keep this from re-running on the consumer's frequent re-renders
+  // — re-running mid-drag is exactly what used to tear the live listeners off and
+  // freeze the gesture. Active-drag teardown is handled imperatively in
+  // handleDragUp / handlePreUp instead.
   useEffect(() => {
     return () => {
       document.removeEventListener("mousemove", handlePreMove);
@@ -191,7 +214,8 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
         /* ignore */
       }
     };
-  }, [handleDragMove, handleDragUp, handlePreMove, handlePreUp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isHoverBlocked = Boolean(hoverDay && !isDroppable(hoverDay));
 
