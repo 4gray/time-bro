@@ -227,14 +227,29 @@ export const useReleaseUpdates = ({
     void checkForUpdates();
   }, [autoCheck, checkForUpdates, isDemo]);
 
+  const checkForUpdatesFromSettings = useCallback(() => {
+    void checkForUpdates({ force: true, notifyWhenCurrent: true });
+  }, [checkForUpdates]);
+
+  const openCurrentReleaseNotes = useCallback(() => {
+    openReleaseNotes(updateInfoRef.current);
+  }, [openReleaseNotes]);
+
+  const openCurrentUpdateDownload = useCallback(() => {
+    openUpdateDownload(updateInfoRef.current);
+  }, [openUpdateDownload]);
+
   return {
     updateInfo,
     isCheckingUpdates,
     releaseNotesDialogInfo,
     checkForUpdates,
+    checkForUpdatesFromSettings,
     openReleasePage,
     openReleaseNotes,
+    openCurrentReleaseNotes,
     closeReleaseNotes,
-    openUpdateDownload
+    openUpdateDownload,
+    openCurrentUpdateDownload
   };
 };

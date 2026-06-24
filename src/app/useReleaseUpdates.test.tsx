@@ -69,6 +69,14 @@ const renderHarness = (props: { isDemo?: boolean; demoUpdateAvailable?: boolean;
   });
 };
 
+const flushAsync = async () => {
+  for (let index = 0; index < 4; index += 1) {
+    await act(async () => {
+      await Promise.resolve();
+    });
+  }
+};
+
 beforeEach(() => {
   api = undefined;
   localStorage.clear();
@@ -206,6 +214,29 @@ describe("useReleaseUpdates", () => {
     expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: "1.4.0" });
 
     act(() => getApi().openUpdateDownload());
+    expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);
+  });
+
+  it("exposes Settings callbacks that use the current update info", async () => {
+    const update = makeInfo({
+      latestVersion: "1.4.0",
+      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+      updateAvailable: true
+    });
+    getUpdateInfo.mockResolvedValue(update);
+    renderHarness();
+
+    act(() => getApi().checkForUpdatesFromSettings());
+    await flushAsync();
+
+    expect(getUpdateInfo).toHaveBeenCalledTimes(1);
+    expect(getApi().updateInfo).toMatchObject({ latestVersion: "1.4.0", updateAvailable: true });
+    expect(getApi().isCheckingUpdates).toBe(false);
+
+    act(() => getApi().openCurrentReleaseNotes());
+    expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: "1.4.0" });
+
+    act(() => getApi().openCurrentUpdateDownload());
     expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);
   });
 });

@@ -90,11 +90,12 @@ export const App = () => {
     updateInfo,
     isCheckingUpdates,
     releaseNotesDialogInfo,
-    checkForUpdates,
     openReleasePage,
-    openReleaseNotes,
+    checkForUpdatesFromSettings,
+    openCurrentReleaseNotes,
     closeReleaseNotes,
-    openUpdateDownload
+    openUpdateDownload,
+    openCurrentUpdateDownload
   } = useReleaseUpdates({
     appVersion: APP_VERSION,
     isDemo,
@@ -539,11 +540,9 @@ export const App = () => {
               onSelectTheme={selectTheme}
               updateInfo={updateInfo}
               isCheckingUpdates={isCheckingUpdates}
-              onCheckForUpdates={() => {
-                void checkForUpdates({ force: true, notifyWhenCurrent: true });
-              }}
-              onShowReleaseNotes={() => openReleaseNotes(updateInfo)}
-              onDownloadUpdate={() => openUpdateDownload(updateInfo)}
+              onCheckForUpdates={checkForUpdatesFromSettings}
+              onShowReleaseNotes={openCurrentReleaseNotes}
+              onDownloadUpdate={openCurrentUpdateDownload}
               onOpenReleasePage={openReleasePage}
               weekRangeLabel={weekState.weekRangeLabel}
               onExportWeekCsv={handleExportWeekCsv}
