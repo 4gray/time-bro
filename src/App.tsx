@@ -28,6 +28,7 @@ import { useSettingsActions } from "./app/useSettingsActions";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
+import { useWeekStorage } from "./app/useWeekStorage";
 import { nativeApi } from "./api/native";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
@@ -48,18 +49,7 @@ import { isBitbucketConfigured } from "./domain/bitbucketReview";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
 import { buildDefaultRecurringEvents } from "./domain/recurring";
 import { getMonthAnchor } from "./domain/month";
-import {
-  getFavoriteKeys,
-  getBitbucketReviewResult,
-  getPersonalNotes,
-  getRecurringEvents,
-  getRecurringOccurrences,
-  getSettings,
-  getSyncResult,
-  getWeekOverride,
-  saveRecurringEvents,
-  saveWeekOverride
-} from "./storage/db";
+import { saveWeekOverride } from "./storage/db";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "./utils/date";
 
 // The version this build is running; baked from package.json at build time.
@@ -98,7 +88,6 @@ export const App = () => {
     persist: !demoScenario
   });
   const startupSyncCheckedRef = useRef(false);
-  const skipInitialWeekReloadRef = useRef(false);
   const {
     updateInfo,
     isCheckingUpdates,
@@ -180,6 +169,22 @@ export const App = () => {
     weekEndExclusiveISO: weekState.weekEndExclusiveISO,
     demoReviewResult: demoScenario?.bitbucketReviewResult,
     showSuccess,
+    showError
+  });
+  useWeekStorage({
+    isDemo: Boolean(demoScenario),
+    isBooting,
+    weekStart,
+    setSettings,
+    setSettingsDraft,
+    setWeekOverride,
+    setSyncResult,
+    setFavoriteKeys,
+    setPersonalNotes,
+    setBitbucketReviewResult,
+    setRecurringEvents,
+    setRecurringOccurrences,
+    setIsBooting,
     showError
   });
 
@@ -323,120 +328,6 @@ export const App = () => {
       await runReviewSync(settings);
     }
   }, [runReviewSync, runSync, settings]);
-
-  useEffect(() => {
-    if (demoScenario) {
-      return;
-    }
-
-    let isMounted = true;
-
-    const loadInitialState = async () => {
-      const weekKey = toLocalDateKey(weekStart);
-      const [
-        storedSettings,
-        storedOverride,
-        storedSyncResult,
-        storedFavorites,
-        storedPersonalNotes,
-        storedBitbucketReviewResult,
-        storedRecurringEvents,
-        storedRecurringOccurrences
-      ] = await Promise.all([
-        getSettings(),
-        getWeekOverride(weekKey),
-        getSyncResult(weekKey),
-        getFavoriteKeys(),
-        getPersonalNotes(weekKey),
-        getBitbucketReviewResult(weekKey),
-        getRecurringEvents(),
-        getRecurringOccurrences(weekKey)
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      // Seed the prototype defaults the first time the feature is opened so it
-      // is discoverable rather than empty; persist so the seed is stable.
-      let recurringEventsToUse = storedRecurringEvents;
-      if (!recurringEventsToUse) {
-        recurringEventsToUse = buildDefaultRecurringEvents();
-        await saveRecurringEvents(recurringEventsToUse);
-      }
-
-      setSettings(storedSettings);
-      setSettingsDraft(storedSettings);
-      setWeekOverride(storedOverride);
-      setSyncResult(storedSyncResult);
-      setFavoriteKeys(storedFavorites);
-      setPersonalNotes(storedPersonalNotes);
-      setBitbucketReviewResult(storedBitbucketReviewResult);
-      setRecurringEvents(recurringEventsToUse);
-      setRecurringOccurrences(storedRecurringOccurrences);
-      skipInitialWeekReloadRef.current = true;
-      setIsBooting(false);
-    };
-
-    loadInitialState().catch((error) => {
-      console.error(error);
-      setIsBooting(false);
-      showError("Unable to load local tracker data.");
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [showError]);
-
-  useEffect(() => {
-    if (demoScenario || isBooting) {
-      return;
-    }
-
-    if (skipInitialWeekReloadRef.current) {
-      skipInitialWeekReloadRef.current = false;
-      return;
-    }
-
-    let isMounted = true;
-    const weekKey = toLocalDateKey(weekStart);
-
-    const loadWeek = async () => {
-      const [
-        storedOverride,
-        storedSyncResult,
-        storedPersonalNotes,
-        storedBitbucketReviewResult,
-        storedRecurringOccurrences
-      ] = await Promise.all([
-        getWeekOverride(weekKey),
-        getSyncResult(weekKey),
-        getPersonalNotes(weekKey),
-        getBitbucketReviewResult(weekKey),
-        getRecurringOccurrences(weekKey)
-      ]);
-
-      if (!isMounted) {
-        return;
-      }
-
-      setWeekOverride(storedOverride);
-      setSyncResult(storedSyncResult);
-      setPersonalNotes(storedPersonalNotes);
-      setBitbucketReviewResult(storedBitbucketReviewResult);
-      setRecurringOccurrences(storedRecurringOccurrences);
-    };
-
-    loadWeek().catch((error) => {
-      console.error(error);
-      showError("Unable to load the selected week.");
-    });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [demoScenario, isBooting, showError, weekStart]);
 
   useEffect(() => {
     if (demoScenario || isBooting || startupSyncCheckedRef.current) {
