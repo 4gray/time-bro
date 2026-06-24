@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
-  AppUpdateInfo,
   BitbucketReviewSession,
   BitbucketReviewSyncResult,
   BitbucketReviewTargetMode,
@@ -18,12 +17,9 @@ import type {
   WeekdayNumber,
   WeekOverride
 } from "../shared/types";
-import { GITHUB_RELEASES_URL } from "../shared/releases";
 import {
   compareTicketsByCreated,
-  createDemoUpdateInfo,
   formatPersonalNoteCount,
-  formatReleaseVersion,
   formatSyncTime,
   groupPersonalNotesByWeek,
   isJiraConfigured,
@@ -33,6 +29,7 @@ import {
   updateVisiblePersonalNotes
 } from "./app/appHelpers";
 import { useLiveDate } from "./app/useLiveDate";
+import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useSnackbars } from "./app/useSnackbars";
 import { useThemeMode } from "./app/useThemeMode";
 import { nativeApi } from "./api/native";
@@ -62,7 +59,6 @@ import {
 } from "./domain/bitbucketReview";
 import { mergeCreatedWorklogIntoSyncResult } from "./domain/syncResult";
 import { buildWeekState, DEFAULT_SETTINGS, getWeekBounds } from "./domain/week";
-import { isRecentUpdateInfo, readCachedUpdateInfo, writeCachedUpdateInfo } from "./domain/updateCache";
 import { buildDefaultRecurringEvents, getRecurringCandidates, indexOccurrences } from "./domain/recurring";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts, type MonthState } from "./domain/month";
 import {
@@ -114,11 +110,6 @@ export const App = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isTestingBitbucket, setIsTestingBitbucket] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | undefined>(() =>
-    demoConfig ? createDemoUpdateInfo(demoConfig.updateAvailable) : undefined
-  );
-  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [releaseNotesDialogInfo, setReleaseNotesDialogInfo] = useState<AppUpdateInfo | undefined>();
   const [isImportingPersonalNotes, setIsImportingPersonalNotes] = useState(false);
   const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
@@ -147,7 +138,23 @@ export const App = () => {
   const syncInFlightRef = useRef<Promise<SyncResult | undefined> | undefined>();
   const startupSyncCheckedRef = useRef(false);
   const skipInitialWeekReloadRef = useRef(false);
-  const updateSnackbarShownForRef = useRef<string | undefined>();
+  const {
+    updateInfo,
+    isCheckingUpdates,
+    releaseNotesDialogInfo,
+    checkForUpdates,
+    openReleasePage,
+    openReleaseNotes,
+    closeReleaseNotes,
+    openUpdateDownload
+  } = useReleaseUpdates({
+    appVersion: APP_VERSION,
+    isDemo: Boolean(demoScenario),
+    demoUpdateAvailable: demoConfig?.updateAvailable ?? false,
+    showSnackbar,
+    showSuccess,
+    showError
+  });
 
   const weekState = useMemo(
     () =>
@@ -273,155 +280,6 @@ export const App = () => {
     const loggedKeys = new Set(todayWorklogs.map((worklog) => worklog.issueKey));
     return (tickets?.inProgress ?? []).filter((ticket) => !loggedKeys.has(ticket.key));
   }, [tickets, todayWorklogs]);
-
-  const openReleasePage = useCallback(
-    (url?: string) => {
-      void nativeApi.openReleasePage(url ?? GITHUB_RELEASES_URL).catch((error) => {
-        showError(error instanceof Error ? error.message : "Unable to open GitHub Releases.");
-      });
-    },
-    [showError]
-  );
-
-  const openReleaseNotes = useCallback(
-    (info?: AppUpdateInfo) => {
-      const releaseInfo = info ?? updateInfo;
-      if (!releaseInfo?.latestVersion) {
-        showError("No GitHub release notes are available yet.");
-        return;
-      }
-
-      setReleaseNotesDialogInfo(releaseInfo);
-    },
-    [showError, updateInfo]
-  );
-
-  const openUpdateDownload = useCallback(
-    (info?: AppUpdateInfo) => {
-      const downloadUrl = info?.downloadUrl ?? updateInfo?.downloadUrl;
-      if (!downloadUrl) {
-        showError("No installer download is available for this platform.");
-        return;
-      }
-
-      void nativeApi.openReleasePage(downloadUrl).catch((error) => {
-        showError(error instanceof Error ? error.message : "Unable to open the release download.");
-      });
-    },
-    [showError, updateInfo]
-  );
-
-  const showUpdateAvailable = useCallback(
-    (info: AppUpdateInfo) => {
-      if (!info.updateAvailable || !info.latestVersion) {
-        return;
-      }
-
-      if (updateSnackbarShownForRef.current === info.latestVersion) {
-        return;
-      }
-
-      updateSnackbarShownForRef.current = info.latestVersion;
-      showSnackbar(
-        "info",
-        `TimeBro ${formatReleaseVersion(info.latestVersion)} is available. Current version: ${formatReleaseVersion(
-          info.currentVersion
-        )}.`,
-        {
-          actions: [
-            {
-              label: "Release notes",
-              icon: "notes",
-              onAction: () => openReleaseNotes(info)
-            },
-            ...(info.downloadUrl
-              ? [
-                  {
-                    label: "Download",
-                    icon: "download" as const,
-                    onAction: () => openUpdateDownload(info)
-                  }
-                ]
-              : [
-                  {
-                    label: "GitHub",
-                    icon: "external" as const,
-                    onAction: () => openReleasePage(info.releasePageUrl)
-                  }
-                ])
-          ],
-          autoDismiss: false
-        }
-      );
-    },
-    [openReleaseNotes, openReleasePage, openUpdateDownload, showSnackbar]
-  );
-
-  const checkForUpdates = useCallback(
-    async (options: { force?: boolean; notifyWhenCurrent?: boolean } = {}) => {
-      if (demoScenario) {
-        const demoUpdateInfo = createDemoUpdateInfo(demoConfig?.updateAvailable ?? false);
-        setUpdateInfo(demoUpdateInfo);
-
-        if (demoUpdateInfo.updateAvailable) {
-          showUpdateAvailable(demoUpdateInfo);
-        } else if (options.notifyWhenCurrent) {
-          showSuccess("TimeBro is up to date.");
-        }
-
-        return demoUpdateInfo;
-      }
-
-      if (!options.force) {
-        const cachedUpdateInfo = readCachedUpdateInfo(APP_VERSION);
-        if (cachedUpdateInfo && isRecentUpdateInfo(cachedUpdateInfo)) {
-          setUpdateInfo(cachedUpdateInfo);
-          if (cachedUpdateInfo.updateAvailable) {
-            showUpdateAvailable(cachedUpdateInfo);
-          }
-          return cachedUpdateInfo;
-        }
-      }
-
-      setIsCheckingUpdates(true);
-
-      try {
-        const result = await nativeApi.getUpdateInfo();
-        setUpdateInfo(result);
-        writeCachedUpdateInfo(result);
-
-        if (result.updateAvailable) {
-          showUpdateAvailable(result);
-        } else if (options.notifyWhenCurrent) {
-          if (result.error) {
-            showError(result.error);
-          } else {
-            showSuccess("TimeBro is up to date.");
-          }
-        }
-
-        return result;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to check GitHub Releases.";
-        setUpdateInfo((current) => ({
-          currentVersion: current?.currentVersion ?? "unknown",
-          releasePageUrl: current?.releasePageUrl ?? GITHUB_RELEASES_URL,
-          checkedAt: new Date().toISOString(),
-          updateAvailable: false,
-          error: message
-        }));
-
-        if (options.notifyWhenCurrent) {
-          showError(message);
-        }
-
-        return undefined;
-      } finally {
-        setIsCheckingUpdates(false);
-      }
-    },
-    [demoConfig, demoScenario, showError, showSuccess, showUpdateAvailable]
-  );
 
   const loadTickets = useCallback(async () => {
     if (!isConfigured) {
@@ -602,14 +460,6 @@ export const App = () => {
       await runReviewSync(settings);
     }
   }, [runReviewSync, runSync, settings]);
-
-  useEffect(() => {
-    if (demoScenario) {
-      return;
-    }
-
-    void checkForUpdates();
-  }, [checkForUpdates, demoScenario]);
 
   useEffect(() => {
     if (demoScenario) {
@@ -2015,7 +1865,7 @@ export const App = () => {
       {releaseNotesDialogInfo && (
         <ReleaseNotesDialog
           updateInfo={releaseNotesDialogInfo}
-          onClose={() => setReleaseNotesDialogInfo(undefined)}
+          onClose={closeReleaseNotes}
           onDownload={openUpdateDownload}
           onOpenReleasePage={openReleasePage}
         />

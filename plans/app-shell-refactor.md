@@ -15,8 +15,8 @@ Start with low-risk pure helpers from `App.tsx`, add focused unit tests, and kee
 3. Done: extract `useSnackbars` from `App.tsx` with hook-level coverage.
 4. Done: extract `useThemeMode` from `App.tsx` with storage, system preference, and demo-mode coverage.
 5. Done: extract `useLiveDate` from `App.tsx` with fake-timer coverage for ticking, demo freeze, and cleanup.
-6. Next: extract update-check orchestration once its callback dependencies are mapped.
-7. Later: split larger data/action orchestration only after the helper and hook seams are covered.
+6. Done: extract `useReleaseUpdates` from `App.tsx` with demo, cache, native success/error, and open-action coverage.
+7. Next: split larger data/action orchestration only after mapping storage, Jira sync, and ticket dependencies.
 8. Later: split `src/styles.css` mechanically into imported files after UI behavior is protected.
 
 ## Verification
@@ -44,3 +44,9 @@ Phase 4:
 - Passed: `npm run test`
 - Passed: `npm run release:dry-run`
 - Passed: `agent-browser` smoke for frozen demo week date (`WEEK 25 — JUN 15–21`) and overflow
+
+Phase 5:
+
+- Passed: `npm run test`
+- Passed: `npm run release:dry-run`
+- Passed: `agent-browser` smoke for demo update release notes dialog and overflow
