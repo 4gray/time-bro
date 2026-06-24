@@ -30,6 +30,7 @@ import { useThemeMode } from "./app/useThemeMode";
 import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
+import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { AddTimeModal } from "./components/AddTimeModal";
 import { ReportsView } from "./components/ReportsView";
 import { ReleaseNotesDialog } from "./components/ReleaseNotesDialog";
@@ -56,6 +57,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
 export const App = () => {
   const demoConfig = useMemo(() => getDemoConfig(), []);
   const demoScenario = useMemo(() => (demoConfig ? createDemoScenario(demoConfig) : undefined), [demoConfig]);
+  const isDemo = Boolean(demoScenario);
   const currentDate = useLiveDate(demoScenario?.today);
   const [view, setView] = useState<AppView>(() => demoConfig?.view ?? "week");
   const [settings, setSettings] = useState<AppSettings>(() => demoScenario?.settings ?? DEFAULT_SETTINGS);
@@ -74,16 +76,15 @@ export const App = () => {
     demoScenario ? buildDefaultRecurringEvents() : []
   );
   const [recurringOccurrences, setRecurringOccurrences] = useState<RecurringOccurrence[]>([]);
-  const [isBooting, setIsBooting] = useState(() => !demoScenario);
+  const [isBooting, setIsBooting] = useState(() => !isDemo);
   const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [addModalDate, setAddModalDate] = useState<Date | undefined>();
   const [editingWorklog, setEditingWorklog] = useState<JiraWorklog | undefined>();
-  const [welcomeConnected, setWelcomeConnected] = useState(false);
   const { effectiveTheme, selectTheme } = useThemeMode({
     initialTheme: demoConfig?.theme,
-    persist: !demoScenario
+    persist: !isDemo
   });
   const {
     updateInfo,
@@ -96,7 +97,7 @@ export const App = () => {
     openUpdateDownload
   } = useReleaseUpdates({
     appVersion: APP_VERSION,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     demoUpdateAvailable: demoConfig?.updateAvailable ?? false,
     showSnackbar,
     showSuccess,
@@ -139,6 +140,7 @@ export const App = () => {
 
   const isConfigured = isJiraConfigured(settings);
   const isBitbucketReady = isBitbucketConfigured(settings);
+  const welcomeFlow = useWelcomeFlow({ isDemo, isBooting, isConfigured, setView });
   const {
     goToPreviousWeek,
     goToCurrentWeek,
@@ -188,7 +190,7 @@ export const App = () => {
     showError
   });
   useWeekStorage({
-    isDemo: Boolean(demoScenario),
+    isDemo,
     isBooting,
     weekStart,
     setSettings,
@@ -256,13 +258,13 @@ export const App = () => {
     handleTestBitbucketConnection
   } = useSettingsActions({
     settingsDraft,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     demoJiraResult,
     runSync,
     loadTickets,
     setSettings,
     setSettingsDraft,
-    setWelcomeConnected,
+    setWelcomeConnected: welcomeFlow.setWelcomeConnected,
     showSuccess,
     showError
   });
@@ -280,7 +282,7 @@ export const App = () => {
     settings,
     syncResult,
     editingWorklog,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     runSync,
     loadTickets,
     onSyncResult: setSyncResult,
@@ -300,7 +302,7 @@ export const App = () => {
     personalNotes,
     setPersonalNotes,
     visibleWeekKey: weekState.weekKey,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     setIsLogging,
     setLogError,
     showInfo,
@@ -321,14 +323,14 @@ export const App = () => {
     recurringOccurrences,
     setRecurringOccurrences,
     visibleWeekKey: weekState.weekKey,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     showSuccess,
     showError
   });
   const { isLoggingReview, handleLogReviewSessions } = useBitbucketReviewLogging({
     settings,
     sourceResult: visibleBitbucketReviewResult,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     runSync,
     loadTickets,
     onReviewResult: setBitbucketReviewResult,
@@ -350,12 +352,12 @@ export const App = () => {
     weekState,
     weekOverride,
     setWeekOverride,
-    isDemo: Boolean(demoScenario),
+    isDemo,
     showSuccess
   });
 
   useAppLifecycleEffects({
-    isDemo: Boolean(demoScenario),
+    isDemo,
     isBooting,
     isConfigured,
     isBitbucketReady,
@@ -372,7 +374,7 @@ export const App = () => {
     currentDate,
     weekState,
     isConfigured,
-    welcomeConnected,
+    welcomeConnected: welcomeFlow.welcomeConnected,
     isBooting,
     addModalDate,
     editingWorklog,
@@ -384,18 +386,15 @@ export const App = () => {
     setLogError
   });
 
-  if (!demoScenario && !isBooting && (!isConfigured || welcomeConnected)) {
+  if (welcomeFlow.isWelcomeVisible) {
     return (
       <div className="app-shell" data-theme={effectiveTheme} data-view="welcome">
         <WelcomeView
           initialSettings={settingsDraft}
-          isConnected={welcomeConnected}
+          isConnected={welcomeFlow.welcomeConnected}
           connectedSettings={settings}
           onConnect={handleWelcomeConnect}
-          onEnterApp={() => {
-            setWelcomeConnected(false);
-            setView("week");
-          }}
+          onEnterApp={welcomeFlow.enterApp}
         />
         <SnackbarStack notifications={snackbars} onDismiss={dismissSnackbar} />
       </div>

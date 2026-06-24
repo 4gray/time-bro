@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, Add Time date/shortcut decisions and modal action handlers, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and JSX wiring, persisted week/bootstrap loading, month aggregation, settings connection actions, welcome gate flow, Add Time date/shortcut decisions and modal action handlers, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -34,7 +34,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 22. Done: extract week skip/export actions into a focused hook with coverage.
 23. Done: extract Add Time modal open/edit/shortcut actions into a focused hook with coverage.
 24. Done: extract sync button/status controls into a focused hook with coverage.
-25. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+25. Done: extract welcome gate and enter-app flow into a focused hook with coverage.
+26. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -197,3 +198,11 @@ Phase 23:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo week sync status/button, desktop/mobile overflow, and console health
+
+Phase 24:
+
+- Passed: `npm run test -- src/app/useWelcomeFlow.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for non-demo welcome bootstrap, demo week bypass, desktop/mobile overflow, and console health
