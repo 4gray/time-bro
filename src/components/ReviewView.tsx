@@ -376,7 +376,15 @@ export const ReviewView = ({
   const canConfirmLog = logPreview.length > 0 && logPreview.every((item) => item.targetIssueKey);
 
   useEffect(() => {
-    setSelectedIds((current) => (areSameIds(current, selectableIds) ? current : selectableIds));
+    setSelectedIds((current) => {
+      if (current.length === 0) {
+        return selectableIds;
+      }
+
+      const selectableSet = new Set(selectableIds);
+      const stillSelectable = current.filter((sessionId) => selectableSet.has(sessionId));
+      return areSameIds(current, stillSelectable) ? current : stillSelectable;
+    });
   }, [selectableIds]);
 
   useEffect(() => {

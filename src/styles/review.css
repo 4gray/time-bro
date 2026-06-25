@@ -59,7 +59,7 @@
   white-space: nowrap;
   border: none;
   border-radius: 8px;
-  color: #211536;
+  color: #f8f7ff;
   background: var(--purple);
   font-family: var(--font-mono);
   font-size: 12px;
@@ -582,4 +582,3 @@
 .review-estimate-steps li + li {
   margin-top: 9px;
 }
-

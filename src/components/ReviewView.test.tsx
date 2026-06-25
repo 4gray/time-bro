@@ -1,7 +1,12 @@
+// @vitest-environment jsdom
+import { act, type ComponentProps } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
-import type { AppSettings, BitbucketReviewSyncResult } from "../../shared/types";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AppSettings, BitbucketReviewSession, BitbucketReviewSyncResult } from "../../shared/types";
 import { ReviewView } from "./ReviewView";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -18,6 +23,41 @@ const settings: AppSettings = {
   remindersEnabled: true
 };
 
+const buildSession = (
+  pullRequestId: number,
+  overrides: Partial<BitbucketReviewSession> = {}
+): BitbucketReviewSession => ({
+  id: `team/explorer-web#${pullRequestId}:2026-06-15`,
+  workspace: "team",
+  repositorySlug: "explorer-web",
+  repositoryName: "Explorer Web",
+  pullRequestId,
+  pullRequestTitle: `Review flow ${pullRequestId}`,
+  pullRequestUrl: `https://bitbucket.org/team/explorer-web/pull-requests/${pullRequestId}`,
+  pullRequestState: "OPEN",
+  pullRequestAuthorAccountId: "author-account",
+  pullRequestAuthorDisplayName: "Feature Author",
+  isPullRequestAuthor: false,
+  jiraIssueKey: `FTDM-${pullRequestId}`,
+  dateKey: "2026-06-15",
+  startedISO: "2026-06-15T09:40:00.000Z",
+  endedISO: "2026-06-15T10:25:00.000Z",
+  estimatedSeconds: 45 * 60,
+  reviewStateLabel: "APPROVED",
+  commentCount: 9,
+  activityCount: 10,
+  confidence: "high",
+  events: [
+    {
+      id: `comment-${pullRequestId}`,
+      type: "comment",
+      occurredAt: "2026-06-15T09:45:00.000Z"
+    }
+  ],
+  status: "unlogged",
+  ...overrides
+});
+
 const reviewResult: BitbucketReviewSyncResult = {
   weekKey: "2026-06-15",
   weekStartISO: "2026-06-15T00:00:00.000Z",
@@ -30,38 +70,75 @@ const reviewResult: BitbucketReviewSyncResult = {
   pullRequestCount: 1,
   sessionCount: 1,
   sessions: [
-    {
-      id: "team/explorer-web#214:2026-06-15",
-      workspace: "team",
-      repositorySlug: "explorer-web",
-      repositoryName: "Explorer Web",
-      pullRequestId: 214,
+    buildSession(214, {
       pullRequestTitle: "Active interrupt handling for poller",
-      pullRequestUrl: "https://bitbucket.org/team/explorer-web/pull-requests/214",
-      pullRequestState: "OPEN",
-      pullRequestAuthorAccountId: "author-account",
-      pullRequestAuthorDisplayName: "Feature Author",
-      isPullRequestAuthor: false,
-      jiraIssueKey: "FTDM-328",
-      dateKey: "2026-06-15",
-      startedISO: "2026-06-15T09:40:00.000Z",
-      endedISO: "2026-06-15T10:25:00.000Z",
-      estimatedSeconds: 45 * 60,
-      reviewStateLabel: "APPROVED",
-      commentCount: 9,
-      activityCount: 10,
-      confidence: "high",
-      events: [
-        {
-          id: "comment-1",
-          type: "comment",
-          occurredAt: "2026-06-15T09:45:00.000Z"
-        }
-      ],
-      status: "unlogged"
-    }
+      jiraIssueKey: "FTDM-328"
+    })
   ]
 };
+
+type ReviewViewProps = ComponentProps<typeof ReviewView>;
+
+const baseProps = (): ReviewViewProps => ({
+  weekKey: "2026-06-15",
+  weekStartISO: "2026-06-15T00:00:00.000Z",
+  settings,
+  result: reviewResult,
+  issueUrlsByKey: { "FTDM-328": "https://example.atlassian.net/browse/FTDM-328" },
+  issueTypesByKey: {},
+  isConfigured: true,
+  isSyncing: false,
+  isLogging: false,
+  targetMode: "reviewed-ticket" as const,
+  onTargetModeChange: () => undefined,
+  onSync: () => undefined,
+  onLogSessions: async () => true,
+  onPreviousWeek: () => undefined,
+  onCurrentWeek: () => undefined,
+  onNextWeek: () => undefined
+});
+
+let container: HTMLDivElement;
+let root: Root;
+
+const renderView = (props: Partial<ReviewViewProps> = {}) => {
+  act(() => {
+    root.render(<ReviewView {...baseProps()} {...props} />);
+  });
+};
+
+const getButtonByText = (text: string) => {
+  const button = Array.from(container.querySelectorAll<HTMLButtonElement>("button")).find(
+    (candidate) => candidate.textContent?.trim() === text
+  );
+
+  if (!button) {
+    throw new Error(`Button not found: ${text}`);
+  }
+
+  return button;
+};
+
+const getDialogPanel = () => {
+  const dialogPanel = container.querySelector<HTMLElement>(".review-dialog-panel");
+
+  if (!dialogPanel) {
+    throw new Error("Review dialog panel not found.");
+  }
+
+  return dialogPanel;
+};
+
+beforeEach(() => {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+  root = createRoot(container);
+});
+
+afterEach(() => {
+  act(() => root.unmount());
+  container.remove();
+});
 
 describe("ReviewView", () => {
   it("renders Bitbucket review sessions and Jira targets", () => {
@@ -96,5 +173,61 @@ describe("ReviewView", () => {
     expect(markup).toContain("author: Feature Author");
     expect(markup).toContain("FTDM-328");
     expect(markup).toContain("LOG 1 SESSION");
+  });
+
+  it("keeps the confirm dialog scoped to manually selected sessions after editing duration", async () => {
+    const result = {
+      ...reviewResult,
+      pullRequestCount: 2,
+      sessionCount: 2,
+      sessions: [
+        buildSession(214, {
+          pullRequestTitle: "Active interrupt handling for poller",
+          jiraIssueKey: "FTDM-328"
+        }),
+        buildSession(215, {
+          pullRequestTitle: "Refresh account picker",
+          jiraIssueKey: "FTDM-329"
+        })
+      ]
+    };
+    const onLogSessions = vi.fn(async () => true);
+    renderView({
+      result,
+      issueUrlsByKey: {
+        "FTDM-328": "https://example.atlassian.net/browse/FTDM-328",
+        "FTDM-329": "https://example.atlassian.net/browse/FTDM-329"
+      },
+      onLogSessions
+    });
+
+    act(() => {
+      container.querySelector<HTMLButtonElement>("[aria-label='Select PR 215']")?.click();
+    });
+
+    expect(getButtonByText("LOG 1 SESSION").disabled).toBe(false);
+
+    act(() => {
+      getButtonByText("LOG 1 SESSION").click();
+    });
+
+    expect(container.querySelectorAll(".review-dialog-item")).toHaveLength(1);
+    expect(getDialogPanel().textContent).toContain("Active interrupt handling for poller");
+    expect(getDialogPanel().textContent).not.toContain("Refresh account picker");
+
+    act(() => {
+      getButtonByText("1h").click();
+    });
+
+    expect(container.querySelectorAll(".review-dialog-item")).toHaveLength(1);
+    expect(getButtonByText("CREATE 1 WORKLOG").disabled).toBe(false);
+
+    await act(async () => {
+      getButtonByText("CREATE 1 WORKLOG").click();
+    });
+
+    expect(onLogSessions).toHaveBeenCalledWith(["team/explorer-web#214:2026-06-15"], "reviewed-ticket", {
+      "team/explorer-web#214:2026-06-15": 3600
+    });
   });
 });
