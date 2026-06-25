@@ -1,33 +1,33 @@
 import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView } from "../components/Sidebar";
-import { TodayView } from "../components/TodayView";
 import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
 import { AppTicketsRoute } from "./AppTicketsRoute";
+import { AppTodayRoute } from "./AppTodayRoute";
 import { AppWeekRoute } from "./AppWeekRoute";
 
-type TodayViewProps = ComponentProps<typeof TodayView>;
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
+type AppTodayRouteProps = ComponentProps<typeof AppTodayRoute>;
 type AppWeekRouteProps = ComponentProps<typeof AppWeekRoute>;
 
 export interface AppMainViewProps {
   view: AppView;
   isBooting: boolean;
-  currentDate: TodayViewProps["date"];
-  selectedTicket: TodayViewProps["selectedTicket"];
-  ticketOptions: TodayViewProps["ticketOptions"];
-  todayWorklogs: TodayViewProps["todayWorklogs"];
-  todayPersonalNotes: TodayViewProps["personalNotes"];
-  issueUrlsByKey: TodayViewProps["issueUrlsByKey"];
+  currentDate: AppTodayRouteProps["currentDate"];
+  selectedTicket: AppTodayRouteProps["selectedTicket"];
+  ticketOptions: AppTodayRouteProps["ticketOptions"];
+  todayWorklogs: AppTodayRouteProps["todayWorklogs"];
+  todayPersonalNotes: AppTodayRouteProps["todayPersonalNotes"];
+  issueUrlsByKey: AppTodayRouteProps["issueUrlsByKey"];
   issueTypesByKey: AppReviewRouteProps["issueTypesByKey"];
-  todayTrackedHours: TodayViewProps["todayTrackedHours"];
-  touchedNotLogged: TodayViewProps["touchedNotLogged"];
+  todayTrackedHours: AppTodayRouteProps["todayTrackedHours"];
+  touchedNotLogged: AppTodayRouteProps["touchedNotLogged"];
   settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   weekState: AppWeekRouteProps["weekState"];
@@ -40,11 +40,11 @@ export interface AppMainViewProps {
   dockTickets: AppWeekRouteProps["dockTickets"];
   activeTicketCount: AppWeekRouteProps["activeTicketCount"];
   reviewTargetMode: AppReviewRouteProps["reviewTargetMode"];
-  isConfigured: TodayViewProps["isConfigured"];
+  isConfigured: AppTodayRouteProps["isConfigured"];
   isBitbucketReady: AppReviewRouteProps["isBitbucketReady"];
   isSyncing: AppWeekRouteProps["isSyncing"];
   isSyncingReviews: AppReviewRouteProps["isSyncingReviews"];
-  isLogging: TodayViewProps["isLogging"];
+  isLogging: AppTodayRouteProps["isLogging"];
   isLoggingReview: AppReviewRouteProps["isLoggingReview"];
   ticketsLoading: AppTicketsRouteProps["ticketsLoading"];
   ticketsError: AppTicketsRouteProps["ticketsError"];
@@ -55,8 +55,8 @@ export interface AppMainViewProps {
   isCheckingUpdates: AppSettingsRouteProps["isCheckingUpdates"];
   recurringEvents: AppSettingsRouteProps["recurringEvents"];
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
-  handleAddWorklog: TodayViewProps["onLog"] & AppWeekRouteProps["handleAddWorklog"];
-  handleAddPersonalNote: TodayViewProps["onAddPersonalNote"];
+  handleAddWorklog: AppTodayRouteProps["handleAddWorklog"] & AppWeekRouteProps["handleAddWorklog"];
+  handleAddPersonalNote: AppTodayRouteProps["handleAddPersonalNote"];
   handleSync: AppWeekRouteProps["handleSync"];
   goToPreviousWeek: AppWeekRouteProps["goToPreviousWeek"];
   goToCurrentWeek: AppWeekRouteProps["goToCurrentWeek"];
@@ -84,11 +84,11 @@ export interface AppMainViewProps {
   handleSaveRecurringEvent: AppSettingsRouteProps["handleSaveRecurringEvent"];
   handleDeleteRecurringEvent: AppSettingsRouteProps["handleDeleteRecurringEvent"];
   handleToggleRecurringEvent: AppSettingsRouteProps["handleToggleRecurringEvent"];
-  setSelectedTicket: TodayViewProps["onSelectTicket"];
-  searchTickets: TodayViewProps["onSearchTickets"];
+  setSelectedTicket: AppTodayRouteProps["setSelectedTicket"];
+  searchTickets: AppTodayRouteProps["searchTickets"];
   openAddTime: AppWeekRouteProps["openAddTime"];
-  openEditWorklog: TodayViewProps["onEditWorklog"] & AppWeekRouteProps["openEditWorklog"];
-  openEditPersonalNote: TodayViewProps["onEditPersonalNote"] & AppWeekRouteProps["openEditPersonalNote"];
+  openEditWorklog: AppTodayRouteProps["openEditWorklog"] & AppWeekRouteProps["openEditWorklog"];
+  openEditPersonalNote: AppTodayRouteProps["openEditPersonalNote"] & AppWeekRouteProps["openEditPersonalNote"];
   handleToggleSkipped: AppWeekRouteProps["handleToggleSkipped"];
   handleConfirmRecurring: AppWeekRouteProps["handleConfirmRecurring"];
   handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
@@ -179,12 +179,12 @@ export const AppMainView = ({
     content = <LoadingView />;
   } else if (view === "today") {
     content = (
-      <TodayView
-        date={currentDate}
+      <AppTodayRoute
+        currentDate={currentDate}
         selectedTicket={selectedTicket}
         ticketOptions={ticketOptions}
         todayWorklogs={todayWorklogs}
-        personalNotes={todayPersonalNotes}
+        todayPersonalNotes={todayPersonalNotes}
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
         todayTrackedHours={todayTrackedHours}
@@ -194,12 +194,12 @@ export const AppMainView = ({
         remindersEnabled={settings.remindersEnabled}
         isConfigured={isConfigured}
         isLogging={isLogging}
-        onLog={handleAddWorklog}
-        onAddPersonalNote={handleAddPersonalNote}
-        onEditWorklog={openEditWorklog}
-        onEditPersonalNote={openEditPersonalNote}
-        onSelectTicket={setSelectedTicket}
-        onSearchTickets={searchTickets}
+        handleAddWorklog={handleAddWorklog}
+        handleAddPersonalNote={handleAddPersonalNote}
+        openEditWorklog={openEditWorklog}
+        openEditPersonalNote={openEditPersonalNote}
+        setSelectedTicket={setSelectedTicket}
+        searchTickets={searchTickets}
       />
     );
   } else if (view === "week") {
