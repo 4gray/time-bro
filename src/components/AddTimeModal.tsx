@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote, RecurringEvent } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
-import type { JiraDurationUnit } from "../utils/date";
+import {
+  AddTimeDurationPicker,
+  type DurationMode,
+  type DurationPreset,
+  type DurationUnit
+} from "./AddTimeDurationPicker";
 import { AddTimeRecurringForm, formatRecurringMinutes } from "./AddTimeRecurringForm";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 
@@ -52,27 +57,18 @@ export interface AddTimeModalProps {
   onLogRecurring?: (payload: LogRecurringPayload) => Promise<boolean>;
 }
 
-const PRESETS: Array<{ label: string; seconds: number }> = [
+const PRESETS: DurationPreset[] = [
   { label: "30m", seconds: 30 * 60 },
   { label: "1h", seconds: 60 * 60 },
   { label: "2h", seconds: 2 * 60 * 60 },
   { label: "4h", seconds: 4 * 60 * 60 }
 ];
 
-const PERSONAL_NOTE_PRESETS: Array<{ label: string; seconds: number }> = [
+const PERSONAL_NOTE_PRESETS: DurationPreset[] = [
   { label: "15m", seconds: 15 * 60 },
   { label: "30m", seconds: 30 * 60 },
   { label: "1h", seconds: 60 * 60 },
   { label: "2h", seconds: 2 * 60 * 60 }
-];
-
-type DurationMode = "preset" | "custom";
-type DurationUnit = JiraDurationUnit;
-
-const CUSTOM_UNITS: Array<{ unit: DurationUnit; label: string }> = [
-  { unit: "h", label: "H" },
-  { unit: "d", label: "D" },
-  { unit: "w", label: "W" }
 ];
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -152,84 +148,6 @@ const DaySelector = ({ dateOptions, value, onChange }: DaySelectorProps) => {
     </div>
   );
 };
-
-interface DurationPickerProps {
-  seconds: number;
-  presets: Array<{ label: string; seconds: number }>;
-  valueClassName: string;
-  customMode: DurationMode;
-  customAmount: string;
-  customUnit: DurationUnit;
-  customAmountLabel: string;
-  onPreset: (seconds: number) => void;
-  onCustomOpen: () => void;
-  onCustomAmountChange: (amount: string) => void;
-  onCustomAmountBlur: () => void;
-  onCustomUnitChange: (unit: DurationUnit) => void;
-}
-
-const DurationPicker = ({
-  seconds,
-  presets,
-  valueClassName,
-  customMode,
-  customAmount,
-  customUnit,
-  customAmountLabel,
-  onPreset,
-  onCustomOpen,
-  onCustomAmountChange,
-  onCustomAmountBlur,
-  onCustomUnitChange
-}: DurationPickerProps) => (
-  <div className="duration-picker">
-    <div className={valueClassName}>{formatClock(seconds)}</div>
-    <div className="modal-presets">
-      {presets.map((preset) => (
-        <button
-          type="button"
-          key={preset.label}
-          className={`preset ${customMode === "preset" && preset.seconds === seconds ? "active" : ""}`}
-          onClick={() => onPreset(preset.seconds)}
-        >
-          {preset.label}
-        </button>
-      ))}
-      <button type="button" className={`preset ${customMode === "custom" ? "active" : ""}`} onClick={onCustomOpen}>
-        Custom
-      </button>
-    </div>
-    {customMode === "custom" && (
-      <div className="custom-duration">
-        <input
-          className="custom-duration-input"
-          type="number"
-          min="0.25"
-          step="0.25"
-          inputMode="decimal"
-          value={customAmount}
-          onChange={(event) => onCustomAmountChange(event.target.value)}
-          onBlur={onCustomAmountBlur}
-          aria-label={customAmountLabel}
-        />
-        <div className="custom-unit-toggle" aria-label="Custom duration unit">
-          {CUSTOM_UNITS.map((unit) => (
-            <button
-              type="button"
-              key={unit.unit}
-              className={customUnit === unit.unit ? "active" : ""}
-              aria-pressed={customUnit === unit.unit}
-              onClick={() => onCustomUnitChange(unit.unit)}
-            >
-              {unit.label}
-            </button>
-          ))}
-        </div>
-        <span className="custom-duration-hint">1D = 8h · 1W = 40h</span>
-      </div>
-    )}
-  </div>
-);
 
 export const AddTimeModal = ({
   date,
@@ -595,7 +513,7 @@ export const AddTimeModal = ({
               <div className="modal-grid">
                 <div className="modal-col">
                   <div className="modal-label">DURATION</div>
-                  <DurationPicker
+                  <AddTimeDurationPicker
                     seconds={durationSeconds}
                     presets={PRESETS}
                     valueClassName="modal-duration"
@@ -671,7 +589,7 @@ export const AddTimeModal = ({
               </div>
               <div className="personal-note-duration">
                 <div className="modal-label">TIME SPENT</div>
-                <DurationPicker
+                <AddTimeDurationPicker
                   seconds={personalNoteSeconds}
                   presets={PERSONAL_NOTE_PRESETS}
                   valueClassName="personal-note-time"
