@@ -1,5 +1,6 @@
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
+import { AppShellFrame } from "./app/AppShellFrame";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { useAppCalendarState } from "./app/useAppCalendarState";
 import { useAppConnectionState } from "./app/useAppConnectionState";
@@ -32,7 +33,6 @@ import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
-import { Sidebar } from "./components/Sidebar";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -359,133 +359,127 @@ export const App = () => {
   }
 
   return (
-    <div
-      className="app-shell"
-      data-demo={demoScenario ? "true" : undefined}
-      data-screenshot-ready={isBooting ? "false" : "true"}
-      data-theme={effectiveTheme}
-      data-view={view}
-    >
-      <div className="shell-body">
-        <Sidebar
-          view={view}
-          collapsed={sidebarCollapsed}
-          onViewChange={handleViewChange}
-          onToggleCollapse={toggleSidebarCollapsed}
-          syncLabel={syncLabel}
-          syncState={syncState}
-          showReview={isBitbucketReady}
-        />
-
-        <AppMainView
-          view={view}
-          isBooting={isBooting}
-          currentDate={currentDate}
-          selectedTicket={selectedTicket}
+    <AppShellFrame
+      isDemo={Boolean(demoScenario)}
+      isBooting={isBooting}
+      theme={effectiveTheme}
+      view={view}
+      sidebarCollapsed={sidebarCollapsed}
+      onViewChange={handleViewChange}
+      onToggleSidebarCollapsed={toggleSidebarCollapsed}
+      syncLabel={syncLabel}
+      syncState={syncState}
+      showReview={isBitbucketReady}
+      overlays={
+        <AppOverlays
+          addModalDate={addModalDate}
+          editingWorklog={editingWorklog}
+          editingPersonalNote={editingPersonalNote}
+          dateOptions={addTimeDateOptions}
           ticketOptions={ticketOptions}
-          todayWorklogs={todayWorklogs}
-          todayPersonalNotes={todayPersonalNotes}
-          issueUrlsByKey={issueUrlsByKey}
-          issueTypesByKey={issueTypesByKey}
-          todayTrackedHours={todayTrackedHours}
-          touchedNotLogged={touchedNotLogged}
-          settings={settings}
-          settingsDraft={settingsDraft}
-          weekState={weekState}
-          syncResult={syncResult}
-          monthState={monthState}
-          visibleBitbucketReviewResult={visibleBitbucketReviewResult}
-          tickets={tickets}
-          favoriteKeys={favoriteKeys}
-          hoursByKey={hoursByKey}
-          dockTickets={dockTickets}
-          activeTicketCount={activeTicketCount}
-          reviewTargetMode={reviewTargetMode}
           isConfigured={isConfigured}
-          isBitbucketReady={isBitbucketReady}
-          isSyncing={isSyncing}
-          isSyncingReviews={isSyncingReviews}
           isLogging={isLogging}
-          isLoggingReview={isLoggingReview}
-          ticketsLoading={ticketsLoading}
-          ticketsError={ticketsError}
-          isTesting={isTesting}
-          isTestingBitbucket={isTestingBitbucket}
-          effectiveTheme={effectiveTheme}
-          updateInfo={updateInfo}
-          isCheckingUpdates={isCheckingUpdates}
-          recurringEvents={recurringEvents}
-          isImportingPersonalNotes={isImportingPersonalNotes}
-          handleAddWorklog={handleAddWorklog}
-          handleAddPersonalNote={handleAddPersonalNote}
-          handleSync={handleSync}
-          goToPreviousWeek={goToPreviousWeek}
-          goToCurrentWeek={goToCurrentWeek}
-          goToNextWeek={goToNextWeek}
-          goToPreviousMonth={goToPreviousMonth}
-          goToCurrentMonth={goToCurrentMonth}
-          goToNextMonth={goToNextMonth}
-          openWeekFromMonth={openWeekFromMonth}
-          handleReviewSync={handleReviewSync}
-          handleLogReviewSessions={handleLogReviewSessions}
-          setReviewTargetMode={setReviewTargetMode}
-          toggleFavorite={toggleFavorite}
-          handleLogTicket={handleLogTicket}
-          setSettingsDraft={setSettingsDraft}
-          handleSaveSettings={handleSaveSettings}
-          handleTestConnection={handleTestConnection}
-          handleTestBitbucketConnection={handleTestBitbucketConnection}
-          selectTheme={selectTheme}
-          checkForUpdatesFromSettings={checkForUpdatesFromSettings}
-          openCurrentReleaseNotes={openCurrentReleaseNotes}
-          openCurrentUpdateDownload={openCurrentUpdateDownload}
-          openReleasePage={openReleasePage}
-          handleExportWeekCsv={handleExportWeekCsv}
-          handleImportPersonalNotes={handleImportPersonalNotes}
-          handleSaveRecurringEvent={handleSaveRecurringEvent}
-          handleDeleteRecurringEvent={handleDeleteRecurringEvent}
-          handleToggleRecurringEvent={handleToggleRecurringEvent}
-          setSelectedTicket={setSelectedTicket}
-          searchTickets={searchTickets}
-          openAddTime={addTimeModalActions.openAddTime}
-          openEditWorklog={addTimeModalActions.openEditWorklog}
-          openEditPersonalNote={addTimeModalActions.openEditPersonalNote}
-          handleToggleSkipped={handleToggleSkipped}
-          handleConfirmRecurring={handleConfirmRecurring}
-          handleSkipRecurring={handleSkipRecurring}
-          handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
+          isDeletingWorklog={isDeletingWorklog}
+          logError={logError}
+          onCloseAddTime={addTimeModalActions.closeAddTime}
+          onCloseEditingWorklog={addTimeModalActions.closeEditingWorklog}
+          onCloseEditingPersonalNote={addTimeModalActions.closeEditingPersonalNote}
+          onAddWorklog={handleAddWorklog}
+          onUpdateWorklog={handleUpdateWorklog}
+          onDeleteWorklog={handleDeleteWorklog}
+          onSearchTickets={searchTickets}
+          onAddPersonalNote={handleAddPersonalNote}
+          onUpdatePersonalNote={handleUpdatePersonalNote}
+          onDeletePersonalNote={handleDeletePersonalNote}
+          getRecurringCandidates={recurringCandidatesForDate}
+          onLogRecurring={handleConfirmRecurring}
+          releaseNotesDialogInfo={releaseNotesDialogInfo}
+          onCloseReleaseNotes={closeReleaseNotes}
+          onDownloadUpdate={openUpdateDownload}
+          onOpenReleasePage={openReleasePage}
+          notifications={snackbars}
+          onDismissNotification={dismissSnackbar}
         />
-      </div>
-
-      <AppOverlays
-        addModalDate={addModalDate}
-        editingWorklog={editingWorklog}
-        editingPersonalNote={editingPersonalNote}
-        dateOptions={addTimeDateOptions}
+      }
+    >
+      <AppMainView
+        view={view}
+        isBooting={isBooting}
+        currentDate={currentDate}
+        selectedTicket={selectedTicket}
         ticketOptions={ticketOptions}
+        todayWorklogs={todayWorklogs}
+        todayPersonalNotes={todayPersonalNotes}
+        issueUrlsByKey={issueUrlsByKey}
+        issueTypesByKey={issueTypesByKey}
+        todayTrackedHours={todayTrackedHours}
+        touchedNotLogged={touchedNotLogged}
+        settings={settings}
+        settingsDraft={settingsDraft}
+        weekState={weekState}
+        syncResult={syncResult}
+        monthState={monthState}
+        visibleBitbucketReviewResult={visibleBitbucketReviewResult}
+        tickets={tickets}
+        favoriteKeys={favoriteKeys}
+        hoursByKey={hoursByKey}
+        dockTickets={dockTickets}
+        activeTicketCount={activeTicketCount}
+        reviewTargetMode={reviewTargetMode}
         isConfigured={isConfigured}
+        isBitbucketReady={isBitbucketReady}
+        isSyncing={isSyncing}
+        isSyncingReviews={isSyncingReviews}
         isLogging={isLogging}
-        isDeletingWorklog={isDeletingWorklog}
-        logError={logError}
-        onCloseAddTime={addTimeModalActions.closeAddTime}
-        onCloseEditingWorklog={addTimeModalActions.closeEditingWorklog}
-        onCloseEditingPersonalNote={addTimeModalActions.closeEditingPersonalNote}
-        onAddWorklog={handleAddWorklog}
-        onUpdateWorklog={handleUpdateWorklog}
-        onDeleteWorklog={handleDeleteWorklog}
-        onSearchTickets={searchTickets}
-        onAddPersonalNote={handleAddPersonalNote}
-        onUpdatePersonalNote={handleUpdatePersonalNote}
-        onDeletePersonalNote={handleDeletePersonalNote}
-        getRecurringCandidates={recurringCandidatesForDate}
-        onLogRecurring={handleConfirmRecurring}
-        releaseNotesDialogInfo={releaseNotesDialogInfo}
-        onCloseReleaseNotes={closeReleaseNotes}
-        onDownloadUpdate={openUpdateDownload}
-        onOpenReleasePage={openReleasePage}
-        notifications={snackbars}
-        onDismissNotification={dismissSnackbar}
+        isLoggingReview={isLoggingReview}
+        ticketsLoading={ticketsLoading}
+        ticketsError={ticketsError}
+        isTesting={isTesting}
+        isTestingBitbucket={isTestingBitbucket}
+        effectiveTheme={effectiveTheme}
+        updateInfo={updateInfo}
+        isCheckingUpdates={isCheckingUpdates}
+        recurringEvents={recurringEvents}
+        isImportingPersonalNotes={isImportingPersonalNotes}
+        handleAddWorklog={handleAddWorklog}
+        handleAddPersonalNote={handleAddPersonalNote}
+        handleSync={handleSync}
+        goToPreviousWeek={goToPreviousWeek}
+        goToCurrentWeek={goToCurrentWeek}
+        goToNextWeek={goToNextWeek}
+        goToPreviousMonth={goToPreviousMonth}
+        goToCurrentMonth={goToCurrentMonth}
+        goToNextMonth={goToNextMonth}
+        openWeekFromMonth={openWeekFromMonth}
+        handleReviewSync={handleReviewSync}
+        handleLogReviewSessions={handleLogReviewSessions}
+        setReviewTargetMode={setReviewTargetMode}
+        toggleFavorite={toggleFavorite}
+        handleLogTicket={handleLogTicket}
+        setSettingsDraft={setSettingsDraft}
+        handleSaveSettings={handleSaveSettings}
+        handleTestConnection={handleTestConnection}
+        handleTestBitbucketConnection={handleTestBitbucketConnection}
+        selectTheme={selectTheme}
+        checkForUpdatesFromSettings={checkForUpdatesFromSettings}
+        openCurrentReleaseNotes={openCurrentReleaseNotes}
+        openCurrentUpdateDownload={openCurrentUpdateDownload}
+        openReleasePage={openReleasePage}
+        handleExportWeekCsv={handleExportWeekCsv}
+        handleImportPersonalNotes={handleImportPersonalNotes}
+        handleSaveRecurringEvent={handleSaveRecurringEvent}
+        handleDeleteRecurringEvent={handleDeleteRecurringEvent}
+        handleToggleRecurringEvent={handleToggleRecurringEvent}
+        setSelectedTicket={setSelectedTicket}
+        searchTickets={searchTickets}
+        openAddTime={addTimeModalActions.openAddTime}
+        openEditWorklog={addTimeModalActions.openEditWorklog}
+        openEditPersonalNote={addTimeModalActions.openEditPersonalNote}
+        handleToggleSkipped={handleToggleSkipped}
+        handleConfirmRecurring={handleConfirmRecurring}
+        handleSkipRecurring={handleSkipRecurring}
+        handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
       />
-    </div>
+    </AppShellFrame>
   );
 };
