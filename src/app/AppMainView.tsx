@@ -2,19 +2,19 @@ import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView } from "../components/Sidebar";
 import { TodayView } from "../components/TodayView";
-import { WeekView } from "../components/WeekView";
 import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
 import { AppTicketsRoute } from "./AppTicketsRoute";
+import { AppWeekRoute } from "./AppWeekRoute";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
-type WeekViewProps = ComponentProps<typeof WeekView>;
 type AppMonthRouteProps = ComponentProps<typeof AppMonthRoute>;
 type AppReviewRouteProps = ComponentProps<typeof AppReviewRoute>;
 type AppSettingsRouteProps = ComponentProps<typeof AppSettingsRoute>;
 type AppTicketsRouteProps = ComponentProps<typeof AppTicketsRoute>;
+type AppWeekRouteProps = ComponentProps<typeof AppWeekRoute>;
 
 export interface AppMainViewProps {
   view: AppView;
@@ -30,19 +30,19 @@ export interface AppMainViewProps {
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
   settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
-  weekState: WeekViewProps["weekState"];
-  syncResult: WeekViewProps["syncResult"];
+  weekState: AppWeekRouteProps["weekState"];
+  syncResult: AppWeekRouteProps["syncResult"];
   monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: AppTicketsRouteProps["tickets"];
   favoriteKeys: AppTicketsRouteProps["favoriteKeys"];
   hoursByKey: AppTicketsRouteProps["hoursByKey"];
-  dockTickets: WeekViewProps["dockTickets"];
-  activeTicketCount: WeekViewProps["activeTicketCount"];
+  dockTickets: AppWeekRouteProps["dockTickets"];
+  activeTicketCount: AppWeekRouteProps["activeTicketCount"];
   reviewTargetMode: AppReviewRouteProps["reviewTargetMode"];
   isConfigured: TodayViewProps["isConfigured"];
   isBitbucketReady: AppReviewRouteProps["isBitbucketReady"];
-  isSyncing: WeekViewProps["isSyncing"];
+  isSyncing: AppWeekRouteProps["isSyncing"];
   isSyncingReviews: AppReviewRouteProps["isSyncingReviews"];
   isLogging: TodayViewProps["isLogging"];
   isLoggingReview: AppReviewRouteProps["isLoggingReview"];
@@ -55,12 +55,12 @@ export interface AppMainViewProps {
   isCheckingUpdates: AppSettingsRouteProps["isCheckingUpdates"];
   recurringEvents: AppSettingsRouteProps["recurringEvents"];
   isImportingPersonalNotes: AppSettingsRouteProps["isImportingPersonalNotes"];
-  handleAddWorklog: TodayViewProps["onLog"] & NonNullable<WeekViewProps["onDockLog"]>;
+  handleAddWorklog: TodayViewProps["onLog"] & AppWeekRouteProps["handleAddWorklog"];
   handleAddPersonalNote: TodayViewProps["onAddPersonalNote"];
-  handleSync: WeekViewProps["onSync"];
-  goToPreviousWeek: WeekViewProps["onPreviousWeek"];
-  goToCurrentWeek: WeekViewProps["onCurrentWeek"];
-  goToNextWeek: WeekViewProps["onNextWeek"];
+  handleSync: AppWeekRouteProps["handleSync"];
+  goToPreviousWeek: AppWeekRouteProps["goToPreviousWeek"];
+  goToCurrentWeek: AppWeekRouteProps["goToCurrentWeek"];
+  goToNextWeek: AppWeekRouteProps["goToNextWeek"];
   goToPreviousMonth: AppMonthRouteProps["goToPreviousMonth"];
   goToCurrentMonth: AppMonthRouteProps["goToCurrentMonth"];
   goToNextMonth: AppMonthRouteProps["goToNextMonth"];
@@ -86,13 +86,13 @@ export interface AppMainViewProps {
   handleToggleRecurringEvent: AppSettingsRouteProps["handleToggleRecurringEvent"];
   setSelectedTicket: TodayViewProps["onSelectTicket"];
   searchTickets: TodayViewProps["onSearchTickets"];
-  openAddTime: WeekViewProps["onAddTime"];
-  openEditWorklog: TodayViewProps["onEditWorklog"];
-  openEditPersonalNote: TodayViewProps["onEditPersonalNote"];
-  handleToggleSkipped: WeekViewProps["onToggleSkipped"];
-  handleConfirmRecurring: WeekViewProps["onConfirmRecurring"];
-  handleSkipRecurring: WeekViewProps["onSkipRecurring"];
-  handleDeleteRecurringOccurrence: WeekViewProps["onDeleteRecurring"];
+  openAddTime: AppWeekRouteProps["openAddTime"];
+  openEditWorklog: TodayViewProps["onEditWorklog"] & AppWeekRouteProps["openEditWorklog"];
+  openEditPersonalNote: TodayViewProps["onEditPersonalNote"] & AppWeekRouteProps["openEditPersonalNote"];
+  handleToggleSkipped: AppWeekRouteProps["handleToggleSkipped"];
+  handleConfirmRecurring: AppWeekRouteProps["handleConfirmRecurring"];
+  handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
+  handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
 }
 
 export const AppMainView = ({
@@ -204,27 +204,28 @@ export const AppMainView = ({
     );
   } else if (view === "week") {
     content = (
-      <WeekView
+      <AppWeekRoute
         weekState={weekState}
         syncResult={syncResult}
         currentDate={currentDate}
-        isSyncing={isSyncing || isSyncingReviews}
+        isSyncing={isSyncing}
+        isSyncingReviews={isSyncingReviews}
         isConfigured={isConfigured}
         dockTickets={dockTickets}
         activeTicketCount={activeTicketCount}
         isLogging={isLogging}
-        onSync={handleSync}
-        onPreviousWeek={goToPreviousWeek}
-        onCurrentWeek={goToCurrentWeek}
-        onNextWeek={goToNextWeek}
-        onAddTime={openAddTime}
-        onEditWorklog={openEditWorklog}
-        onEditPersonalNote={openEditPersonalNote}
-        onToggleSkipped={handleToggleSkipped}
-        onDockLog={handleAddWorklog}
-        onConfirmRecurring={handleConfirmRecurring}
-        onSkipRecurring={handleSkipRecurring}
-        onDeleteRecurring={handleDeleteRecurringOccurrence}
+        handleSync={handleSync}
+        goToPreviousWeek={goToPreviousWeek}
+        goToCurrentWeek={goToCurrentWeek}
+        goToNextWeek={goToNextWeek}
+        openAddTime={openAddTime}
+        openEditWorklog={openEditWorklog}
+        openEditPersonalNote={openEditPersonalNote}
+        handleToggleSkipped={handleToggleSkipped}
+        handleAddWorklog={handleAddWorklog}
+        handleConfirmRecurring={handleConfirmRecurring}
+        handleSkipRecurring={handleSkipRecurring}
+        handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
       />
     );
   } else if (view === "month") {
