@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, Check, Loader2, MessageSquare, Pencil, PenLine, Plus, Repeat2, RotateCw, Trash2, X } from "lucide-react";
+import { Ban, Check, MessageSquare, Pencil, PenLine, Plus, Repeat2, Trash2, X } from "lucide-react";
 import type {
   DayTrackingSummary,
   JiraTicket,
@@ -14,9 +14,7 @@ import type {
 import {
   formatDuration,
   formatHours,
-  formatWeekRangeCompact,
   fromLocalDateKey,
-  getIsoWeekNumber,
   SHORT_WEEKDAY_LABELS,
   toLocalDateKey
 } from "../utils/date";
@@ -25,7 +23,7 @@ import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
 import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
-import { WeekNavigator } from "./WeekNavigator";
+import { WeekHeader } from "./WeekHeader";
 
 const DOCK_OPEN_STORAGE_KEY = "timebro-active-dock";
 const DOCK_INITIAL_SHOWN = 6;
@@ -89,9 +87,6 @@ const PALETTE = [
   { seg: "#3ecf8e", text: "#7fe3b6" },
   { seg: "#e87f9b", text: "#f3a8bd" }
 ];
-
-const RING_RADIUS = 33;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 const pad = (value: number) => String(value).padStart(2, "0");
 const hm = (date: Date) => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -676,15 +671,8 @@ export const WeekView = ({
   onDeleteRecurring
 }: WeekViewProps) => {
   const weekStart = fromLocalDateKey(weekState.weekKey);
-  const weekNumber = getIsoWeekNumber(weekStart);
-  const rangeLabel = formatWeekRangeCompact(weekStart);
   const now = currentDate ?? new Date();
   const todayKey = toLocalDateKey(now);
-  const pct =
-    weekState.weeklyTargetHours > 0
-      ? Math.min((weekState.trackedWeekHours / weekState.weeklyTargetHours) * 100, 100)
-      : 0;
-  const dashOffset = RING_CIRCUMFERENCE * (1 - pct / 100);
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
 
@@ -777,66 +765,19 @@ export const WeekView = ({
 
   return (
     <div className="view">
-      <div className="week-header">
-        <div className="week-headline">
-          <div className="ring" aria-label={`${Math.round(pct)} percent of weekly target`}>
-            <svg width="78" height="78" viewBox="0 0 78 78" style={{ transform: "rotate(-90deg)" }}>
-              <circle cx="39" cy="39" r={RING_RADIUS} fill="none" stroke="var(--line)" strokeWidth="7" />
-              <circle
-                cx="39"
-                cy="39"
-                r={RING_RADIUS}
-                fill="none"
-                stroke="var(--blue)"
-                strokeWidth="7"
-                strokeLinecap="round"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={dashOffset}
-              />
-            </svg>
-            <div className="ring-label">
-              {Math.round(pct)}
-              <span className="ring-pct">%</span>
-            </div>
-          </div>
-          <div>
-            <div className="week-meta-label">
-              WEEK {weekNumber} — {rangeLabel}
-            </div>
-            <div className="week-figure">
-              {formatHours(weekState.remainingWeekHours)}
-              <span className="unit"> left</span>
-              <span className="week-figure-sub">
-                {" "}
-                · {formatHours(weekState.trackedWeekHours)} / {formatHours(weekState.weeklyTargetHours)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="week-actions">
-          <button
-            type="button"
-            className="sync-button"
-            onClick={onSync}
-            disabled={isSyncing || !isConfigured}
-            title={isConfigured ? "Sync with Jira" : "Connect Jira in settings to sync"}
-          >
-            {isSyncing ? <Loader2 className="spin" size={14} /> : <RotateCw size={14} strokeWidth={2} />}
-            SYNC
-          </button>
-          <button type="button" className="add-time-button" onClick={() => onAddTime()}>
-            <Plus size={14} strokeWidth={2.6} />
-            ADD TIME
-          </button>
-          <div className="week-divider" />
-          <WeekNavigator
-            onPreviousWeek={onPreviousWeek}
-            onCurrentWeek={onCurrentWeek}
-            onNextWeek={onNextWeek}
-          />
-        </div>
-      </div>
+      <WeekHeader
+        weekStart={weekStart}
+        remainingWeekHours={weekState.remainingWeekHours}
+        trackedWeekHours={weekState.trackedWeekHours}
+        weeklyTargetHours={weekState.weeklyTargetHours}
+        isSyncing={isSyncing}
+        isConfigured={isConfigured}
+        onSync={onSync}
+        onAddTime={onAddTime}
+        onPreviousWeek={onPreviousWeek}
+        onCurrentWeek={onCurrentWeek}
+        onNextWeek={onNextWeek}
+      />
 
       <div className="week-grid">
         {weekState.days.map((day) => {
