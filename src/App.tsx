@@ -1,8 +1,8 @@
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
-import { isJiraConfigured } from "./app/appHelpers";
 import { useAppCalendarState } from "./app/useAppCalendarState";
+import { useAppConnectionState } from "./app/useAppConnectionState";
 import { useAppReviewTargetState } from "./app/useAppReviewTargetState";
 import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
@@ -33,7 +33,6 @@ import { useWeekStorage } from "./app/useWeekStorage";
 import { useWeekState } from "./app/useWeekState";
 import { useWelcomeFlow } from "./app/useWelcomeFlow";
 import { Sidebar } from "./components/Sidebar";
-import { isBitbucketConfigured } from "./domain/bitbucketReview";
 
 // The version this build is running; baked from package.json at build time.
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "unknown";
@@ -109,8 +108,7 @@ export const App = () => {
     recurringOccurrences
   });
 
-  const isConfigured = isJiraConfigured(settings);
-  const isBitbucketReady = isBitbucketConfigured(settings);
+  const { isConfigured, isBitbucketReady } = useAppConnectionState(settings);
   const welcomeFlow = useWelcomeFlow({ isDemo, isBooting, isConfigured, setView });
   const {
     goToPreviousWeek,
