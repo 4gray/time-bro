@@ -1,10 +1,9 @@
-import { useState } from "react";
-import type { BitbucketReviewTargetMode } from "../shared/types";
 import { AppMainView } from "./app/AppMainView";
 import { AppOverlays } from "./app/AppOverlays";
 import { AppWelcomeScreen } from "./app/AppWelcomeScreen";
 import { isJiraConfigured } from "./app/appHelpers";
 import { useAppCalendarState } from "./app/useAppCalendarState";
+import { useAppReviewTargetState } from "./app/useAppReviewTargetState";
 import { useAppRecurringState } from "./app/useAppRecurringState";
 import { useAppSettingsState } from "./app/useAppSettingsState";
 import { useAppShellState } from "./app/useAppShellState";
@@ -53,7 +52,7 @@ export const App = () => {
   const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
     isDemo
   });
-  const [reviewTargetMode, setReviewTargetMode] = useState<BitbucketReviewTargetMode>("reviewed-ticket");
+  const { reviewTargetMode, setReviewTargetMode } = useAppReviewTargetState();
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();
   const { sidebarCollapsed, toggleSidebarCollapsed } = useSidebarState();
   const { addModalDate, setAddModalDate, editingWorklog, setEditingWorklog } = useAppTimeEntryModalState();

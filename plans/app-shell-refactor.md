@@ -6,7 +6,7 @@ Reduce the size and coupling of `src/App.tsx` and `src/styles.css` without chang
 
 ## Current Decision
 
-Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
+Continue with feature-driven extractions only. `App.tsx` is now mostly orchestration and shell wiring; Review target mode state, weekly sync/personal-note data state, Add Time modal state, shell view/boot state, recurring state, settings state, calendar anchor state, demo bootstrap/current date setup, welcome shell rendering, main view routing, app overlay rendering, shared loading surface, sidebar collapse state, visible week-state derivation, persisted week/bootstrap loading, month aggregation, settings connection actions and demo identity, settings update callbacks, review sync trigger, Jira worklog edit-state clearing, welcome gate flow, Add Time date/shortcut decisions and modal open/close action handlers, Add Time modal rendering, app navigation handlers, startup/reminder lifecycle effects, week skip/export actions, and sync button/status controls live behind focused helpers/hooks/components with coverage, and `src/styles.css` is a small import surface over domain-scoped style files.
 
 ## Phases
 
@@ -52,7 +52,8 @@ Continue with feature-driven extractions only. `App.tsx` is now mostly orchestra
 40. Done: extract shell view/boot state into a focused hook with coverage.
 41. Done: extract Add Time modal state into a focused hook with coverage.
 42. Done: extract weekly sync/personal-note data state into a focused hook with coverage.
-43. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
+43. Done: extract Review target mode state into a focused hook with coverage.
+44. Next: avoid broad slicing for its own sake; future extractions should stay feature-driven.
 
 ## Verification
 
@@ -359,3 +360,11 @@ Phase 42:
 - Passed: `npm run build`
 - Passed: `npm run release:dry-run`
 - Passed: Playwright smoke for demo Week weekly data and Add Time modal state, with no horizontal overflow and no console errors
+
+Phase 43:
+
+- Passed: `npm run test -- src/app/useAppReviewTargetState.test.tsx`
+- Passed: `npm run test`
+- Passed: `npm run build`
+- Passed: `npm run release:dry-run`
+- Passed: Playwright smoke for demo Review target mode confirmation to review bucket, with no horizontal overflow and no console errors
