@@ -14,6 +14,7 @@ import {
   Lock,
   Moon,
   PlusCircle,
+  RefreshCw,
   Send,
   Sparkles,
   Zap,
@@ -54,6 +55,12 @@ export interface ReconstructViewProps {
   onPrimaryAction: () => void;
   /** Log entries for this day (opens the existing Add Time write flow). */
   onLogTime: () => void;
+  /** Background sync state for Jira worklogs + Bitbucket reviews/commits. */
+  syncState: "synced" | "stale" | "syncing";
+  /** Human label for the last sync, e.g. "SYNCED 6:47 PM" or "SYNCING…". */
+  syncLabel: string;
+  /** Re-sync this week's signals from Jira + Bitbucket. */
+  onSync: () => void;
 }
 
 const SIGNAL_ACCENT: Record<SignalKind, string> = {
@@ -97,13 +104,17 @@ export const ReconstructView = ({
   onStepForward,
   onOpenSettings,
   onPrimaryAction,
-  onLogTime
+  onLogTime,
+  syncState,
+  syncLabel,
+  onSync
 }: ReconstructViewProps) => {
   const modelShort = aiModel.split(":")[0] || aiModel;
   const isWeekend = day.kind === "weekend";
   const isComplete = day.kind === "complete";
   const isActive = !isWeekend && !isComplete;
   const showTimeline = isActive || isComplete;
+  const isSyncing = syncState === "syncing";
 
   return (
     <div className="view recon-view">
@@ -149,6 +160,23 @@ export const ReconstructView = ({
           </div>
 
           <div className="recon-divider" />
+
+          <button
+            type="button"
+            className={`recon-refresh is-${syncState}`}
+            onClick={onSync}
+            disabled={isSyncing}
+            title={
+              isSyncing
+                ? "Syncing your activity…"
+                : syncState === "stale"
+                  ? "Not synced yet — sync now"
+                  : `${syncLabel} · click to sync now`
+            }
+            aria-label="Sync activity"
+          >
+            <RefreshCw size={14} strokeWidth={1.9} className={isSyncing ? "spin" : undefined} />
+          </button>
 
           <button
             type="button"
@@ -272,7 +300,33 @@ export const ReconstructView = ({
               );
             })}
 
-            {day.signals.length === 0 && (
+            {day.signals.length === 0 && isActive && isSyncing && (
+              <div className="recon-rail-empty">
+                <span className="recon-rail-empty-icon">
+                  <Loader2 size={18} strokeWidth={2} className="spin" />
+                </span>
+                <div className="recon-rail-empty-title">Syncing your activity…</div>
+                <div className="recon-rail-empty-text">Checking Jira and Bitbucket for this day.</div>
+              </div>
+            )}
+
+            {day.signals.length === 0 && isActive && syncState === "stale" && (
+              <div className="recon-rail-empty">
+                <span className="recon-rail-empty-icon">
+                  <RefreshCw size={18} strokeWidth={2} />
+                </span>
+                <div className="recon-rail-empty-title">Not synced yet</div>
+                <div className="recon-rail-empty-text">
+                  Sync your Jira and Bitbucket activity to reconstruct this day.
+                </div>
+                <button type="button" className="recon-rail-sync-btn" onClick={onSync}>
+                  <RefreshCw size={14} strokeWidth={1.9} />
+                  Sync now
+                </button>
+              </div>
+            )}
+
+            {day.signals.length === 0 && (isWeekend || (!isSyncing && syncState !== "stale")) && (
               <div className="recon-rail-empty">
                 <span className="recon-rail-empty-icon">
                   <PlusCircle size={18} strokeWidth={2} />

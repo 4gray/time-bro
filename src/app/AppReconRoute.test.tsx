@@ -30,6 +30,9 @@ const render = (overrides: Partial<ComponentProps<typeof AppReconRoute>> = {}) =
       syncResult={undefined}
       reviewResult={undefined}
       dailyTargetHours={8}
+      syncState="synced"
+      syncLabel="SYNCED 6:47 PM"
+      onSync={() => undefined}
       onOpenSettings={() => undefined}
       onLogTime={() => undefined}
       {...overrides}

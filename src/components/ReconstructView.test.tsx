@@ -57,6 +57,9 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
       onOpenSettings={() => undefined}
       onPrimaryAction={() => undefined}
       onLogTime={() => undefined}
+      syncState="synced"
+      syncLabel="SYNCED 6:47 PM"
+      onSync={() => undefined}
       {...overrides}
     />
   );
@@ -87,6 +90,20 @@ describe("ReconstructView", () => {
     expect(markup).toContain("DRAFTED · llama3.1");
     expect(markup).toContain("Reviewed the schema migration PR.");
     expect(markup).toContain("Auto-draft all");
+  });
+
+  it("shows a syncing state instead of an empty one while a sync is in flight", () => {
+    const day = buildReconstructDay(baseInput({ worklogs: [], reviewSessions: [] }));
+    const markup = render({ day, syncState: "syncing" });
+    expect(markup).toContain("Syncing your activity");
+    expect(markup).not.toContain("already reflected in a Jira worklog");
+  });
+
+  it("offers a Sync now action when nothing has synced yet", () => {
+    const day = buildReconstructDay(baseInput({ worklogs: [], reviewSessions: [] }));
+    const markup = render({ day, syncState: "stale" });
+    expect(markup).toContain("Not synced yet");
+    expect(markup).toContain("Sync now");
   });
 
   it("renders a calm weekend rest state with a log-anyway escape hatch", () => {

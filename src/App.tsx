@@ -480,6 +480,8 @@ export const App = () => {
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
         openSettings={() => handleViewChange("settings")}
+        syncState={syncState}
+        syncLabel={syncLabel}
       />
     </AppShellFrame>
   );

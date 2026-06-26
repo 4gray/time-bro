@@ -159,7 +159,9 @@ const baseProps = (): AppMainViewProps => ({
   handleConfirmRecurring: asyncFalse as AppMainViewProps["handleConfirmRecurring"],
   handleSkipRecurring: asyncFalse as AppMainViewProps["handleSkipRecurring"],
   handleDeleteRecurringOccurrence: asyncFalse as AppMainViewProps["handleDeleteRecurringOccurrence"],
-  openSettings: noop
+  openSettings: noop,
+  syncState: "synced",
+  syncLabel: "SYNCED 6:47 PM"
 });
 
 let container: HTMLDivElement;

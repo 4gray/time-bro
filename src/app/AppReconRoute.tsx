@@ -8,6 +8,9 @@ export interface AppReconRouteProps {
   syncResult?: SyncResult;
   reviewResult?: BitbucketReviewSyncResult;
   dailyTargetHours: number;
+  syncState: "synced" | "stale" | "syncing";
+  syncLabel: string;
+  onSync: () => void;
   onOpenSettings: () => void;
   onLogTime: (date: Date) => void;
 }
@@ -18,6 +21,9 @@ export const AppReconRoute = ({
   syncResult,
   reviewResult,
   dailyTargetHours,
+  syncState,
+  syncLabel,
+  onSync,
   onOpenSettings,
   onLogTime
 }: AppReconRouteProps) => {
@@ -38,6 +44,9 @@ export const AppReconRoute = ({
       onOpenSettings={onOpenSettings}
       onPrimaryAction={vm.aiOn ? vm.refreshAi : vm.distribute}
       onLogTime={() => onLogTime(vm.selectedDate)}
+      syncState={syncState}
+      syncLabel={syncLabel}
+      onSync={onSync}
     />
   );
 };

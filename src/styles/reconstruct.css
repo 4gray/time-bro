@@ -139,6 +139,54 @@
   background: var(--border);
 }
 
+.recon-refresh {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.recon-refresh:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-bright);
+}
+
+.recon-refresh:disabled {
+  cursor: default;
+  color: var(--dim);
+}
+
+.recon-refresh.is-stale {
+  color: var(--amber-soft);
+  border-color: color-mix(in srgb, var(--amber-soft) 40%, transparent);
+}
+
+.recon-rail-sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(79, 124, 255, 0.4);
+  background: rgba(79, 124, 255, 0.1);
+  color: var(--blue);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: background 120ms ease;
+}
+
+.recon-rail-sync-btn:hover {
+  background: rgba(79, 124, 255, 0.16);
+}
+
 .recon-ai-pill {
   display: flex;
   align-items: center;

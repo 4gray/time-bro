@@ -95,6 +95,8 @@ export interface AppMainViewProps {
   handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
   handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
   openSettings: () => void;
+  syncState: "synced" | "stale" | "syncing";
+  syncLabel: string;
 }
 
 export const AppMainView = ({
@@ -174,7 +176,9 @@ export const AppMainView = ({
   handleConfirmRecurring,
   handleSkipRecurring,
   handleDeleteRecurringOccurrence,
-  openSettings
+  openSettings,
+  syncState,
+  syncLabel
 }: AppMainViewProps) => {
   let content;
 
@@ -239,6 +243,9 @@ export const AppMainView = ({
         syncResult={syncResult}
         reviewResult={visibleBitbucketReviewResult}
         dailyTargetHours={weekState.dailyTargetHours}
+        syncState={syncState}
+        syncLabel={syncLabel}
+        onSync={handleSync}
         onOpenSettings={openSettings}
         onLogTime={openAddTime}
       />
