@@ -3,6 +3,9 @@ import type { MonthState } from "../domain/month";
 import { formatDuration, formatHours, fromLocalDateKey } from "../utils/date";
 import { MonthNavigator } from "./MonthNavigator";
 
+const RING_RADIUS = 33;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
 interface MonthViewProps {
   monthState: MonthState;
   onSelectWeek: (date: Date) => void;
@@ -28,38 +31,67 @@ export const MonthView = ({
     }
   };
 
+  const pct =
+    monthState.targetHours > 0 ? Math.min((monthState.trackedHours / monthState.targetHours) * 100, 100) : 0;
+  const dashOffset = RING_CIRCUMFERENCE * (1 - pct / 100);
+
   return (
     <div className="view view-scroll month-view">
       <div className="month-header">
-        <div>
-          <div className="eyebrow">MONTH — {monthState.monthLabel}</div>
-          <div className="month-figure-row">
-            <div className="big-figure">
-              {formatHours(monthState.trackedHours).replace("h", "")}
-              <span className="unit">h / {formatHours(monthState.targetHours)}</span>
+        <div className="week-headline">
+          <div className="ring" aria-label={`${Math.round(pct)} percent of monthly target`}>
+            <svg width="78" height="78" viewBox="0 0 78 78" style={{ transform: "rotate(-90deg)" }}>
+              <circle cx="39" cy="39" r={RING_RADIUS} fill="none" stroke="var(--line)" strokeWidth="7" />
+              <circle
+                cx="39"
+                cy="39"
+                r={RING_RADIUS}
+                fill="none"
+                stroke="var(--blue)"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeDasharray={RING_CIRCUMFERENCE}
+                strokeDashoffset={dashOffset}
+              />
+            </svg>
+            <div className="ring-label">
+              {Math.round(pct)}
+              <span className="ring-pct">%</span>
             </div>
-            {monthState.gapCount > 0 ? (
-              <span className="month-gap-badge">
-                <span className="month-gap-dot" />
-                {monthState.gapCount} {monthState.gapCount === 1 ? "gap" : "gaps"} · {monthState.hoursToFill}h to fill
-              </span>
-            ) : (
-              monthState.targetHours > 0 && (
-                <span className="month-gap-badge is-clear">
+          </div>
+          <div>
+            <div className="week-meta-label">MONTH — {monthState.monthLabel}</div>
+            <div className="month-figure-row">
+              <div className="week-figure">
+                {formatHours(monthState.trackedHours).replace("h", "")}
+                <span className="unit">h / {formatHours(monthState.targetHours)}</span>
+              </div>
+              {monthState.gapCount > 0 ? (
+                <span className="month-gap-badge">
                   <span className="month-gap-dot" />
-                  No gaps to fill
+                  {monthState.gapCount} {monthState.gapCount === 1 ? "gap" : "gaps"} · {monthState.hoursToFill}h to fill
                 </span>
-              )
-            )}
+              ) : (
+                monthState.targetHours > 0 && (
+                  <span className="month-gap-badge is-clear">
+                    <span className="month-gap-dot" />
+                    No gaps to fill
+                  </span>
+                )
+              )}
+            </div>
           </div>
         </div>
 
         <div className="month-actions">
           {firstGapWeek && (
-            <button type="button" className="month-gap-jump" onClick={handleJumpToGap}>
-              <Search size={14} />
-              JUMP TO NEXT GAP
-            </button>
+            <>
+              <button type="button" className="month-gap-jump" onClick={handleJumpToGap}>
+                <Search size={14} />
+                JUMP TO NEXT GAP
+              </button>
+              <div className="week-divider" />
+            </>
           )}
           <MonthNavigator
             label={monthState.monthLabel}
