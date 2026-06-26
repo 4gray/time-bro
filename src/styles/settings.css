@@ -7,7 +7,7 @@
 }
 
 .settings-header {
-  padding: 30px 48px 24px;
+  padding: 28px var(--header-pad-x) 24px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -107,7 +107,7 @@
 .settings-title {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 40px;
+  font-size: var(--figure-compact);
   letter-spacing: -0.04em;
   line-height: 1;
   color: var(--text-bright);

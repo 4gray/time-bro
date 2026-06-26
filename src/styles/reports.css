@@ -17,13 +17,13 @@
 }
 
 .reports-header .big-figure {
-  font-size: 56px;
+  font-size: var(--figure-standard);
   line-height: 1;
   white-space: nowrap;
 }
 
 .reports-header .big-figure .unit {
-  font-size: 26px;
+  font-size: 23px;
 }
 
 .reports-figure-row .delta {

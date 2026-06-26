@@ -41,6 +41,13 @@
   --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
 
+  /* header design system */
+  --header-pad-x: 48px;
+  --figure-hero: 60px; /* Today */
+  --figure-standard: 48px; /* Week, Month, Review, Reports, Reconstruct */
+  --figure-compact: 40px; /* Settings, Tickets */
+  --cta-accent: var(--blue); /* primary-button accent, overridable per variant */
+
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.45;

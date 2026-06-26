@@ -20,11 +20,11 @@
 }
 
 .today-header .big-figure {
-  font-size: 62px;
+  font-size: var(--figure-hero);
 }
 
 .today-header .big-figure .unit {
-  font-size: 30px;
+  font-size: 28px;
 }
 
 .today-meta {
