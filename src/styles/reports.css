@@ -1,9 +1,9 @@
 /* ============================ REPORTS view ============================ */
 .reports-header {
   flex: none;
-  padding: 30px 48px 24px;
+  padding: 24px var(--header-pad-x) 22px;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
   border-bottom: 1px solid var(--line);
@@ -13,7 +13,7 @@
   display: flex;
   align-items: flex-end;
   gap: 16px;
-  margin-top: 10px;
+  margin-top: 4px;
 }
 
 .reports-header .big-figure {
@@ -43,7 +43,6 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 6px;
 }
 
 .kpi-row {

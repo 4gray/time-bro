@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
+import { ProgressRing } from "./ProgressRing";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { WeekNavigator } from "./WeekNavigator";
 
@@ -102,25 +103,30 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
   const total = weekState.trackedWeekHours;
   const remaining = weekState.weeklyTargetHours - total;
   const billablePct = total > 0 ? Math.round((weekState.jiraTrackedWeekHours / total) * 100) : 0;
+  const targetPct =
+    weekState.weeklyTargetHours > 0 ? Math.min((total / weekState.weeklyTargetHours) * 100, 100) : 0;
 
   return (
     <div className="view view-scroll">
       <div className="reports-header">
-        <div>
-          <div className="eyebrow">REPORTS — WEEK {weekNumber}</div>
-          <div className="reports-figure-row">
-            <div className="big-figure">
-              {formatHours(total)}
-              <span className="unit">
-                {" "}
-                / {formatHours(weekState.weeklyTargetHours)}
-              </span>
+        <div className="week-headline">
+          <ProgressRing pct={targetPct} ariaLabel={`${Math.round(targetPct)} percent of weekly target`} />
+          <div>
+            <div className="eyebrow">REPORTS — WEEK {weekNumber}</div>
+            <div className="reports-figure-row">
+              <div className="big-figure">
+                {formatHours(total)}
+                <span className="unit">
+                  {" "}
+                  / {formatHours(weekState.weeklyTargetHours)}
+                </span>
+              </div>
+              {remaining > 0 ? (
+                <span className="delta under">{formatHours(remaining)} under target</span>
+              ) : (
+                <span className="delta on">On target</span>
+              )}
             </div>
-            {remaining > 0 ? (
-              <span className="delta under">{formatHours(remaining)} under target</span>
-            ) : (
-              <span className="delta on">On target</span>
-            )}
           </div>
         </div>
 

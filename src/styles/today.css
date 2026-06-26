@@ -1,7 +1,9 @@
 /* ============================ TODAY view ============================ */
 .today-header {
   flex: none;
-  padding: 30px 48px 24px;
+  padding: 24px var(--header-pad-x) 22px;
+  display: flex;
+  align-items: center;
   border-bottom: 1px solid var(--line);
 }
 
@@ -16,7 +18,7 @@
   display: flex;
   align-items: flex-end;
   gap: 18px;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 
 .today-header .big-figure {
