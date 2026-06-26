@@ -1,12 +1,23 @@
-import { Calendar, CalendarDays, ChevronsLeft, GitPullRequest, LineChart, Settings, Sun, Tag } from "lucide-react";
+import {
+  Calendar,
+  CalendarDays,
+  ChevronsLeft,
+  GitPullRequest,
+  History,
+  LineChart,
+  Settings,
+  Sun,
+  Tag
+} from "lucide-react";
 
-export type AppView = "today" | "week" | "month" | "review" | "tickets" | "reports" | "settings";
+export type AppView = "today" | "week" | "month" | "recon" | "review" | "tickets" | "reports" | "settings";
 export type ThemeMode = "light" | "dark";
 
 const NAV: Array<{ id: Exclude<AppView, "settings">; label: string; Icon: typeof Sun }> = [
   { id: "today", label: "TODAY", Icon: Sun },
   { id: "week", label: "WEEK", Icon: Calendar },
   { id: "month", label: "MONTH", Icon: CalendarDays },
+  { id: "recon", label: "RECONSTRUCT", Icon: History },
   { id: "review", label: "REVIEW", Icon: GitPullRequest },
   { id: "tickets", label: "TICKETS", Icon: Tag },
   { id: "reports", label: "REPORTS", Icon: LineChart }

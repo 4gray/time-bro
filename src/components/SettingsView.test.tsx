@@ -16,7 +16,10 @@ const settings: AppSettings = {
   weeklyTargetHours: 40,
   workingDays: [1, 2, 3, 4, 5],
   reminderTime: "17:00",
-  remindersEnabled: true
+  remindersEnabled: true,
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
 };
 
 const updateInfo: AppUpdateInfo = {
@@ -110,5 +113,26 @@ describe("SettingsView", () => {
     expect(markup).toContain("Export CSV");
     expect(markup).toContain("Personal notes");
     expect(markup).toContain("Import CSV");
+  });
+
+  it("exposes the optional Local AI subpage and frames it as not required", () => {
+    const markup = renderSettings({ initialSection: "reconstruct" });
+
+    expect(markup).toContain("LOCAL AI · OLLAMA");
+    expect(markup).toContain("OPTIONAL");
+    expect(markup).toContain("RECONSTRUCTION WORKS WITHOUT AI");
+    expect(markup).toContain("CORE · ALWAYS ON");
+    expect(markup).toContain("WITH LOCAL AI · OPTIONAL");
+    expect(markup).toContain("Use local AI for day reconstruction");
+    expect(markup).toContain("http://localhost:11434");
+    // off by default → activation chain reports inactive
+    expect(markup).toContain("AI inactive");
+  });
+
+  it("reflects the enabled toggle state in the Local AI subpage", () => {
+    const enabled = { ...settings, aiEnabled: true };
+    const markup = renderSettings({ initialSection: "reconstruct", draft: enabled });
+
+    expect(markup).toContain("switch is-ai on");
   });
 });

@@ -71,7 +71,7 @@ export const useAppNavigation = ({
 
   const handleViewChange = useCallback(
     (nextView: AppView) => {
-      if (nextView === "today" || nextView === "tickets") {
+      if (nextView === "today" || nextView === "tickets" || nextView === "recon") {
         goToCurrentWeek();
       }
       if (nextView === "month") {

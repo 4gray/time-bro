@@ -479,6 +479,7 @@ export const App = () => {
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
+        openSettings={() => handleViewChange("settings")}
       />
     </AppShellFrame>
   );

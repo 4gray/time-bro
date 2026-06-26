@@ -9,6 +9,10 @@ import type {
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OllamaGenerateRequest,
+  OllamaGenerateResult,
+  OllamaListModelsRequest,
+  OllamaListModelsResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -161,6 +165,33 @@ export const nativeApi = {
     }
 
     return bridge.deleteWorklog(request);
+  },
+
+  listOllamaModels(request: OllamaListModelsRequest): Promise<OllamaListModelsResult> {
+    const bridge = getNativeBridgeWithMethod("listOllamaModels");
+
+    if (!bridge) {
+      return Promise.resolve({
+        ok: false,
+        models: [],
+        message: "Open the Electron app to reach a local Ollama model."
+      });
+    }
+
+    return bridge.listOllamaModels(request);
+  },
+
+  generateWithOllama(request: OllamaGenerateRequest): Promise<OllamaGenerateResult> {
+    const bridge = getNativeBridgeWithMethod("generateWithOllama");
+
+    if (!bridge) {
+      return Promise.resolve({
+        ok: false,
+        message: "Open the Electron app to reach a local Ollama model."
+      });
+    }
+
+    return bridge.generateWithOllama(request);
   },
 
   scheduleReminder(payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> {

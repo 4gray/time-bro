@@ -10,6 +10,7 @@ import {
   syncJiraWorklogs,
   updateWorklog
 } from "./jira";
+import { generateWithOllama, listOllamaModels } from "./ollama";
 import { scheduleReminder } from "./reminders";
 import { checkForAppUpdate } from "./updates";
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
@@ -19,6 +20,8 @@ import type {
   AppSettings,
   BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
+  OllamaGenerateRequest,
+  OllamaListModelsRequest,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   SearchTicketsRequest,
@@ -129,6 +132,14 @@ ipcMain.handle("bitbucket:test-connection", (_event, settings: AppSettings) => {
 
 ipcMain.handle("bitbucket:sync-reviews", (_event, request: BitbucketReviewSyncRequest) => {
   return syncBitbucketReviewSessions(request);
+});
+
+ipcMain.handle("ollama:list-models", (_event, request: OllamaListModelsRequest) => {
+  return listOllamaModels(request);
+});
+
+ipcMain.handle("ollama:generate", (_event, request: OllamaGenerateRequest) => {
+  return generateWithOllama(request);
 });
 
 ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) => {

@@ -13,6 +13,16 @@ export interface AppSettings {
   workingDays: WeekdayNumber[];
   reminderTime: string;
   remindersEnabled: boolean;
+  /**
+   * Optional local-AI (Ollama) enhancement for Day Reconstruction. Off by default —
+   * the reconstruction core works fully without it. When on, drafts are written
+   * on-device by the configured Ollama model. Never sends data off the machine.
+   */
+  aiEnabled: boolean;
+  /** Ollama HTTP endpoint, default `http://localhost:11434`. */
+  ollamaEndpoint: string;
+  /** Selected Ollama model tag, e.g. `llama3.1:8b`. */
+  ollamaModel: string;
 }
 
 export interface WeekOverride {
@@ -404,4 +414,37 @@ export interface AppUpdateInfo {
 export interface OpenReleasePageResult {
   ok: boolean;
   url: string;
+}
+
+/**
+ * Local-AI (Ollama) IPC contracts. All calls go through the Electron main process so
+ * requests to `localhost:11434` are not subject to renderer CORS, and the key-less,
+ * on-device contract stays explicit. Every call degrades gracefully: on any failure the
+ * caller falls back to the deterministic reconstruction.
+ */
+export interface OllamaListModelsRequest {
+  endpoint: string;
+}
+
+export interface OllamaListModelsResult {
+  ok: boolean;
+  /** Pulled model tags, e.g. ["llama3.1:8b", "qwen2.5-coder:7b"]. */
+  models: string[];
+  message?: string;
+}
+
+export interface OllamaGenerateRequest {
+  endpoint: string;
+  model: string;
+  prompt: string;
+  system?: string;
+  /** When "json", asks Ollama to constrain output to a JSON object. */
+  format?: "json";
+}
+
+export interface OllamaGenerateResult {
+  ok: boolean;
+  /** Raw model completion text (JSON when `format: "json"` was requested). */
+  response?: string;
+  message?: string;
 }
