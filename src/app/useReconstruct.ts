@@ -124,7 +124,8 @@ export const useReconstruct = ({
         estimatedSeconds: session.estimatedSeconds,
         commentCount: session.commentCount,
         confidence: session.confidence,
-        logged: session.status === "logged"
+        logged: session.status === "logged",
+        isPullRequestAuthor: session.isPullRequestAuthor
       }));
 
     return buildReconstructDay({

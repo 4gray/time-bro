@@ -101,6 +101,12 @@ export interface ReconstructReviewSession {
   confidence: "high" | "medium" | "low";
   /** True when this review is already logged to Jira (shows as locked, not a signal). */
   logged?: boolean;
+  /**
+   * True when the current user authored the PR. Activity on your own PR is coordination,
+   * not review — it is surfaced as a low-confidence "on your PR" work signal, never a
+   * "Review" entry.
+   */
+  isPullRequestAuthor?: boolean;
 }
 
 export interface ReconstructInput {
@@ -163,27 +169,31 @@ export const buildSignals = (sessions: ReconstructReviewSession[]): ReconstructS
         session.commentCount > 0
           ? `${session.commentCount} ${session.commentCount === 1 ? "comment" : "comments"}`
           : "no comments";
+      const isOwn = Boolean(session.isPullRequestAuthor);
       return {
         id: session.id,
         kind: "pr" as const,
         key: session.jiraIssueKey?.trim().toUpperCase() ?? "",
-        title: `Review: ${session.pullRequestTitle}`,
+        // Activity on your own PR is coordination, not review — label and weight it as such.
+        title: isOwn ? `On your PR: ${session.pullRequestTitle}` : `Review: ${session.pullRequestTitle}`,
         sub: [`${session.repositoryName} · PR #${session.pullRequestId}`, commentLabel, range]
           .filter(Boolean)
           .join(" · "),
         durationMinutes: minutes,
         isMarker: false,
-        confidence: mapConfidence(session.confidence),
+        confidence: isOwn ? "low" : mapConfidence(session.confidence),
         startHour: localHourOf(session.startedISO)
       };
     });
 
-/** Factual, model-free description for a proposed PR-review entry. */
+/** Factual, model-free description for a proposed PR entry. */
 const naivePrDescription = (session: ReconstructReviewSession): string => {
-  const activity =
-    session.commentCount > 0
-      ? ` and left ${session.commentCount} ${session.commentCount === 1 ? "comment" : "comments"}`
-      : "";
+  const count = session.commentCount;
+  if (session.isPullRequestAuthor) {
+    const activity = count > 0 ? ` — ${count} ${count === 1 ? "comment/reply" : "comments/replies"}` : "";
+    return `Worked on your pull request #${session.pullRequestId} (${session.pullRequestTitle}) in ${session.repositoryName}${activity}.`;
+  }
+  const activity = count > 0 ? ` and left ${count} ${count === 1 ? "comment" : "comments"}` : "";
   return `Reviewed pull request #${session.pullRequestId} (${session.pullRequestTitle}) in ${session.repositoryName}${activity}.`;
 };
 

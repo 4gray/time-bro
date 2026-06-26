@@ -73,6 +73,20 @@ describe("buildSignals", () => {
     const signals = buildSignals([review({ id: "logged", logged: true }), review({ id: "open" })]);
     expect(signals.map((s) => s.id)).toEqual(["open"]);
   });
+
+  it("reclassifies activity on your own PR as low-confidence work, not a review", () => {
+    const [own] = buildSignals([review({ isPullRequestAuthor: true, confidence: "high" })]);
+    expect(own.title).toBe("On your PR: schema migration");
+    expect(own.title).not.toContain("Review");
+    expect(own.confidence).toBe("low"); // own-PR comments are a weak signal of work time
+    expect(own.key).toBe("FTDM-395"); // still attributed to the PR's ticket
+  });
+
+  it("keeps a real review of someone else's PR as a review", () => {
+    const [other] = buildSignals([review({ isPullRequestAuthor: false, confidence: "high" })]);
+    expect(other.title).toBe("Review: schema migration");
+    expect(other.confidence).toBe("high");
+  });
 });
 
 describe("buildReconstructDay", () => {
@@ -127,6 +141,15 @@ describe("buildReconstructDay", () => {
       sendBtnLabel: "Log 2 entries in Jira",
       dayTag: "PAST DAY"
     });
+  });
+
+  it("describes own-PR work without calling it a review", () => {
+    const day = buildReconstructDay(
+      input({ worklogs: [], reviewSessions: [review({ isPullRequestAuthor: true })] })
+    );
+    const row = day.rows.find((r) => r.kind === "filled");
+    expect(row?.naiveDescription).toContain("Worked on your pull request");
+    expect(row?.naiveDescription).not.toContain("Reviewed");
   });
 
   it("marks today", () => {
