@@ -1,7 +1,9 @@
 import {
   Bell,
   BadgeInfo,
+  Bot,
   CalendarDays,
+  Check,
   Database,
   Download,
   ExternalLink,
@@ -12,6 +14,7 @@ import {
   KeyRound,
   LockKeyhole,
   Loader2,
+  Minus,
   Moon,
   Pencil,
   Plus,
@@ -19,14 +22,16 @@ import {
   Repeat2,
   Save,
   ShieldCheck,
+  Sparkles,
   SunMedium,
   TestTube2,
   Trash2,
   Upload,
   type LucideIcon
 } from "lucide-react";
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import type { AppSettings, AppUpdateInfo, RecurringEvent, WeekdayNumber } from "../../shared/types";
+import { probeOllama, type OllamaStatus } from "../api/ollama";
 import type { ThemeMode } from "./Sidebar";
 
 export interface RecurringEventDraft {
@@ -66,7 +71,17 @@ interface SettingsViewProps {
   initialSection?: SettingsSection;
 }
 
-type SettingsSection = "jira" | "bitbucket" | "tracking" | "recurring" | "appearance" | "data" | "about";
+export type SettingsSection =
+  | "jira"
+  | "bitbucket"
+  | "reconstruct"
+  | "tracking"
+  | "recurring"
+  | "appearance"
+  | "data"
+  | "about";
+
+const OLLAMA_DOWNLOAD_URL = "https://ollama.com/download";
 
 const RECURRING_DURATION_MINUTES = [10, 15, 30, 45, 60, 90] as const;
 
@@ -112,6 +127,14 @@ const SECTIONS: SectionMeta[] = [
     title: "Bitbucket connection",
     subtitle: "Surface pull request review sessions from Bitbucket Cloud.",
     icon: GitPullRequest
+  },
+  {
+    id: "reconstruct",
+    label: "Local AI",
+    hint: "Optional model",
+    title: "Day Reconstruction · Local AI",
+    subtitle: "Reconstruction works without a model. Optionally connect a local Ollama model to polish the drafts.",
+    icon: Bot
   },
   {
     id: "tracking",
@@ -209,6 +232,15 @@ const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
   return "TimeBro is up to date.";
 };
 
+const ChainStep = ({ label, done }: { label: string; done: boolean }) => (
+  <span className="ai-chain-step">
+    <span className={`ai-chain-dot ${done ? "is-done" : ""}`}>
+      {done ? <Check size={11} strokeWidth={3} /> : <Minus size={10} strokeWidth={3} />}
+    </span>
+    {label}
+  </span>
+);
+
 export const SettingsView = ({
   draft,
   onDraftChange,
@@ -242,6 +274,44 @@ export const SettingsView = ({
   const [recurringFormOpen, setRecurringFormOpen] = useState(false);
   const [recurringEditingId, setRecurringEditingId] = useState<string | undefined>();
   const [recurringForm, setRecurringForm] = useState<RecurringEventDraft>(EMPTY_RECURRING_FORM);
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | undefined>();
+  const [isProbingOllama, setIsProbingOllama] = useState(false);
+
+  const handleTestOllama = async () => {
+    setIsProbingOllama(true);
+    try {
+      setOllamaStatus(await probeOllama({ endpoint: draft.ollamaEndpoint, model: draft.ollamaModel }));
+    } finally {
+      setIsProbingOllama(false);
+    }
+  };
+
+  // Auto-probe whenever the Local AI section is shown (or the endpoint/model changes), so
+  // the pulled-model list and the activation chain are live without pressing Test connection.
+  useEffect(() => {
+    if (activeSection !== "reconstruct") {
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setIsProbingOllama(true);
+      void probeOllama({ endpoint: draft.ollamaEndpoint, model: draft.ollamaModel })
+        .then((status) => {
+          if (!cancelled) {
+            setOllamaStatus(status);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsProbingOllama(false);
+          }
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeSection, draft.ollamaEndpoint, draft.ollamaModel]);
 
   const updateField = <Key extends keyof AppSettings>(key: Key, value: AppSettings[Key]) => {
     onDraftChange({
@@ -533,6 +603,173 @@ export const SettingsView = ({
       </div>
     </form>
   );
+
+  const renderReconstruct = () => {
+    const reachable = ollamaStatus?.reachable ?? false;
+    const modelReady = ollamaStatus?.modelReady ?? false;
+    const enabled = draft.aiEnabled;
+    const aiActive = reachable && modelReady && enabled;
+    const modelOptions = Array.from(
+      new Set([draft.ollamaModel, ...(ollamaStatus?.models ?? [])].filter(Boolean))
+    );
+
+    const coreItems = [
+      "Collects commits, PRs, reviews, CI runs & Jira changelog",
+      "Estimates duration from commit & PR timestamps",
+      "Maps branch → ticket via FTDM-xxx keys",
+      "Places blocks on the timeline & flags gaps",
+      "Rule-based auto-distribute & confidence scoring"
+    ];
+    const aiItems = [
+      "Turns fix npe / wip into clean worklog prose",
+      "Collapses noisy commit runs into one entry",
+      "Reasons about what a gap likely was",
+      "Dedupes a commit + PR describing the same work",
+      "Normalizes tone & classifies work type for reports"
+    ];
+
+    return (
+      <div className="ai-card">
+        <div className="ai-card-head">
+          <Bot size={17} strokeWidth={1.8} />
+          <span className="ai-card-title">LOCAL AI · OLLAMA</span>
+          <span className="ai-card-spacer" />
+          <span className="ai-pill-opt">OPTIONAL</span>
+          <span className={`ai-pill-status ${aiActive ? "is-active" : ""}`}>
+            <span className="ai-pill-dot" />
+            {aiActive ? "ACTIVE" : "OFF"}
+          </span>
+        </div>
+
+        <div className="ai-privacy">
+          <span className="ai-privacy-icon">
+            <ShieldCheck size={17} strokeWidth={1.8} />
+          </span>
+          <div>
+            <strong>Stays on your machine</strong>
+            <p>
+              TimeBro talks to Ollama on <code>localhost</code> only. Your commits, diffs and ticket text are
+              summarised on-device — no cloud, no API key, no telemetry. Same privacy promise as the rest of the app.
+            </p>
+          </div>
+        </div>
+
+        <div className="ai-fields">
+          <label className="ai-field">
+            <span>Ollama endpoint</span>
+            <div className="ai-endpoint">
+              <input
+                type="text"
+                className="ai-endpoint-input"
+                value={draft.ollamaEndpoint}
+                placeholder="http://localhost:11434"
+                spellCheck={false}
+                onChange={(event) => updateField("ollamaEndpoint", event.target.value)}
+              />
+              {ollamaStatus && (
+                <span className={`ai-reach ${reachable ? "is-ok" : "is-bad"}`}>
+                  <span className="ai-reach-dot" />
+                  {reachable ? "REACHABLE" : "UNREACHABLE"}
+                </span>
+              )}
+            </div>
+            <small className="field-hint-text">Default Ollama port. Point it elsewhere if you run it on your LAN.</small>
+          </label>
+
+          <label className="ai-field">
+            <span>Model</span>
+            <div className="ai-model">
+              <span className="ai-model-dot" aria-hidden="true" />
+              <select
+                className="ai-model-select"
+                value={draft.ollamaModel}
+                onChange={(event) => updateField("ollamaModel", event.target.value)}
+              >
+                {modelOptions.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <small className="field-hint-text">
+              {ollamaStatus?.models?.length
+                ? `Pulled: ${ollamaStatus.models.join(", ")}`
+                : "Run a Test connection to list pulled models."}
+            </small>
+          </label>
+        </div>
+
+        <div className="ai-compare-label">RECONSTRUCTION WORKS WITHOUT AI</div>
+        <div className="ai-compare">
+          <div className="ai-col is-core">
+            <div className="ai-col-head">
+              <Check size={15} strokeWidth={2} />
+              CORE · ALWAYS ON
+            </div>
+            <p>Built deterministically from Jira &amp; Bitbucket APIs — no model required:</p>
+            <ul>
+              {coreItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="ai-col is-ai">
+            <div className="ai-col-head">
+              <Sparkles size={15} strokeWidth={2} />
+              WITH LOCAL AI · OPTIONAL
+            </div>
+            <p>A local model polishes the raw signals into something send-ready:</p>
+            <ul>
+              {aiItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="ai-toggle-row">
+          <div>
+            <strong>Use local AI for day reconstruction</strong>
+            <small>Draft worklog descriptions, group related commits, and suggest fills for gaps. Off by default — you stay in control.</small>
+          </div>
+          <button
+            type="button"
+            className={`switch is-ai ${enabled ? "on" : ""}`}
+            aria-pressed={enabled}
+            aria-label={enabled ? "Disable local AI" : "Enable local AI"}
+            onClick={() => updateField("aiEnabled", !enabled)}
+          >
+            <span />
+          </button>
+        </div>
+
+        <div className="inline-actions">
+          <button className="secondary-button" type="button" onClick={handleTestOllama} disabled={isProbingOllama}>
+            {isProbingOllama ? <Loader2 className="spin" size={16} /> : <RefreshCw size={16} />}
+            Test connection
+          </button>
+          <a className="secondary-button" href={OLLAMA_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+            <ExternalLink size={16} />
+            Install Ollama
+          </a>
+          <code className="ai-pull-hint">$ ollama pull llama3.1</code>
+        </div>
+
+        <div className="ai-chain">
+          <ChainStep label="Endpoint reachable" done={reachable} />
+          <span className="ai-chain-line" />
+          <ChainStep label="Model ready" done={modelReady} />
+          <span className="ai-chain-line" />
+          <ChainStep label="Enabled" done={enabled} />
+          <span className="ai-chain-line" />
+          <span className={`ai-chain-result ${aiActive ? "is-active" : ""}`}>
+            {aiActive ? "Reconstruction AI active" : "AI inactive"}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   const renderTracking = () => (
     <>
@@ -920,6 +1157,8 @@ export const SettingsView = ({
         return renderJira();
       case "bitbucket":
         return renderBitbucket();
+      case "reconstruct":
+        return renderReconstruct();
       case "tracking":
         return renderTracking();
       case "recurring":

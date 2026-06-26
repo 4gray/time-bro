@@ -62,7 +62,10 @@ const settings = {
   weeklyTargetHours: 32,
   workingDays: [1, 2, 3, 4] as AppMainViewProps["settings"]["workingDays"],
   reminderTime: "17:30",
-  remindersEnabled: true
+  remindersEnabled: true,
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
 };
 
 const weekState = {
@@ -155,7 +158,11 @@ const baseProps = (): AppMainViewProps => ({
   handleToggleSkipped: noop,
   handleConfirmRecurring: asyncFalse as AppMainViewProps["handleConfirmRecurring"],
   handleSkipRecurring: asyncFalse as AppMainViewProps["handleSkipRecurring"],
-  handleDeleteRecurringOccurrence: asyncFalse as AppMainViewProps["handleDeleteRecurringOccurrence"]
+  handleDeleteRecurringOccurrence: asyncFalse as AppMainViewProps["handleDeleteRecurringOccurrence"],
+  openSettings: noop,
+  settingsSection: "jira",
+  syncState: "synced",
+  syncLabel: "SYNCED 6:47 PM"
 });
 
 let container: HTMLDivElement;

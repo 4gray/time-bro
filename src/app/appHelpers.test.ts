@@ -27,6 +27,9 @@ const buildSettings = (overrides: Partial<AppSettings> = {}): AppSettings => ({
   workingDays: [1, 2, 3, 4, 5],
   reminderTime: "16:30",
   remindersEnabled: true,
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
   ...overrides
 });
 

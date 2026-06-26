@@ -11,6 +11,10 @@ import type {
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OllamaGenerateRequest,
+  OllamaGenerateResult,
+  OllamaListModelsRequest,
+  OllamaListModelsResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -34,6 +38,8 @@ interface TimeBroNativeApi {
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;
+  listOllamaModels: (request: OllamaListModelsRequest) => Promise<OllamaListModelsResult>;
+  generateWithOllama: (request: OllamaGenerateRequest) => Promise<OllamaGenerateResult>;
   scheduleReminder: (payload: ReminderSchedulePayload) => Promise<ReminderScheduleResult>;
   getUpdateInfo: () => Promise<AppUpdateInfo>;
   openReleasePage: (url?: string) => Promise<OpenReleasePageResult>;

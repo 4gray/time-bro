@@ -32,6 +32,9 @@
   --amber: #e0a44a;
   --amber-soft: #edc488;
   --purple: #bda6f5;
+  --teal: #6bd0c2;
+  /* AI accent — used ONLY for optional local-AI affordances */
+  --ai: #9c8cff;
 
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, "Helvetica Neue",
     sans-serif;
@@ -72,6 +75,8 @@
     --blue-soft: #3b63d6;
     --amber-soft: #9a6a16;
     --purple: #7a52d6;
+    --teal: #1f8a7c;
+    --ai: #6d4fd6;
   }
 }
 
@@ -101,6 +106,8 @@
   --blue-soft: #3b63d6;
   --amber-soft: #9a6a16;
   --purple: #7a52d6;
+  --teal: #1f8a7c;
+  --ai: #6d4fd6;
 }
 
 :root.theme-dark {

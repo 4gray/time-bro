@@ -10,6 +10,10 @@ import type {
   DeleteWorklogRequest,
   DeleteWorklogResult,
   JiraConnectionResult,
+  OllamaGenerateRequest,
+  OllamaGenerateResult,
+  OllamaListModelsRequest,
+  OllamaListModelsResult,
   OpenReleasePageResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
@@ -50,6 +54,12 @@ const timeBroApi = {
   },
   deleteWorklog: (request: DeleteWorklogRequest): Promise<DeleteWorklogResult> => {
     return ipcRenderer.invoke("jira:delete-worklog", request);
+  },
+  listOllamaModels: (request: OllamaListModelsRequest): Promise<OllamaListModelsResult> => {
+    return ipcRenderer.invoke("ollama:list-models", request);
+  },
+  generateWithOllama: (request: OllamaGenerateRequest): Promise<OllamaGenerateResult> => {
+    return ipcRenderer.invoke("ollama:generate", request);
   },
   scheduleReminder: (payload: ReminderSchedulePayload): Promise<ReminderScheduleResult> => {
     return ipcRenderer.invoke("reminder:schedule", payload);

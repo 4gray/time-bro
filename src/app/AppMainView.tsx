@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView } from "../components/Sidebar";
 import { AppMonthRoute } from "./AppMonthRoute";
+import { AppReconRoute } from "./AppReconRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
 import { AppReviewRoute } from "./AppReviewRoute";
 import { AppSettingsRoute } from "./AppSettingsRoute";
@@ -93,6 +94,10 @@ export interface AppMainViewProps {
   handleConfirmRecurring: AppWeekRouteProps["handleConfirmRecurring"];
   handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
   handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
+  openSettings: () => void;
+  settingsSection: AppSettingsRouteProps["initialSection"];
+  syncState: "synced" | "stale" | "syncing";
+  syncLabel: string;
 }
 
 export const AppMainView = ({
@@ -171,7 +176,11 @@ export const AppMainView = ({
   handleToggleSkipped,
   handleConfirmRecurring,
   handleSkipRecurring,
-  handleDeleteRecurringOccurrence
+  handleDeleteRecurringOccurrence,
+  openSettings,
+  settingsSection,
+  syncState,
+  syncLabel
 }: AppMainViewProps) => {
   let content;
 
@@ -226,6 +235,21 @@ export const AppMainView = ({
         handleConfirmRecurring={handleConfirmRecurring}
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
+      />
+    );
+  } else if (view === "recon") {
+    content = (
+      <AppReconRoute
+        currentDate={currentDate}
+        settings={settings}
+        syncResult={syncResult}
+        reviewResult={visibleBitbucketReviewResult}
+        dailyTargetHours={weekState.dailyTargetHours}
+        syncState={syncState}
+        syncLabel={syncLabel}
+        onSync={handleSync}
+        onOpenSettings={openSettings}
+        onLogTime={openAddTime}
       />
     );
   } else if (view === "month") {
@@ -285,6 +309,7 @@ export const AppMainView = ({
   } else {
     content = (
       <AppSettingsRoute
+        initialSection={settingsSection}
         settingsDraft={settingsDraft}
         setSettingsDraft={setSettingsDraft}
         handleSaveSettings={handleSaveSettings}

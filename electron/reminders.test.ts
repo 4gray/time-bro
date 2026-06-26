@@ -44,7 +44,10 @@ const baseSettings: AppSettings = {
   weeklyTargetHours: 40,
   workingDays: [1, 2, 3, 4, 5],
   reminderTime: "16:30",
-  remindersEnabled: true
+  remindersEnabled: true,
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
 };
 
 const makePayload = (

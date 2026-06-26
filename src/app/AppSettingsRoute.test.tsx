@@ -52,7 +52,10 @@ const settingsDraft: AppSettings = {
   weeklyTargetHours: 32,
   workingDays: [1, 2, 3, 4],
   reminderTime: "17:30",
-  remindersEnabled: true
+  remindersEnabled: true,
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
 };
 
 const updateInfo: AppUpdateInfo = {

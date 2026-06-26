@@ -78,6 +78,12 @@ Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each 
   <img src="./screenshots/v1.4.0/dark-review.png" alt="TimeBro Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
 </p>
 
+### 🧩 Reconstruct — rebuild a day you forgot to track *(optional AI)*
+
+Forgot to log a day? Open **Reconstruct** and TimeBro rebuilds it from the signals it already syncs — your Bitbucket **commits**, **PR reviews**, and the Jira time **already logged** — laid out on a 09:00→18:00 timeline. **Drag each signal onto the hour it belongs to** (or place them all at once), fine-tune any entry's duration, and watch the day add up. Step back through the last couple of weeks to catch the day you missed; today never offers hours that haven't happened yet.
+
+It works **completely without AI**. Optionally, point it at a **local [Ollama](https://ollama.com) model** and it polishes raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences — entirely **on your machine**: no cloud, no API key, no telemetry. Off by default; the deterministic reconstruction is always the floor.
+
 ### 🏷️ Tickets — your workload, starred and sorted
 
 Everything assigned and in progress, plus recently closed tickets and your **starred favorites**, each with a status badge, project context, hours logged this week, and a one-click **LOG** button that drops you into Today with the ticket pre-selected.
@@ -122,6 +128,19 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 - Optional worklog comments that sync to the Jira work log item itself.
 - **Personal notes** — local-only entries that count toward your totals but never touch Jira.
 - Optimistic refresh: new entries show up immediately, before the next full sync.
+
+</details>
+
+<details>
+<summary><strong>Day Reconstruction</strong> <em>(optional local AI)</em></summary>
+
+- Rebuild a forgotten day from **Bitbucket commits + PR reviews + existing Jira worklogs**, deterministically — no model required.
+- **Drag-and-drop** signals onto a 09:00→18:00 timeline, or place them all at once; re-position entries or send them back to the rail.
+- **Editable durations** with a visible time span per entry; totals update live and are measured against elapsed time for today (no fabricating future hours).
+- Bounded **date stepper** over the recent worklog window; the back/forward arrows never run past the editable range or into the future.
+- Activity on **your own PRs** counts as work, not review; your commits are grouped by branch → ticket.
+- Optional **local [Ollama](https://ollama.com)** layer drafts clean worklog prose **on-device**, with a clear AI highlight and a **Stop** control. Endpoint and pulled models are detected automatically.
+- Fully local: placements, durations, and AI drafts are cached per day in IndexedDB; the model is reached only on `localhost`.
 
 </details>
 
@@ -290,8 +309,9 @@ The **Review** nav item only appears once Bitbucket is configured, and the integ
 - Credentials are sent only to the Jira/Bitbucket sites you configure, and only when testing a connection or syncing.
 - **No backend server.** Sync results, skipped days, favorites, and personal notes stay on your machine.
 - API calls are made by the Electron main process over IPC.
+- **Local AI is on-device only.** When you enable Day Reconstruction's optional model, TimeBro talks to [Ollama](https://ollama.com) on `localhost` (default `:11434`) through the Electron main process — your commits, diffs, and ticket text are summarised locally. No cloud, no API key, no telemetry.
 
-**IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`.
+**IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`, `reconstructDrafts`, `reconstructAiDrafts`.
 
 <details>
 <summary>How the Jira work log sync actually works</summary>
