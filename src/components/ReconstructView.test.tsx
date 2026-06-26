@@ -64,6 +64,7 @@ const render = (overrides: Partial<ComponentProps<typeof ReconstructView>> = {})
       onPlaceSignal={() => undefined}
       onUnplaceSignal={() => undefined}
       onPlaceAll={() => undefined}
+      onAdjustDuration={() => undefined}
       {...overrides}
     />
   );

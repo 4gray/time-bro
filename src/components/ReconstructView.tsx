@@ -12,7 +12,9 @@ import {
   LineChart,
   Loader2,
   Lock,
+  Minus,
   Moon,
+  Plus,
   PlusCircle,
   RefreshCw,
   Send,
@@ -70,11 +72,24 @@ export interface ReconstructViewProps {
   onUnplaceSignal: (signalId: string) => void;
   /** Place every still-unplaced signal at once. */
   onPlaceAll: () => void;
+  /** Nudge a placed entry's duration by ±minutes. */
+  onAdjustDuration: (signalId: string, deltaMinutes: number) => void;
 }
 
 const HOUR_DND_MIME = "application/x-recon-signal";
 
 const hourOf = (label: string) => Number.parseInt(label.slice(0, 2), 10);
+
+/** "13:00" + 125min → "13:00–15:05" so a multi-hour entry's real span is visible. */
+const spanLabel = (hourLabel: string, minutes: number): string => {
+  const start = hourOf(hourLabel) * 60;
+  if (!Number.isFinite(start) || minutes <= 0) {
+    return "";
+  }
+  const end = start + minutes;
+  const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  return `${hourLabel}–${fmt(end)}`;
+};
 
 const SIGNAL_ACCENT: Record<SignalKind, string> = {
   commit: "var(--blue-soft)",
@@ -124,7 +139,8 @@ export const ReconstructView = ({
   onSync,
   onPlaceSignal,
   onUnplaceSignal,
-  onPlaceAll
+  onPlaceAll,
+  onAdjustDuration
 }: ReconstructViewProps) => {
   const modelShort = aiModel.split(":")[0] || aiModel;
   const isWeekend = day.kind === "weekend";
@@ -470,6 +486,9 @@ export const ReconstructView = ({
                     onRowDragLeave={() => setDragOverHour((current) => (current === hour ? null : current))}
                     onRowDrop={(event) => dropOnHour(event, hour)}
                     onRemove={row.signalId ? () => onUnplaceSignal(row.signalId!) : undefined}
+                    onAdjustDuration={
+                      row.signalId ? (delta) => onAdjustDuration(row.signalId!, delta) : undefined
+                    }
                   />
                 );
               })}
@@ -526,6 +545,7 @@ interface TimelineRowViewProps {
   onRowDragLeave: () => void;
   onRowDrop: (event: DragEvent) => void;
   onRemove?: () => void;
+  onAdjustDuration?: (deltaMinutes: number) => void;
 }
 
 const TimelineRowView = ({
@@ -538,7 +558,8 @@ const TimelineRowView = ({
   onRowDragOver,
   onRowDragLeave,
   onRowDrop,
-  onRemove
+  onRemove,
+  onAdjustDuration
 }: TimelineRowViewProps) => {
   const showAiDraft = aiOn && Boolean(row.aiDraft);
   const showAiGap = aiOn && Boolean(row.gapText) && row.kind === "empty";
@@ -568,14 +589,29 @@ const TimelineRowView = ({
                 <span className="recon-tl-title">{row.title}</span>
               </div>
               <div className="recon-tl-desc">{showAiDraft ? row.aiDraft : row.naiveDescription}</div>
-              {showAiDraft && (
-                <span className="recon-drafted-tag">
-                  <Sparkles size={10} strokeWidth={2} />
-                  DRAFTED · {modelShort}
-                </span>
-              )}
+              <div className="recon-tl-meta-row">
+                <span className="recon-tl-span">{spanLabel(row.hour, row.durationMinutes)}</span>
+                {showAiDraft && (
+                  <span className="recon-drafted-tag">
+                    <Sparkles size={10} strokeWidth={2} />
+                    DRAFTED · {modelShort}
+                  </span>
+                )}
+              </div>
             </div>
-            <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
+            {onAdjustDuration ? (
+              <span className="recon-dur-edit">
+                <button type="button" onClick={() => onAdjustDuration(-15)} title="−15 min" aria-label="Decrease duration">
+                  <Minus size={13} strokeWidth={2.4} />
+                </button>
+                <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
+                <button type="button" onClick={() => onAdjustDuration(15)} title="+15 min" aria-label="Increase duration">
+                  <Plus size={13} strokeWidth={2.4} />
+                </button>
+              </span>
+            ) : (
+              <span className="recon-tl-dur">{formatReconDuration(row.durationMinutes)}</span>
+            )}
             {onRemove && (
               <button type="button" className="recon-tl-remove" onClick={onRemove} title="Return to the rail">
                 <X size={14} strokeWidth={2} />

@@ -194,17 +194,27 @@ export const saveRecurringOccurrences = (weekKey: string, occurrences: Recurring
   return writeStore("recurringOccurrences", { weekKey, occurrences });
 };
 
-/** Per-day Day-Reconstruction placement draft: signalId → assigned working hour. */
-export const getReconstructDraft = async (dateKey: string): Promise<Record<string, number> | undefined> => {
-  const stored = await readStore<{ dateKey: string; placements: Record<string, number> }>(
-    "reconstructDrafts",
-    dateKey
-  );
-  return stored?.placements;
+interface StoredReconstructDraft {
+  placements: Record<string, number>;
+  /** signalId → overridden duration in minutes (optional; falls back to the estimate). */
+  durations: Record<string, number>;
+}
+
+/** Per-day Day-Reconstruction draft: signal placements + duration overrides. */
+export const getReconstructDraft = async (dateKey: string): Promise<StoredReconstructDraft | undefined> => {
+  const stored = await readStore<{ dateKey: string } & Partial<StoredReconstructDraft>>("reconstructDrafts", dateKey);
+  if (!stored) {
+    return undefined;
+  }
+  return { placements: stored.placements ?? {}, durations: stored.durations ?? {} };
 };
 
-export const saveReconstructDraft = (dateKey: string, placements: Record<string, number>) => {
-  return writeStore("reconstructDrafts", { dateKey, placements });
+export const saveReconstructDraft = (
+  dateKey: string,
+  placements: Record<string, number>,
+  durations: Record<string, number>
+) => {
+  return writeStore("reconstructDrafts", { dateKey, placements, durations });
 };
 
 interface StoredAiDrafts {

@@ -51,6 +51,16 @@ const weekKeyOf = (dateKey: string) => toLocalDateKey(startOfWeekMonday(fromLoca
 
 const clampHour = (hour: number) => Math.min(17, Math.max(9, Math.round(hour)));
 
+interface DayDraft {
+  placements: PlacementMap;
+  /** signalId → overridden duration in minutes. */
+  durations: Record<string, number>;
+}
+
+const EMPTY_DRAFT: DayDraft = { placements: {}, durations: {} };
+
+const DURATION_STEP = 15;
+
 /**
  * Derives the Reconstruct view-model for the trailing ~2-week sync window. The
  * deterministic day is always produced from data TimeBro already holds (current week in
@@ -117,10 +127,13 @@ export const useReconstruct = ({
   // Hour-bucketed so today's view advances each hour without recomputing every minute.
   const nowMinutes = selIsToday ? currentDate.getHours() * 60 : undefined;
 
-  // ---- per-day drag/drop placement draft (persisted) ------------------------
-  // A day starts with everything unplaced (in the rail); the user drags or bulk-places.
-  const [drafts, setDrafts] = useState<Record<string, PlacementMap>>({});
-  const placements = drafts[selDateKey] ?? {};
+  // ---- per-day drag/drop draft: placements + duration overrides (persisted) --
+  // A day starts with everything unplaced (in the rail); the user drags or bulk-places,
+  // and can fine-tune each entry's duration.
+  const [drafts, setDrafts] = useState<Record<string, DayDraft>>({});
+  const dayDraft = drafts[selDateKey] ?? EMPTY_DRAFT;
+  const placements = dayDraft.placements;
+  const durations = dayDraft.durations;
 
   useEffect(() => {
     let cancelled = false;
@@ -135,9 +148,9 @@ export const useReconstruct = ({
   }, [selDateKey]);
 
   // Functional update so rapid edits in one tick compose instead of clobbering.
-  const mutatePlacements = useCallback(
-    (fn: (prev: PlacementMap) => PlacementMap) => {
-      setDrafts((current) => ({ ...current, [selDateKey]: fn(current[selDateKey] ?? {}) }));
+  const mutateDraft = useCallback(
+    (fn: (prev: DayDraft) => DayDraft) => {
+      setDrafts((current) => ({ ...current, [selDateKey]: fn(current[selDateKey] ?? EMPTY_DRAFT) }));
     },
     [selDateKey]
   );
@@ -146,7 +159,7 @@ export const useReconstruct = ({
   useEffect(() => {
     const draft = drafts[selDateKey];
     if (draft) {
-      void saveReconstructDraft(selDateKey, draft);
+      void saveReconstructDraft(selDateKey, draft.placements, draft.durations);
     }
   }, [drafts, selDateKey]);
 
@@ -206,9 +219,11 @@ export const useReconstruct = ({
         commits,
         nowMinutes
       },
-      placements
+      placements,
+      durations
     );
   }, [
+    durations,
     loaded,
     nowMinutes,
     placements,
@@ -221,37 +236,52 @@ export const useReconstruct = ({
     targetMinutes
   ]);
 
-  // ---- drag/drop placement handlers ----------------------------------------
+  // Latest coreDay without making callbacks/effects depend on placement edits.
+  const coreDayRef = useRef(coreDay);
+  coreDayRef.current = coreDay;
+
+  // ---- drag/drop placement + duration handlers -----------------------------
   const placeSignal = useCallback(
     (signalId: string, hour: number) => {
-      mutatePlacements((prev) => ({ ...prev, [signalId]: clampHour(hour) }));
+      mutateDraft((prev) => ({ ...prev, placements: { ...prev.placements, [signalId]: clampHour(hour) } }));
     },
-    [mutatePlacements]
+    [mutateDraft]
   );
   const unplaceSignal = useCallback(
     (signalId: string) => {
-      mutatePlacements((prev) => {
-        const next = { ...prev };
-        delete next[signalId];
-        return next;
+      mutateDraft((prev) => {
+        const placements = { ...prev.placements };
+        delete placements[signalId];
+        return { ...prev, placements };
       });
     },
-    [mutatePlacements]
+    [mutateDraft]
   );
   const placeAllSignals = useCallback(() => {
-    mutatePlacements((prev) => {
-      const next = { ...prev };
-      for (const signal of coreDay.signals) {
+    mutateDraft((prev) => {
+      const placements = { ...prev.placements };
+      for (const signal of coreDayRef.current.signals) {
         if (signal.isMarker || signal.durationMinutes <= 0) {
           continue;
         }
-        if (typeof next[signal.id] !== "number") {
-          next[signal.id] = clampHour(signal.startHour);
+        if (typeof placements[signal.id] !== "number") {
+          placements[signal.id] = clampHour(signal.startHour);
         }
       }
-      return next;
+      return { ...prev, placements };
     });
-  }, [coreDay.signals, mutatePlacements]);
+  }, [mutateDraft]);
+  const adjustDuration = useCallback(
+    (signalId: string, deltaMinutes: number) => {
+      mutateDraft((prev) => {
+        const signal = coreDayRef.current.signals.find((candidate) => candidate.id === signalId);
+        const base = prev.durations[signalId] ?? signal?.durationMinutes ?? 60;
+        const next = Math.max(DURATION_STEP, Math.round((base + deltaMinutes) / DURATION_STEP) * DURATION_STEP);
+        return { ...prev, durations: { ...prev.durations, [signalId]: next } };
+      });
+    },
+    [mutateDraft]
+  );
 
   // ---- rule-based auto-distribute (core, no model) --------------------------
   const [distributedKey, setDistributedKey] = useState<string | undefined>();
@@ -266,10 +296,6 @@ export const useReconstruct = ({
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [aiDraftsByDay, setAiDraftsByDay] = useState<Record<string, AiDrafts>>({});
   const enhanceRunId = useRef(0);
-
-  // Latest coreDay without making the AI effect depend on placement edits.
-  const coreDayRef = useRef(coreDay);
-  coreDayRef.current = coreDay;
 
   const aiConnection = useMemo(
     () => ({ endpoint: settings.ollamaEndpoint, model: settings.ollamaModel }),
@@ -378,6 +404,7 @@ export const useReconstruct = ({
     placeSignal,
     unplaceSignal,
     placeAllSignals,
+    adjustDuration,
     selectedDate: selected.date
   };
 };

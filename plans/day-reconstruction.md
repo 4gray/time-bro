@@ -91,6 +91,12 @@ Deferred (need explicit go-ahead — AGENTS.md write-surface caution / larger sc
   placement-aware core; the gap-fill auto-distribute and AI overlay compose on top.
   - Still deferred: real batch worklog write to Jira (the "Log N entries" button opens
     the existing Add Time flow; bulk write is a write-surface that needs explicit sign-off).
+- AI drafting rework: signal-keyed drafts (survive re-positioning), no re-draft on every
+  drop, a Stop control, clearer AI-row highlight, and drafts cached per day in IndexedDB
+  (switch views / restart and the results persist; non-blocking by design).
+- Editable durations + time-range: each placed entry shows its real span (e.g. 10:00–12:05)
+  and a ±15m stepper; the override is persisted in the day draft and feeds the totals.
+  - Follow-up: overlap awareness (two entries' spans can overlap; currently just visible).
 - Own-PR activity is reclassified as low-confidence "On your PR" work, not "Review".
 - Bitbucket **commit** signals: `syncBitbucketReviewSessions` now also collects the user's
   own commits (per authored PR), grouped by branch/ticket/day, and the engine renders them

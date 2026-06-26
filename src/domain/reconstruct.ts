@@ -311,7 +311,11 @@ interface PlacedContent {
   minutes: number;
 }
 
-export const buildReconstructDay = (input: ReconstructInput, placements?: PlacementMap): ReconstructDay => {
+export const buildReconstructDay = (
+  input: ReconstructInput,
+  placements?: PlacementMap,
+  durations?: Record<string, number>
+): ReconstructDay => {
   const commits = input.commits ?? [];
   const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
     (a, b) => a.startHour - b.startHour
@@ -387,6 +391,7 @@ export const buildReconstructDay = (input: ReconstructInput, placements?: Placem
   const filledItems = placeable
     .filter((signal) => typeof effective[signal.id] === "number")
     .map((signal) => {
+      const minutes = Math.max(5, Math.round(durations?.[signal.id] ?? signal.durationMinutes));
       const row: TimelineRow = {
         hour: "",
         kind: "filled",
@@ -395,10 +400,10 @@ export const buildReconstructDay = (input: ReconstructInput, placements?: Placem
         key: signal.key,
         title: signal.title,
         sub: signal.sub,
-        durationMinutes: signal.durationMinutes,
+        durationMinutes: minutes,
         naiveDescription: signal.naiveDescription
       };
-      return { hour: clampHour(effective[signal.id]), value: { kind: "filled" as const, row, minutes: signal.durationMinutes } };
+      return { hour: clampHour(effective[signal.id]), value: { kind: "filled" as const, row, minutes } };
     });
 
   const unplacedSignalIds = placeable

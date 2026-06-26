@@ -51,6 +51,7 @@ export const AppReconRoute = ({
       onPlaceSignal={vm.placeSignal}
       onUnplaceSignal={vm.unplaceSignal}
       onPlaceAll={vm.placeAllSignals}
+      onAdjustDuration={vm.adjustDuration}
     />
   );
 };

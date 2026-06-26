@@ -211,6 +211,14 @@ describe("buildReconstructDay", () => {
     expect(draft.reconstructedMinutes).toBe(110); // only the placed commit counts
   });
 
+  it("applies per-signal duration overrides to the row and totals", () => {
+    const args = input({ worklogs: [], reviewSessions: [], commits: [commit({ id: "com", estimatedSeconds: 110 * 60 })] });
+    const day = buildReconstructDay(args, { com: 10 }, { com: 60 }); // override 1h 50m → 1h
+    const row = day.rows.find((r) => r.signalId === "com");
+    expect(row?.durationMinutes).toBe(60);
+    expect(day.reconstructedMinutes).toBe(60);
+  });
+
   it("describes own-PR work without calling it a review", () => {
     const day = buildReconstructDay(
       input({ worklogs: [], reviewSessions: [review({ isPullRequestAuthor: true })] })

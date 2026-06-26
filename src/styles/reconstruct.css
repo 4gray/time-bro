@@ -829,6 +829,55 @@
   flex: none;
 }
 
+.recon-tl-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.recon-tl-span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+}
+
+.recon-dur-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.recon-dur-edit button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, background 120ms ease;
+}
+
+.recon-tl-cell:hover .recon-dur-edit button {
+  opacity: 1;
+}
+
+.recon-dur-edit button:hover {
+  color: var(--text-bright);
+  background: var(--bg-hover);
+}
+
+.recon-dur-edit .recon-tl-dur {
+  min-width: 56px;
+  text-align: center;
+}
+
 .recon-tl-dur.is-jira {
   font-size: 11px;
   font-weight: 600;
