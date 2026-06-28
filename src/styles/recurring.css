@@ -261,7 +261,7 @@
 }
 
 .primary-button.is-recurring {
-  background: var(--purple);
+  --cta-accent: var(--purple);
 }
 
 /* — Settings: recurring subpage — */

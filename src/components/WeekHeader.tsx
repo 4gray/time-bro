@@ -1,9 +1,7 @@
 import { Loader2, Plus, RotateCw } from "lucide-react";
 import { formatHours, formatWeekRangeCompact, getIsoWeekNumber } from "../utils/date";
+import { ProgressRing } from "./ProgressRing";
 import { WeekNavigator } from "./WeekNavigator";
-
-const RING_RADIUS = 33;
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export interface WeekHeaderProps {
   weekStart: Date;
@@ -35,31 +33,11 @@ export const WeekHeader = ({
   const weekNumber = getIsoWeekNumber(weekStart);
   const rangeLabel = formatWeekRangeCompact(weekStart);
   const pct = weeklyTargetHours > 0 ? Math.min((trackedWeekHours / weeklyTargetHours) * 100, 100) : 0;
-  const dashOffset = RING_CIRCUMFERENCE * (1 - pct / 100);
 
   return (
     <div className="week-header">
       <div className="week-headline">
-        <div className="ring" aria-label={`${Math.round(pct)} percent of weekly target`}>
-          <svg width="78" height="78" viewBox="0 0 78 78" style={{ transform: "rotate(-90deg)" }}>
-            <circle cx="39" cy="39" r={RING_RADIUS} fill="none" stroke="var(--line)" strokeWidth="7" />
-            <circle
-              cx="39"
-              cy="39"
-              r={RING_RADIUS}
-              fill="none"
-              stroke="var(--blue)"
-              strokeWidth="7"
-              strokeLinecap="round"
-              strokeDasharray={RING_CIRCUMFERENCE}
-              strokeDashoffset={dashOffset}
-            />
-          </svg>
-          <div className="ring-label">
-            {Math.round(pct)}
-            <span className="ring-pct">%</span>
-          </div>
-        </div>
+        <ProgressRing pct={pct} ariaLabel={`${Math.round(pct)} percent of weekly target`} />
         <div>
           <div className="eyebrow">
             WEEK {weekNumber} — {rangeLabel}

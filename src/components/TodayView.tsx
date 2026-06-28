@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Calendar, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
 import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
 import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
+import { ProgressRing } from "./ProgressRing";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -180,25 +181,25 @@ export const TodayView = ({
   return (
     <div className="view view-scroll">
       <div className="today-header">
-        <div className="eyebrow">
-          {new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" })
-            .format(todayDate)
-            .toUpperCase()}
-        </div>
-        <div className="today-figure-row">
-          <div className="big-figure">
-            {trackedH}
-            <span className="unit">h</span>
-            {pad(trackedM)}
-            <span className="unit">m</span>
-          </div>
-          <div className="today-meta">
-            <div className="today-meta-label">LOGGED OF {formatHours(dailyTargetHours)}</div>
-            <div className="meter-row">
-              <div className="meter" style={{ width: 130 }}>
-                <span style={{ width: `${meterPct}%` }} />
+        <div className="week-headline">
+          <ProgressRing pct={meterPct} ariaLabel={`${Math.round(meterPct)} percent of daily target`} />
+          <div>
+            <div className="eyebrow">
+              {new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" })
+                .format(todayDate)
+                .toUpperCase()}
+            </div>
+            <div className="today-figure-row">
+              <div className="big-figure">
+                {trackedH}
+                <span className="unit">h</span>
+                {pad(trackedM)}
+                <span className="unit">m</span>
               </div>
-              <span className="meter-text">{formatClock(remainingHours * 3600)} left</span>
+              <div className="today-meta">
+                <div className="today-meta-label">LOGGED OF {formatHours(dailyTargetHours)}</div>
+                <div className="meter-text">{formatClock(remainingHours * 3600)} left</div>
+              </div>
             </div>
           </div>
         </div>

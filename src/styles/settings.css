@@ -7,7 +7,7 @@
 }
 
 .settings-header {
-  padding: 30px 48px 24px;
+  padding: 28px var(--header-pad-x) 24px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -107,7 +107,7 @@
 .settings-title {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 40px;
+  font-size: var(--figure-compact);
   letter-spacing: -0.04em;
   line-height: 1;
   color: var(--text-bright);
@@ -599,20 +599,24 @@ input:focus {
   color: #ff8b84;
 }
 
-/* shared buttons */
+/* shared buttons — canonical primary CTA: sans, white-on-accent, accent glow.
+   Accent is the --cta-accent token so variants (e.g. .is-recurring) recolor
+   both fill and glow in one place. Header CTAs (.add-time-button,
+   .review-log-button) are the compact members of this family. */
 .primary-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.01em;
-  color: var(--bg);
-  background: var(--blue);
+  color: #fff;
+  background: var(--cta-accent);
   border: none;
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 11px 18px;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--cta-accent) 45%, transparent);
   transition: filter 150ms ease;
 }
 

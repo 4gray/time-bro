@@ -44,7 +44,7 @@
 .week-figure {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 46px;
+  font-size: var(--figure-standard);
   line-height: 0.9;
   letter-spacing: -0.05em;
   color: var(--text-bright);
@@ -53,7 +53,7 @@
 }
 
 .week-figure .unit {
-  font-size: 22px;
+  font-size: 23px;
   font-weight: 700;
   color: var(--dim-2);
 }
