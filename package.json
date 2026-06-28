@@ -30,6 +30,7 @@
     "e2e:renderer": "node --test e2e/renderer.e2e.mjs"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -71,6 +72,14 @@
       "buildResources": "build",
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "4gray",
+        "repo": "time-bro",
+        "releaseType": "release"
+      }
+    ],
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",

@@ -5,6 +5,8 @@ import type {
   AddWorklogResult,
   AppSettings,
   AppUpdateInfo,
+  AppAutoUpdateActionResult,
+  AppAutoUpdateState,
   BitbucketConnectionResult,
   BitbucketReviewSyncRequest,
   BitbucketReviewSyncResult,
@@ -42,6 +44,9 @@ interface TimeBroNativeApi {
   generateWithOllama: (request: OllamaGenerateRequest) => Promise<OllamaGenerateResult>;
   scheduleReminder: (payload: ReminderSchedulePayload) => Promise<ReminderScheduleResult>;
   getUpdateInfo: () => Promise<AppUpdateInfo>;
+  downloadUpdate: () => Promise<AppAutoUpdateActionResult>;
+  installUpdate: () => Promise<AppAutoUpdateActionResult>;
+  onAutoUpdateState?: (callback: (state: AppAutoUpdateState) => void) => () => void;
   openReleasePage: (url?: string) => Promise<OpenReleasePageResult>;
 }
 

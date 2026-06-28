@@ -186,7 +186,7 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 - Collapsible sidebar and a sync-status dot you can click to refresh.
 - Snackbar notifications for sync, save, and update events.
 - Native reminder notifications (skipped on vacation days and completed weeks).
-- In-app update checks with release notes and a download link.
+- In-app update checks with release notes; signed macOS and Linux AppImage builds can download and install updates directly, while Windows and package-manager Linux builds keep the installer download fallback.
 - Window position and size remembered between launches.
 - Responsive down to phone-width viewports.
 - Import/export personal notes as CSV to move between machines.
@@ -360,7 +360,7 @@ POST /rest/api/3/issue/{issueIdOrKey}/worklog
 
 Pushes to `main` run unit tests, renderer E2E, and the production build via [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
-Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will install deps, run tests + E2E, build, package macOS/Windows/Linux on native runners, and create/update a GitHub Release with the installers attached. It uses the built-in `GITHUB_TOKEN`, so no extra release token is needed for same-repo releases.
+Releases are automated through [`.github/workflows/release.yml`](./.github/workflows/release.yml). Push a version tag and GitHub Actions will install deps, run tests + E2E, build, package macOS/Windows/Linux on native runners, and create/update a GitHub Release with the installers plus updater metadata (`latest*.yml` and blockmaps) attached. It uses the built-in `GITHUB_TOKEN`, so no extra release token is needed for same-repo releases.
 
 **One-command version bumps:**
 

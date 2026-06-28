@@ -587,6 +587,7 @@ input:focus {
 }
 
 .update-status small {
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -677,4 +678,3 @@ input:focus {
   cursor: not-allowed;
   opacity: 0.55;
 }
-

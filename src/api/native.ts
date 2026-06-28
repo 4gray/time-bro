@@ -1,6 +1,8 @@
 import type {
   AddWorklogRequest,
   AddWorklogResult,
+  AppAutoUpdateActionResult,
+  AppAutoUpdateState,
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
@@ -221,6 +223,47 @@ export const nativeApi = {
     }
 
     return bridge.getUpdateInfo();
+  },
+
+  downloadUpdate(): Promise<AppAutoUpdateActionResult> {
+    const bridge = getNativeBridgeWithMethod("downloadUpdate");
+
+    if (!bridge) {
+      return Promise.resolve({
+        ok: false,
+        message: "Open the packaged Electron app to install updates automatically.",
+        state: {
+          supported: false,
+          phase: "unsupported",
+          reason: "Automatic installation is not available in renderer preview."
+        }
+      });
+    }
+
+    return bridge.downloadUpdate();
+  },
+
+  installUpdate(): Promise<AppAutoUpdateActionResult> {
+    const bridge = getNativeBridgeWithMethod("installUpdate");
+
+    if (!bridge) {
+      return Promise.resolve({
+        ok: false,
+        message: "Open the packaged Electron app to install updates automatically.",
+        state: {
+          supported: false,
+          phase: "unsupported",
+          reason: "Automatic installation is not available in renderer preview."
+        }
+      });
+    }
+
+    return bridge.installUpdate();
+  },
+
+  onAutoUpdateState(callback: (state: AppAutoUpdateState) => void): (() => void) {
+    const bridge = getNativeBridgeWithMethod("onAutoUpdateState");
+    return bridge?.onAutoUpdateState?.(callback) ?? (() => undefined);
   },
 
   openReleasePage(url?: string): Promise<OpenReleasePageResult> {

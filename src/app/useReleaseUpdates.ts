@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { AppUpdateInfo, OpenReleasePageResult } from "../../shared/types";
+import type {
+  AppAutoUpdateActionResult,
+  AppAutoUpdateState,
+  AppUpdateInfo,
+  OpenReleasePageResult
+} from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 import { nativeApi } from "../api/native";
 import { isRecentUpdateInfo, readCachedUpdateInfo, writeCachedUpdateInfo } from "../domain/updateCache";
@@ -8,6 +13,9 @@ import type { SnackbarOptions } from "./useSnackbars";
 
 export interface ReleaseUpdateClient {
   getUpdateInfo(): Promise<AppUpdateInfo>;
+  downloadUpdate(): Promise<AppAutoUpdateActionResult>;
+  installUpdate(): Promise<AppAutoUpdateActionResult>;
+  onAutoUpdateState?: (callback: (state: AppAutoUpdateState) => void) => () => void;
   openReleasePage(url?: string): Promise<OpenReleasePageResult>;
 }
 
@@ -40,21 +48,47 @@ export const useReleaseUpdates = ({
   const [updateInfo, setUpdateInfo] = useState<AppUpdateInfo | undefined>(() =>
     isDemo ? createDemoUpdateInfo(demoUpdateAvailable) : undefined
   );
+  const [autoUpdateState, setAutoUpdateState] = useState<AppAutoUpdateState | undefined>(() => updateInfo?.autoUpdate);
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [releaseNotesDialogInfo, setReleaseNotesDialogInfo] = useState<AppUpdateInfo | undefined>();
   const updateInfoRef = useRef(updateInfo);
+  const autoUpdateStateRef = useRef(autoUpdateState);
   const updateSnackbarShownForRef = useRef<string | undefined>();
 
   const storeUpdateInfo = useCallback((next: AppUpdateInfo | undefined) => {
     updateInfoRef.current = next;
+    autoUpdateStateRef.current = next?.autoUpdate;
     setUpdateInfo(next);
+    setAutoUpdateState(next?.autoUpdate);
   }, []);
 
   const updateStoredInfo = useCallback((updater: (current?: AppUpdateInfo) => AppUpdateInfo | undefined) => {
     const next = updater(updateInfoRef.current);
     updateInfoRef.current = next;
+    autoUpdateStateRef.current = next?.autoUpdate;
     setUpdateInfo(next);
+    setAutoUpdateState(next?.autoUpdate);
   }, []);
+
+  const storeAutoUpdateState = useCallback(
+    (state: AppAutoUpdateState) => {
+      autoUpdateStateRef.current = state;
+      setAutoUpdateState(state);
+      setUpdateInfo((current) => {
+        if (!current) {
+          return current;
+        }
+
+        const next = {
+          ...current,
+          autoUpdate: state
+        };
+        updateInfoRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
 
   const openReleasePage = useCallback(
     (url?: string) => {
@@ -97,6 +131,70 @@ export const useReleaseUpdates = ({
     [client, showError]
   );
 
+  const applyAutoUpdateResult = useCallback(
+    (result: AppAutoUpdateActionResult) => {
+      if (result.updateInfo) {
+        storeUpdateInfo(result.updateInfo);
+        return;
+      }
+
+      storeAutoUpdateState(result.state);
+    },
+    [storeAutoUpdateState, storeUpdateInfo]
+  );
+
+  const installDownloadedUpdate = useCallback(() => {
+    void client
+      .installUpdate()
+      .then((result) => {
+        applyAutoUpdateResult(result);
+
+        if (!result.ok) {
+          showError(result.message);
+        }
+      })
+      .catch((error) => {
+        showError(error instanceof Error ? error.message : "Unable to restart and install the update.");
+      });
+  }, [applyAutoUpdateResult, client, showError]);
+
+  const downloadCurrentUpdate = useCallback(
+    (info?: AppUpdateInfo) => {
+      const targetInfo = info ?? updateInfoRef.current;
+
+      if (!targetInfo?.updateAvailable) {
+        showError("No update is available to download.");
+        return;
+      }
+
+      if (!targetInfo.autoUpdate?.supported) {
+        openUpdateDownload(targetInfo);
+        return;
+      }
+
+      if (targetInfo.autoUpdate.phase === "downloaded") {
+        installDownloadedUpdate();
+        return;
+      }
+
+      void client
+        .downloadUpdate()
+        .then((result) => {
+          applyAutoUpdateResult(result);
+
+          if (result.ok) {
+            showSuccess(result.message);
+          } else {
+            showError(result.message);
+          }
+        })
+        .catch((error) => {
+          showError(error instanceof Error ? error.message : "Unable to download the update.");
+        });
+    },
+    [applyAutoUpdateResult, client, installDownloadedUpdate, openUpdateDownload, showError, showSuccess]
+  );
+
   const showUpdateAvailable = useCallback(
     (info: AppUpdateInfo) => {
       if (!info.updateAvailable || !info.latestVersion) {
@@ -120,7 +218,21 @@ export const useReleaseUpdates = ({
               icon: "notes",
               onAction: () => openReleaseNotes(info)
             },
-            ...(info.downloadUrl
+            ...(info.autoUpdate?.supported
+              ? [
+                  info.autoUpdate.phase === "downloaded"
+                    ? {
+                        label: "Restart",
+                        icon: "restart" as const,
+                        onAction: () => installDownloadedUpdate()
+                      }
+                    : {
+                        label: "Download update",
+                        icon: "download" as const,
+                        onAction: () => downloadCurrentUpdate(info)
+                      }
+                ]
+              : info.downloadUrl
               ? [
                   {
                     label: "Download",
@@ -140,7 +252,7 @@ export const useReleaseUpdates = ({
         }
       );
     },
-    [openReleaseNotes, openReleasePage, openUpdateDownload, showSnackbar]
+    [downloadCurrentUpdate, installDownloadedUpdate, openReleaseNotes, openReleasePage, openUpdateDownload, showSnackbar]
   );
 
   const checkForUpdates = useCallback(
@@ -227,6 +339,16 @@ export const useReleaseUpdates = ({
     void checkForUpdates();
   }, [autoCheck, checkForUpdates, isDemo]);
 
+  useEffect(() => {
+    if (isDemo || !client.onAutoUpdateState) {
+      return undefined;
+    }
+
+    return client.onAutoUpdateState((state) => {
+      storeAutoUpdateState(state);
+    });
+  }, [client, isDemo, storeAutoUpdateState]);
+
   const checkForUpdatesFromSettings = useCallback(() => {
     void checkForUpdates({ force: true, notifyWhenCurrent: true });
   }, [checkForUpdates]);
@@ -235,12 +357,17 @@ export const useReleaseUpdates = ({
     openReleaseNotes(updateInfoRef.current);
   }, [openReleaseNotes]);
 
-  const openCurrentUpdateDownload = useCallback(() => {
-    openUpdateDownload(updateInfoRef.current);
-  }, [openUpdateDownload]);
+  const downloadCurrentUpdateFromSettings = useCallback(() => {
+    downloadCurrentUpdate(updateInfoRef.current);
+  }, [downloadCurrentUpdate]);
+
+  const installDownloadedUpdateFromSettings = useCallback(() => {
+    installDownloadedUpdate();
+  }, [installDownloadedUpdate]);
 
   return {
     updateInfo,
+    autoUpdateState,
     isCheckingUpdates,
     releaseNotesDialogInfo,
     checkForUpdates,
@@ -250,6 +377,7 @@ export const useReleaseUpdates = ({
     openCurrentReleaseNotes,
     closeReleaseNotes,
     openUpdateDownload,
-    openCurrentUpdateDownload
+    downloadCurrentUpdate: downloadCurrentUpdateFromSettings,
+    installDownloadedUpdate: installDownloadedUpdateFromSettings
   };
 };

@@ -60,6 +60,7 @@ interface SettingsViewProps {
   onCheckForUpdates: () => void;
   onShowReleaseNotes: () => void;
   onDownloadUpdate: () => void;
+  onInstallUpdate: () => void;
   onOpenReleasePage: (url?: string) => void;
   weekRangeLabel: string;
   onExportWeekCsv: () => void;
@@ -231,6 +232,19 @@ const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
     return "Checking GitHub Releases...";
   }
 
+  if (updateInfo?.autoUpdate?.phase === "downloading") {
+    const percent = updateInfo.autoUpdate.progress?.percent;
+    return typeof percent === "number" ? `Downloading update ${Math.round(percent)}%.` : "Downloading update.";
+  }
+
+  if (updateInfo?.autoUpdate?.phase === "downloaded") {
+    return "Update downloaded. Restart to install.";
+  }
+
+  if (updateInfo?.autoUpdate?.phase === "error" && updateInfo.autoUpdate.error) {
+    return updateInfo.autoUpdate.error;
+  }
+
   if (!updateInfo) {
     return "Release status has not been checked yet.";
   }
@@ -244,6 +258,34 @@ const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
   }
 
   return "TimeBro is up to date.";
+};
+
+const getUpdateDetail = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdates: boolean) => {
+  if (isCheckingUpdates) {
+    return "Looking at the latest GitHub Release.";
+  }
+
+  if (updateInfo?.autoUpdate?.phase === "downloaded") {
+    return "TimeBro will close and reopen after installing.";
+  }
+
+  if (updateInfo?.autoUpdate?.phase === "downloading") {
+    return updateInfo.autoUpdate.progress?.total
+      ? `${Math.round((updateInfo.autoUpdate.progress.transferred ?? 0) / 1024 / 1024)} MB downloaded.`
+      : "Keep TimeBro open while the update downloads.";
+  }
+
+  if (updateInfo?.updateAvailable && updateInfo.autoUpdate?.supported) {
+    return updateInfo.autoUpdate.platform === "linux-appimage"
+      ? "Automatic install is available for this AppImage build."
+      : "Automatic install is available for this macOS build.";
+  }
+
+  if (updateInfo?.updateAvailable && updateInfo.autoUpdate?.reason) {
+    return updateInfo.autoUpdate.reason;
+  }
+
+  return formatCheckedAt(updateInfo?.checkedAt);
 };
 
 const ChainStep = ({ label, done }: { label: string; done: boolean }) => (
@@ -271,6 +313,7 @@ export const SettingsView = ({
   onCheckForUpdates,
   onShowReleaseNotes,
   onDownloadUpdate,
+  onInstallUpdate,
   onOpenReleasePage,
   weekRangeLabel,
   onExportWeekCsv,
@@ -960,7 +1003,7 @@ export const SettingsView = ({
         }`}
       >
         <strong>{getUpdateStatus(updateInfo, isCheckingUpdates)}</strong>
-        <small>{formatCheckedAt(updateInfo?.checkedAt)}</small>
+        <small>{getUpdateDetail(updateInfo, isCheckingUpdates)}</small>
       </div>
 
       <div className="inline-actions">
@@ -987,15 +1030,43 @@ export const SettingsView = ({
               <FileText size={16} />
               Release notes
             </button>
-            <button
-              className="primary-button"
-              type="button"
-              onClick={onDownloadUpdate}
-              disabled={!updateInfo.downloadUrl}
-            >
-              <Download size={16} />
-              Download
-            </button>
+            {updateInfo.autoUpdate?.supported ? (
+              updateInfo.autoUpdate.phase === "downloaded" ? (
+                <button className="primary-button" type="button" onClick={onInstallUpdate}>
+                  <RefreshCw size={16} />
+                  Restart to install
+                </button>
+              ) : (
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={onDownloadUpdate}
+                  disabled={
+                    updateInfo.autoUpdate.phase === "checking" || updateInfo.autoUpdate.phase === "downloading"
+                  }
+                >
+                  {updateInfo.autoUpdate.phase === "checking" || updateInfo.autoUpdate.phase === "downloading" ? (
+                    <Loader2 className="spin" size={16} />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  {updateInfo.autoUpdate.phase === "downloading" &&
+                  typeof updateInfo.autoUpdate.progress?.percent === "number"
+                    ? `Downloading ${Math.round(updateInfo.autoUpdate.progress.percent)}%`
+                    : "Download update"}
+                </button>
+              )
+            ) : (
+              <button
+                className="primary-button"
+                type="button"
+                onClick={onDownloadUpdate}
+                disabled={!updateInfo.downloadUrl}
+              >
+                <Download size={16} />
+                Download
+              </button>
+            )}
           </>
         ) : null}
       </div>

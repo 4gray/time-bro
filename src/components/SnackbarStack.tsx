@@ -1,8 +1,8 @@
-import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Info, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Download, ExternalLink, FileText, Info, RefreshCw, X } from "lucide-react";
 import { useEffect } from "react";
 
 export type SnackbarKind = "success" | "error" | "info";
-export type SnackbarActionIcon = "download" | "external" | "notes";
+export type SnackbarActionIcon = "download" | "external" | "notes" | "restart";
 
 export interface SnackbarAction {
   label: string;
@@ -64,7 +64,13 @@ const SnackbarItem = ({ notification, onDismiss, durationMs }: SnackbarItemProps
         <div className="snackbar-actions">
           {actions.map((action) => {
             const ActionIcon =
-              action.icon === "download" ? Download : action.icon === "notes" ? FileText : ExternalLink;
+              action.icon === "download"
+                ? Download
+                : action.icon === "notes"
+                  ? FileText
+                  : action.icon === "restart"
+                    ? RefreshCw
+                    : ExternalLink;
 
             return (
               <button className="snackbar-action" type="button" onClick={action.onAction} key={action.label}>
