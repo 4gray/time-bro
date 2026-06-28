@@ -38,6 +38,24 @@ describe("AddTimeModal", () => {
     expect(markup).not.toContain("21 JUN");
   });
 
+  it("keeps a weekend date when it is an active working-day option", () => {
+    const markup = renderToStaticMarkup(
+      <AddTimeModal
+        date={new Date(2026, 5, 21, 10, 30)}
+        dateOptions={["2026-06-21"]}
+        ticketOptions={[ticket]}
+        isConfigured={true}
+        isLogging={false}
+        onClose={() => undefined}
+        onLog={async () => true}
+        onAddPersonalNote={async () => true}
+      />
+    );
+
+    expect(markup).toContain("SUN");
+    expect(markup).toContain("21 JUN");
+  });
+
   it("opens in local note edit mode with the saved note text", () => {
     const markup = renderToStaticMarkup(
       <AddTimeModal

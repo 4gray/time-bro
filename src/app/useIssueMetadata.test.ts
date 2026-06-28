@@ -284,4 +284,27 @@ describe("issue metadata", () => {
     expect(metadata.todayWorklogs).toEqual([]);
     expect(metadata.todayPersonalNotes).toEqual([]);
   });
+
+  it("includes local notes when today is not a configured week column", () => {
+    const todayBucket = buildBucket({ trackedSeconds: 5400 });
+    const hiddenTodayNote = buildNote("hidden-today-note", {
+      dateKey: "2026-06-20",
+      timeSpentSeconds: 30 * 60
+    });
+
+    const metadata = buildIssueMetadata({
+      currentDate: new Date("2026-06-20T12:00:00.000Z"),
+      weekState: buildWeekState({ days: [buildDay({ dateKey: "2026-06-17" })] }),
+      syncResult: buildSyncResult({
+        daySummaries: {
+          "2026-06-20": todayBucket
+        }
+      }),
+      personalNotes: [hiddenTodayNote]
+    });
+
+    expect(metadata.todaySummary).toBeUndefined();
+    expect(metadata.todayPersonalNotes).toEqual([hiddenTodayNote]);
+    expect(metadata.todayTrackedHours).toBe(2);
+  });
 });

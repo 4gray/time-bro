@@ -1,4 +1,5 @@
-import type { AppSettings, WeekState } from "../../shared/types";
+import type { AppSettings, WeekState, WeekdayNumber } from "../../shared/types";
+import { WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
 import {
   addDays,
   fromLocalDateKey,
@@ -44,6 +45,11 @@ export interface MonthWeek {
   deltaLabel: string;
 }
 
+export interface MonthDayColumn {
+  weekday: WeekdayNumber;
+  label: string;
+}
+
 export interface MonthState {
   monthKey: string;
   /** e.g. "JUNE 2026". */
@@ -58,10 +64,11 @@ export interface MonthState {
   weeksOnTarget: number;
   closedWeekCount: number;
   firstMetWeekLabel?: string;
-  /** Average total across closed, full (5-working-day) weeks. */
+  /** Average total across closed weeks that include every configured working day in the month. */
   averageFullWeekHours: number;
   fullWeekCount: number;
   gapThresholdHours: number;
+  dayColumns: MonthDayColumn[];
   weeks: MonthWeek[];
 }
 
@@ -115,10 +122,15 @@ export const buildMonthState = (
   settings: AppSettings,
   weekStates: WeekState[]
 ): MonthState => {
-  const dailyTarget = settings.weeklyTargetHours / Math.max(settings.workingDays.length, 1);
+  const configuredWorkingDays = normalizeWorkingDays(settings.workingDays);
+  const dailyTarget = settings.weeklyTargetHours / configuredWorkingDays.length;
   const gapThreshold = Math.max(1, dailyTarget - 1);
   const todayKey = toLocalDateKey(today);
   const monthStart = getMonthBounds(anchor).monthStart;
+  const dayColumns = configuredWorkingDays.map((weekday) => ({
+    weekday,
+    label: WEEKDAY_OPTIONS[weekday - 1].label
+  }));
 
   let trackedHours = 0;
   let targetHours = 0;
@@ -208,7 +220,7 @@ export const buildMonthState = (
     trackedHours += weekTracked;
     targetHours += weekTarget;
 
-    const isPartialWeek = inMonthWorkingDays > 0 && inMonthWorkingDays < settings.workingDays.length;
+    const isPartialWeek = inMonthWorkingDays > 0 && inMonthWorkingDays < configuredWorkingDays.length;
     const isClosed = !hasToday && !allInMonthFuture;
 
     let status: MonthWeekStatus;
@@ -283,6 +295,7 @@ export const buildMonthState = (
     averageFullWeekHours: fullWeekCount > 0 ? fullWeekTotal / fullWeekCount : 0,
     fullWeekCount,
     gapThresholdHours: Math.round(gapThreshold),
+    dayColumns,
     weeks
   };
 };
