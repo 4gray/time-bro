@@ -115,4 +115,34 @@ describe("month calculations", () => {
     const finalWeek = month.weeks[4];
     expect(finalWeek.days.map((day) => day.status)).toEqual(["future", "other", "other"]);
   });
+
+  it("drops month rows whose configured days all fall outside the month", () => {
+    const today = new Date(2026, 4, 15, 9);
+    const anchor = getMonthAnchor(today);
+    const starts = getMonthWeekStarts(anchor);
+    const settings: AppSettings = {
+      ...DEFAULT_SETTINGS,
+      weeklyTargetHours: 8,
+      workingDays: [3]
+    };
+
+    const weekStates = starts.map((start) => buildWeek(start, today, undefined, settings));
+    const month = buildMonthState(anchor, today, settings, weekStates);
+
+    expect(starts.map(toLocalDateKey)).toEqual([
+      "2026-04-27",
+      "2026-05-04",
+      "2026-05-11",
+      "2026-05-18",
+      "2026-05-25"
+    ]);
+    expect(month.weeks.map((week) => week.weekKey)).toEqual([
+      "2026-05-04",
+      "2026-05-11",
+      "2026-05-18",
+      "2026-05-25"
+    ]);
+    expect(month.weeks.every((week) => week.days.length === 1)).toBe(true);
+    expect(month.targetHours).toBe(32);
+  });
 });
