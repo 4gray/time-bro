@@ -55,6 +55,8 @@ jobs:
             artifact_paths: |
               release/*.dmg
               release/*.zip
+              release/*.blockmap
+              release/latest-mac.yml
           - platform: windows
             os: windows-latest
             script: npm run dist:win
@@ -62,6 +64,8 @@ jobs:
             artifact_paths: |
               release/*.exe
               release/*.zip
+              release/*.blockmap
+              release/latest.yml
           - platform: linux
             os: ubuntu-latest
             script: npm run dist:linux
@@ -70,6 +74,8 @@ jobs:
               release/*.AppImage
               release/*.deb
               release/*.tar.gz
+              release/*.blockmap
+              release/latest-linux.yml
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout

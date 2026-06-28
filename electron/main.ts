@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
+import { autoUpdater } from "electron-updater";
 import path from "node:path";
 import { syncBitbucketReviewSessions, testBitbucketConnection } from "./bitbucket";
 import {
@@ -12,7 +13,13 @@ import {
 } from "./jira";
 import { generateWithOllama, listOllamaModels } from "./ollama";
 import { scheduleReminder } from "./reminders";
-import { checkForAppUpdate } from "./updates";
+import {
+  checkForAppUpdate,
+  createAppAutoUpdater,
+  getAutoUpdateCapability,
+  type AppAutoUpdaterAdapter,
+  type AppAutoUpdaterService
+} from "./updates";
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
 import { getSafeReleaseUrl } from "../shared/releases";
 import type {
@@ -31,6 +38,27 @@ import type {
 } from "../shared/types";
 
 let mainWindow: BrowserWindow | undefined;
+let appAutoUpdater: AppAutoUpdaterService | undefined;
+
+const sendAutoUpdateState = (state: ReturnType<AppAutoUpdaterService["getState"]>) => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send("app:auto-update-state", state);
+};
+
+const getAppAutoUpdater = () => {
+  if (!appAutoUpdater) {
+    appAutoUpdater = createAppAutoUpdater(
+      autoUpdater as unknown as AppAutoUpdaterAdapter,
+      getAutoUpdateCapability(process.platform, app.isPackaged, process.env),
+      sendAutoUpdateState
+    );
+  }
+
+  return appAutoUpdater;
+};
 
 const getWindowIconPath = () => {
   if (app.isPackaged) {
@@ -166,7 +194,18 @@ ipcMain.handle("reminder:schedule", (_event, payload: ReminderSchedulePayload) =
 });
 
 ipcMain.handle("app:get-update-info", () => {
-  return checkForAppUpdate(app.getVersion());
+  const updater = getAppAutoUpdater();
+  return checkForAppUpdate(app.getVersion(), fetch, process.platform, updater.getState(), process.env).then((info) =>
+    updater.decorateUpdateInfo(info)
+  );
+});
+
+ipcMain.handle("app:download-update", () => {
+  return getAppAutoUpdater().downloadUpdate();
+});
+
+ipcMain.handle("app:install-update", () => {
+  return getAppAutoUpdater().installUpdate();
 });
 
 ipcMain.handle("app:open-release-page", async (_event, url?: string): Promise<OpenReleasePageResult> => {

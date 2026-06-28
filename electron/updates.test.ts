@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { GITHUB_RELEASES_URL } from "../shared/releases";
-import { checkForAppUpdate } from "./updates";
+import { checkForAppUpdate, createAppAutoUpdater, getAutoUpdateCapability, type AppAutoUpdaterAdapter } from "./updates";
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -74,6 +74,37 @@ describe("checkForAppUpdate", () => {
     expect(result.downloadPlatform).toBe("linux");
   });
 
+  it("selects an AppImage asset when running from a Linux AppImage", async () => {
+    const result = await checkForAppUpdate(
+      "1.0.0",
+      async () =>
+        jsonResponse({
+          tag_name: "v1.1.0",
+          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          assets: [
+            {
+              name: "TimeBro-1.1.0.AppImage",
+              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.AppImage"
+            },
+            {
+              name: "TimeBro-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+            }
+          ]
+        }),
+      "linux",
+      getAutoUpdateCapability("linux", true, { APPIMAGE: "/Applications/TimeBro.AppImage" }),
+      { APPIMAGE: "/Applications/TimeBro.AppImage" }
+    );
+
+    expect(result.downloadName).toBe("TimeBro-1.1.0.AppImage");
+    expect(result.downloadPlatform).toBe("linux");
+    expect(result.autoUpdate).toMatchObject({
+      supported: true,
+      platform: "linux-appimage"
+    });
+  });
+
   it("selects an exe asset on Windows", async () => {
     const result = await checkForAppUpdate(
       "1.0.0",
@@ -113,5 +144,103 @@ describe("checkForAppUpdate", () => {
     expect(result.releasePageUrl).toBe(GITHUB_RELEASES_URL);
     expect(result.updateAvailable).toBe(false);
     expect(result.error).toContain("rate limit");
+  });
+});
+
+describe("getAutoUpdateCapability", () => {
+  it("enables automatic installation for packaged macOS and Linux AppImage builds", () => {
+    expect(getAutoUpdateCapability("darwin", true)).toMatchObject({
+      supported: true,
+      phase: "idle",
+      platform: "macos"
+    });
+    expect(getAutoUpdateCapability("linux", true, { APPIMAGE: "/tmp/TimeBro.AppImage" })).toMatchObject({
+      supported: true,
+      phase: "idle",
+      platform: "linux-appimage"
+    });
+  });
+
+  it("keeps development, Linux package-manager builds, and Windows on manual downloads", () => {
+    expect(getAutoUpdateCapability("darwin", false)).toMatchObject({
+      supported: false,
+      phase: "unsupported"
+    });
+    expect(getAutoUpdateCapability("linux", true, {})).toMatchObject({
+      supported: false,
+      phase: "unsupported"
+    });
+    expect(getAutoUpdateCapability("win32", true)).toMatchObject({
+      supported: false,
+      phase: "unsupported"
+    });
+  });
+});
+
+describe("createAppAutoUpdater", () => {
+  it("downloads an update and restarts through the updater adapter", async () => {
+    const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
+    const emit = (event: string, ...args: unknown[]) => {
+      listeners.get(event)?.forEach((listener) => listener(...args));
+    };
+    const states: string[] = [];
+    const adapter: AppAutoUpdaterAdapter = {
+      autoDownload: true,
+      autoInstallOnAppQuit: true,
+      allowPrerelease: true,
+      logger: console,
+      setFeedURL: vi.fn(),
+      checkForUpdates: vi.fn(async () => {
+        emit("update-available");
+        return {
+          isUpdateAvailable: true
+        };
+      }),
+      downloadUpdate: vi.fn(async () => {
+        emit("download-progress", {
+          percent: 42
+        });
+        emit("update-downloaded");
+        return ["/tmp/TimeBro.zip"];
+      }),
+      quitAndInstall: vi.fn(),
+      on: (event, listener) => {
+        listeners.set(event, [...(listeners.get(event) ?? []), listener]);
+        return adapter;
+      }
+    };
+
+    const service = createAppAutoUpdater(adapter, getAutoUpdateCapability("darwin", true), (state) => {
+      states.push(state.phase);
+    });
+    service.decorateUpdateInfo({
+      currentVersion: "1.0.0",
+      latestVersion: "1.1.0",
+      releasePageUrl: GITHUB_RELEASES_URL,
+      checkedAt: new Date().toISOString(),
+      updateAvailable: true
+    });
+
+    const downloadResult = await service.downloadUpdate();
+    const installResult = service.installUpdate();
+
+    expect(adapter.autoDownload).toBe(false);
+    expect(adapter.autoInstallOnAppQuit).toBe(false);
+    expect(adapter.allowPrerelease).toBe(false);
+    expect(adapter.setFeedURL).toHaveBeenCalledWith({
+      provider: "github",
+      owner: "4gray",
+      repo: "time-bro",
+      releaseType: "release"
+    });
+    expect(downloadResult).toMatchObject({
+      ok: true,
+      state: {
+        phase: "downloaded"
+      }
+    });
+    expect(states).toEqual(["checking", "available", "downloading", "downloading", "downloaded", "downloaded"]);
+    expect(installResult.ok).toBe(true);
+    expect(adapter.quitAndInstall).toHaveBeenCalledWith(false, true);
   });
 });

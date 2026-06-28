@@ -28,6 +28,8 @@ let container: HTMLDivElement;
 let root: Root;
 let api: ReleaseUpdatesApi | undefined;
 let getUpdateInfo: ReturnType<typeof vi.fn<() => Promise<AppUpdateInfo>>>;
+let downloadUpdate: ReturnType<typeof vi.fn<ReleaseUpdateClient["downloadUpdate"]>>;
+let installUpdate: ReturnType<typeof vi.fn<ReleaseUpdateClient["installUpdate"]>>;
 let openReleasePage: ReturnType<typeof vi.fn<(url?: string) => Promise<OpenReleasePageResult>>>;
 let client: ReleaseUpdateClient;
 let showSnackbar: ReturnType<typeof vi.fn<(kind: "info", message: string, options?: SnackbarOptions) => void>>;
@@ -81,11 +83,29 @@ beforeEach(() => {
   api = undefined;
   localStorage.clear();
   getUpdateInfo = vi.fn();
+  downloadUpdate = vi.fn(async () => ({
+    ok: true,
+    message: "Update downloaded. Restart TimeBro to install it.",
+    state: {
+      supported: true,
+      phase: "downloaded",
+      platform: "macos"
+    }
+  }));
+  installUpdate = vi.fn(async () => ({
+    ok: true,
+    message: "Restarting TimeBro to install the update.",
+    state: {
+      supported: true,
+      phase: "downloaded",
+      platform: "macos"
+    }
+  }));
   openReleasePage = vi.fn(async (url?: string) => ({
     ok: true,
     url: url ?? GITHUB_RELEASES_URL
   }));
-  client = { getUpdateInfo, openReleasePage };
+  client = { getUpdateInfo, downloadUpdate, installUpdate, openReleasePage };
   showSnackbar = vi.fn();
   showSuccess = vi.fn();
   showError = vi.fn();
@@ -217,6 +237,82 @@ describe("useReleaseUpdates", () => {
     expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);
   });
 
+  it("downloads and installs automatic updates through the native client", async () => {
+    const update = makeInfo({
+      latestVersion: "1.4.0",
+      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+      updateAvailable: true,
+      autoUpdate: {
+        supported: true,
+        phase: "idle",
+        platform: "macos"
+      }
+    });
+    getUpdateInfo.mockResolvedValue(update);
+    renderHarness();
+
+    await act(async () => {
+      await getApi().checkForUpdates({ force: true });
+    });
+
+    const snackbarAction = showSnackbar.mock.calls[0][2]?.actions?.[1];
+    expect(snackbarAction?.label).toBe("Download update");
+
+    await act(async () => {
+      snackbarAction?.onAction();
+      await Promise.resolve();
+    });
+    await flushAsync();
+
+    expect(downloadUpdate).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalledWith("Update downloaded. Restart TimeBro to install it.");
+    expect(getApi().autoUpdateState).toMatchObject({
+      phase: "downloaded"
+    });
+
+    await act(async () => {
+      getApi().downloadCurrentUpdate();
+      await Promise.resolve();
+    });
+    await flushAsync();
+
+    expect(installUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("subscribes to automatic update state changes", async () => {
+    let listener: ((state: NonNullable<AppUpdateInfo["autoUpdate"]>) => void) | undefined;
+    const unsubscribe = vi.fn();
+    client.onAutoUpdateState = vi.fn((callback) => {
+      listener = callback;
+      return unsubscribe;
+    });
+    renderHarness();
+    await flushAsync();
+
+    act(() => {
+      listener?.({
+        supported: true,
+        phase: "downloading",
+        platform: "macos",
+        progress: {
+          percent: 35
+        }
+      });
+    });
+
+    expect(getApi().autoUpdateState).toMatchObject({
+      phase: "downloading",
+      progress: {
+        percent: 35
+      }
+    });
+
+    act(() => {
+      root.render(<></>);
+    });
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it("exposes Settings callbacks that use the current update info", async () => {
     const update = makeInfo({
       latestVersion: "1.4.0",
@@ -236,7 +332,7 @@ describe("useReleaseUpdates", () => {
     act(() => getApi().openCurrentReleaseNotes());
     expect(getApi().releaseNotesDialogInfo).toMatchObject({ latestVersion: "1.4.0" });
 
-    act(() => getApi().openCurrentUpdateDownload());
+    act(() => getApi().downloadCurrentUpdate());
     expect(openReleasePage).toHaveBeenCalledWith(update.downloadUrl);
   });
 });

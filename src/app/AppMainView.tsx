@@ -79,7 +79,8 @@ export interface AppMainViewProps {
   selectTheme: AppSettingsRouteProps["selectTheme"];
   checkForUpdatesFromSettings: AppSettingsRouteProps["checkForUpdatesFromSettings"];
   openCurrentReleaseNotes: AppSettingsRouteProps["openCurrentReleaseNotes"];
-  openCurrentUpdateDownload: AppSettingsRouteProps["openCurrentUpdateDownload"];
+  downloadCurrentUpdate: AppSettingsRouteProps["downloadCurrentUpdate"];
+  installDownloadedUpdate: AppSettingsRouteProps["installDownloadedUpdate"];
   openReleasePage: AppSettingsRouteProps["openReleasePage"];
   handleExportWeekCsv: AppSettingsRouteProps["handleExportWeekCsv"];
   handleImportPersonalNotes: AppSettingsRouteProps["handleImportPersonalNotes"];
@@ -163,7 +164,8 @@ export const AppMainView = ({
   selectTheme,
   checkForUpdatesFromSettings,
   openCurrentReleaseNotes,
-  openCurrentUpdateDownload,
+  downloadCurrentUpdate,
+  installDownloadedUpdate,
   openReleasePage,
   handleExportWeekCsv,
   handleImportPersonalNotes,
@@ -326,7 +328,8 @@ export const AppMainView = ({
         isCheckingUpdates={isCheckingUpdates}
         checkForUpdatesFromSettings={checkForUpdatesFromSettings}
         openCurrentReleaseNotes={openCurrentReleaseNotes}
-        openCurrentUpdateDownload={openCurrentUpdateDownload}
+        downloadCurrentUpdate={downloadCurrentUpdate}
+        installDownloadedUpdate={installDownloadedUpdate}
         openReleasePage={openReleasePage}
         weekRangeLabel={weekState.weekRangeLabel}
         handleExportWeekCsv={handleExportWeekCsv}

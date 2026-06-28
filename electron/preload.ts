@@ -1,7 +1,9 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 import type {
   AddWorklogRequest,
   AddWorklogResult,
+  AppAutoUpdateActionResult,
+  AppAutoUpdateState,
   AppSettings,
   AppUpdateInfo,
   BitbucketConnectionResult,
@@ -66,6 +68,17 @@ const timeBroApi = {
   },
   getUpdateInfo: (): Promise<AppUpdateInfo> => {
     return ipcRenderer.invoke("app:get-update-info");
+  },
+  downloadUpdate: (): Promise<AppAutoUpdateActionResult> => {
+    return ipcRenderer.invoke("app:download-update");
+  },
+  installUpdate: (): Promise<AppAutoUpdateActionResult> => {
+    return ipcRenderer.invoke("app:install-update");
+  },
+  onAutoUpdateState: (callback: (state: AppAutoUpdateState) => void): (() => void) => {
+    const listener = (_event: IpcRendererEvent, state: AppAutoUpdateState) => callback(state);
+    ipcRenderer.on("app:auto-update-state", listener);
+    return () => ipcRenderer.removeListener("app:auto-update-state", listener);
   },
   openReleasePage: (url?: string): Promise<OpenReleasePageResult> => {
     return ipcRenderer.invoke("app:open-release-page", url);

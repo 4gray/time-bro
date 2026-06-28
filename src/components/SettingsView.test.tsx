@@ -53,6 +53,7 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
       onCheckForUpdates={() => undefined}
       onShowReleaseNotes={() => undefined}
       onDownloadUpdate={() => undefined}
+      onInstallUpdate={() => undefined}
       onOpenReleasePage={() => undefined}
       weekRangeLabel="Jun 15 - 21, 2026"
       onExportWeekCsv={() => undefined}
@@ -103,6 +104,43 @@ describe("SettingsView", () => {
     expect(markup).toContain("GitHub Releases");
     expect(markup).toContain("Release notes");
     expect(markup).toContain("Download");
+  });
+
+  it("renders automatic update actions when the package supports in-app installation", () => {
+    const markup = renderSettings({
+      initialSection: "about",
+      updateInfo: {
+        ...updateInfo,
+        autoUpdate: {
+          supported: true,
+          phase: "idle",
+          platform: "macos"
+        }
+      }
+    });
+
+    expect(markup).toContain("Automatic install is available for this macOS build.");
+    expect(markup).toContain("Download update");
+  });
+
+  it("renders restart action after an automatic update download finishes", () => {
+    const markup = renderSettings({
+      initialSection: "about",
+      updateInfo: {
+        ...updateInfo,
+        autoUpdate: {
+          supported: true,
+          phase: "downloaded",
+          platform: "macos",
+          progress: {
+            percent: 100
+          }
+        }
+      }
+    });
+
+    expect(markup).toContain("Update downloaded. Restart to install.");
+    expect(markup).toContain("Restart to install");
   });
 
   it("renders import and export controls in the data panel", () => {

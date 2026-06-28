@@ -89,8 +89,8 @@ export const App = () => {
     checkForUpdatesFromSettings,
     openCurrentReleaseNotes,
     closeReleaseNotes,
-    openUpdateDownload,
-    openCurrentUpdateDownload
+    downloadCurrentUpdate,
+    installDownloadedUpdate
   } = useReleaseUpdates({
     appVersion: APP_VERSION,
     isDemo,
@@ -432,7 +432,7 @@ export const App = () => {
           onLogRecurring={handleConfirmRecurring}
           releaseNotesDialogInfo={releaseNotesDialogInfo}
           onCloseReleaseNotes={closeReleaseNotes}
-          onDownloadUpdate={openUpdateDownload}
+          onDownloadUpdate={downloadCurrentUpdate}
           onOpenReleasePage={openReleasePage}
           notifications={snackbars}
           onDismissNotification={dismissSnackbar}
@@ -501,7 +501,8 @@ export const App = () => {
         selectTheme={selectTheme}
         checkForUpdatesFromSettings={checkForUpdatesFromSettings}
         openCurrentReleaseNotes={openCurrentReleaseNotes}
-        openCurrentUpdateDownload={openCurrentUpdateDownload}
+        downloadCurrentUpdate={downloadCurrentUpdate}
+        installDownloadedUpdate={installDownloadedUpdate}
         openReleasePage={openReleasePage}
         handleExportWeekCsv={handleExportWeekCsv}
         handleImportPersonalNotes={handleImportPersonalNotes}

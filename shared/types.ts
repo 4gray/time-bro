@@ -434,11 +434,47 @@ export interface AppUpdateInfo {
   checkedAt: string;
   updateAvailable: boolean;
   error?: string;
+  autoUpdate?: AppAutoUpdateState;
 }
 
 export interface OpenReleasePageResult {
   ok: boolean;
   url: string;
+}
+
+export type AppAutoUpdatePlatform = "macos" | "linux-appimage";
+
+export type AppAutoUpdatePhase =
+  | "unsupported"
+  | "idle"
+  | "checking"
+  | "available"
+  | "downloading"
+  | "downloaded"
+  | "not-available"
+  | "error";
+
+export interface AppAutoUpdateProgress {
+  percent?: number;
+  bytesPerSecond?: number;
+  transferred?: number;
+  total?: number;
+}
+
+export interface AppAutoUpdateState {
+  supported: boolean;
+  phase: AppAutoUpdatePhase;
+  platform?: AppAutoUpdatePlatform;
+  reason?: string;
+  progress?: AppAutoUpdateProgress;
+  error?: string;
+}
+
+export interface AppAutoUpdateActionResult {
+  ok: boolean;
+  message: string;
+  state: AppAutoUpdateState;
+  updateInfo?: AppUpdateInfo;
 }
 
 /**

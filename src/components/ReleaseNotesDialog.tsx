@@ -1,4 +1,4 @@
-import { Download, ExternalLink, FileText, X } from "lucide-react";
+import { Download, ExternalLink, FileText, RefreshCw, X } from "lucide-react";
 import { useEffect } from "react";
 import type { AppUpdateInfo } from "../../shared/types";
 
@@ -44,6 +44,11 @@ export const ReleaseNotesDialog = ({
 
   const notes = updateInfo.releaseNotes?.trim() || "No release notes were published for this release.";
   const releaseTitle = updateInfo.releaseName?.trim() || `TimeBro ${formatReleaseVersion(updateInfo.latestVersion)}`;
+  const downloadLabel = updateInfo.autoUpdate?.supported
+    ? updateInfo.autoUpdate.phase === "downloaded"
+      ? "Restart"
+      : "Download update"
+    : "Download";
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Release notes">
@@ -80,10 +85,10 @@ export const ReleaseNotesDialog = ({
               <ExternalLink size={16} />
               GitHub
             </button>
-            {updateInfo.downloadUrl ? (
+            {updateInfo.downloadUrl || updateInfo.autoUpdate?.supported ? (
               <button type="button" className="primary-button" onClick={() => onDownload(updateInfo)}>
-                <Download size={16} />
-                Download
+                {updateInfo.autoUpdate?.phase === "downloaded" ? <RefreshCw size={16} /> : <Download size={16} />}
+                {downloadLabel}
               </button>
             ) : null}
           </div>

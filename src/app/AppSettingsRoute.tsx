@@ -19,7 +19,8 @@ export interface AppSettingsRouteProps {
   isCheckingUpdates: SettingsViewProps["isCheckingUpdates"];
   checkForUpdatesFromSettings: SettingsViewProps["onCheckForUpdates"];
   openCurrentReleaseNotes: SettingsViewProps["onShowReleaseNotes"];
-  openCurrentUpdateDownload: SettingsViewProps["onDownloadUpdate"];
+  downloadCurrentUpdate: SettingsViewProps["onDownloadUpdate"];
+  installDownloadedUpdate: SettingsViewProps["onInstallUpdate"];
   openReleasePage: SettingsViewProps["onOpenReleasePage"];
   weekRangeLabel: SettingsViewProps["weekRangeLabel"];
   handleExportWeekCsv: SettingsViewProps["onExportWeekCsv"];
@@ -47,7 +48,8 @@ export const AppSettingsRoute = ({
   isCheckingUpdates,
   checkForUpdatesFromSettings,
   openCurrentReleaseNotes,
-  openCurrentUpdateDownload,
+  downloadCurrentUpdate,
+  installDownloadedUpdate,
   openReleasePage,
   weekRangeLabel,
   handleExportWeekCsv,
@@ -74,7 +76,8 @@ export const AppSettingsRoute = ({
     isCheckingUpdates={isCheckingUpdates}
     onCheckForUpdates={checkForUpdatesFromSettings}
     onShowReleaseNotes={openCurrentReleaseNotes}
-    onDownloadUpdate={openCurrentUpdateDownload}
+    onDownloadUpdate={downloadCurrentUpdate}
+    onInstallUpdate={installDownloadedUpdate}
     onOpenReleasePage={openReleasePage}
     weekRangeLabel={weekRangeLabel}
     onExportWeekCsv={handleExportWeekCsv}
