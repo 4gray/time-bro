@@ -334,9 +334,6 @@ describe("useReleaseUpdates", () => {
       });
       await flushAsync();
       expect(getUpdateInfo).toHaveBeenCalledTimes(3);
-
-      // The interval forces a real fetch rather than reusing the recent cache.
-      expect(getUpdateInfo.mock.calls).toHaveLength(3);
     } finally {
       vi.useRealTimers();
     }
@@ -363,6 +360,37 @@ describe("useReleaseUpdates", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps a known available update when a later background poll fails", async () => {
+    const available = makeInfo({
+      latestVersion: "1.6.0",
+      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.6.0/TimeBro.dmg",
+      updateAvailable: true
+    });
+    const failedCheck = makeInfo({
+      latestVersion: undefined,
+      updateAvailable: false,
+      error: "GitHub is offline"
+    });
+    getUpdateInfo.mockResolvedValueOnce(available).mockResolvedValueOnce(failedCheck);
+    renderHarness();
+
+    await act(async () => {
+      await getApi().checkForUpdates({ force: true });
+    });
+    expect(getApi().updateInfo).toMatchObject({ latestVersion: "1.6.0", updateAvailable: true });
+
+    // A background poll (no notifyWhenCurrent) that errors must not erase the
+    // known-good update or surface a phantom error in its place.
+    await act(async () => {
+      await getApi().checkForUpdates({ force: true });
+    });
+
+    expect(getUpdateInfo).toHaveBeenCalledTimes(2);
+    expect(getApi().updateInfo).toMatchObject({ latestVersion: "1.6.0", updateAvailable: true });
+    expect(getApi().updateInfo?.error).toBeUndefined();
+    expect(showError).not.toHaveBeenCalled();
   });
 
   it("exposes Settings callbacks that use the current update info", async () => {

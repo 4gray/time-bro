@@ -290,8 +290,6 @@ export const useReleaseUpdates = ({
 
       try {
         const result = await client.getUpdateInfo();
-        storeUpdateInfo(result);
-        writeCachedUpdateInfo(result);
 
         if (result.updateAvailable) {
           showUpdateAvailable(result);
@@ -303,7 +301,19 @@ export const useReleaseUpdates = ({
           }
         }
 
-        return result;
+        // A failed check — e.g. a transient network/GitHub error during a
+        // background poll — must not erase a previously known-good result.
+        // Otherwise an available update surfaced at launch would silently
+        // vanish from Settings until the next successful check. Keep the last
+        // good info as the persisted state; the error is still surfaced to a
+        // user-initiated check above via notifyWhenCurrent.
+        const previous = updateInfoRef.current;
+        const persisted = result.error && previous && !previous.error ? previous : result;
+
+        storeUpdateInfo(persisted);
+        writeCachedUpdateInfo(result);
+
+        return persisted;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Unable to check GitHub Releases.";
         updateStoredInfo((current) => ({
