@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppUpdateInfo, OpenReleasePageResult } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
-import { UPDATE_INFO_CACHE_KEY } from "../domain/updateCache";
+import { AUTO_UPDATE_POLL_INTERVAL_MS, UPDATE_INFO_CACHE_KEY } from "../domain/updateCache";
 import type { SnackbarOptions } from "./useSnackbars";
 import type { ReleaseUpdateClient } from "./useReleaseUpdates";
 import { useReleaseUpdates } from "./useReleaseUpdates";
@@ -311,6 +311,58 @@ describe("useReleaseUpdates", () => {
       root.render(<></>);
     });
     expect(unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-checks for updates on the polling interval while the app stays open", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      getUpdateInfo.mockResolvedValue(makeInfo({ updateAvailable: false }));
+      renderHarness({ autoCheck: true });
+      await flushAsync();
+
+      // The check at launch.
+      expect(getUpdateInfo).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(AUTO_UPDATE_POLL_INTERVAL_MS);
+      });
+      await flushAsync();
+      expect(getUpdateInfo).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        vi.advanceTimersByTime(AUTO_UPDATE_POLL_INTERVAL_MS);
+      });
+      await flushAsync();
+      expect(getUpdateInfo).toHaveBeenCalledTimes(3);
+
+      // The interval forces a real fetch rather than reusing the recent cache.
+      expect(getUpdateInfo.mock.calls).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops polling for updates after unmount", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    try {
+      getUpdateInfo.mockResolvedValue(makeInfo({ updateAvailable: false }));
+      renderHarness({ autoCheck: true });
+      await flushAsync();
+      expect(getUpdateInfo).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        root.render(<></>);
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(AUTO_UPDATE_POLL_INTERVAL_MS * 3);
+      });
+      await flushAsync();
+
+      expect(getUpdateInfo).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("exposes Settings callbacks that use the current update info", async () => {

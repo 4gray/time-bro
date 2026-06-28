@@ -7,7 +7,12 @@ import type {
 } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 import { nativeApi } from "../api/native";
-import { isRecentUpdateInfo, readCachedUpdateInfo, writeCachedUpdateInfo } from "../domain/updateCache";
+import {
+  AUTO_UPDATE_POLL_INTERVAL_MS,
+  isRecentUpdateInfo,
+  readCachedUpdateInfo,
+  writeCachedUpdateInfo
+} from "../domain/updateCache";
 import { createDemoUpdateInfo, formatReleaseVersion } from "./appHelpers";
 import type { SnackbarOptions } from "./useSnackbars";
 
@@ -338,6 +343,31 @@ export const useReleaseUpdates = ({
 
     void checkForUpdates();
   }, [autoCheck, checkForUpdates, isDemo]);
+
+  // Keep the latest checkForUpdates accessible to the polling timer without
+  // tearing down and recreating the interval whenever its identity changes.
+  const checkForUpdatesRef = useRef(checkForUpdates);
+  useEffect(() => {
+    checkForUpdatesRef.current = checkForUpdates;
+  }, [checkForUpdates]);
+
+  // While the app stays open, re-check GitHub on a slow interval so a session
+  // that is never restarted still discovers new releases. The poll forces a
+  // real fetch (bypassing the cache window); the snackbar is deduplicated per
+  // version, so repeated checks never re-notify about a release already shown.
+  useEffect(() => {
+    if (!autoCheck || isDemo) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void checkForUpdatesRef.current({ force: true });
+    }, AUTO_UPDATE_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [autoCheck, isDemo]);
 
   useEffect(() => {
     if (isDemo || !client.onAutoUpdateState) {
