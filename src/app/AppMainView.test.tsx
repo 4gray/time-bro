@@ -165,6 +165,7 @@ const baseProps = (): AppMainViewProps => ({
   handleSkipRecurring: asyncFalse as AppMainViewProps["handleSkipRecurring"],
   handleDeleteRecurringOccurrence: asyncFalse as AppMainViewProps["handleDeleteRecurringOccurrence"],
   openSettings: noop,
+  openTicketDetails: noop,
   settingsSection: "jira",
   syncState: "synced",
   syncLabel: "SYNCED 6:47 PM"

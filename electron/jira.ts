@@ -4,8 +4,11 @@ import type {
   AppSettings,
   DeleteWorklogRequest,
   DeleteWorklogResult,
+  IssueDetailsRequest,
+  IssueDetailsResult,
   JiraConnectionResult,
   JiraEpicInfo,
+  JiraIssueDetails,
   JiraIssueSummary,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -50,6 +53,7 @@ interface JiraTicketIssue {
   key: string;
   fields?: {
     summary?: string;
+    description?: unknown;
     aggregatetimespent?: number | null;
     timetracking?: { timeSpentSeconds?: number };
     project?: { key?: string; name?: string };
@@ -439,6 +443,7 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
 };
 
 const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created,assignee";
+const ISSUE_DETAILS_FIELDS = `${TICKET_FIELDS},description`;
 const TICKET_PAGE_SIZE = 100;
 const ASSIGNED_OPEN_TICKET_LIMIT = 500;
 const RECENTLY_CLOSED_TICKET_LIMIT = 50;
@@ -516,6 +521,63 @@ const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => 
     epic: normalizeEpic(settings, fields.parent),
     url: `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issue.key}`
   };
+};
+
+const fetchAllIssueWorklogs = async (settings: AppSettings, issueKey: string) => {
+  const worklogs: JiraWorklogResponse["worklogs"] = [];
+  let startAt = 0;
+  let total = 0;
+  let guard = 0;
+
+  do {
+    const params = new URLSearchParams({
+      startAt: String(startAt),
+      maxResults: "100"
+    });
+
+    const page = await jiraRequest<JiraWorklogResponse>(
+      settings,
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/worklog?${params.toString()}`
+    );
+
+    worklogs.push(...(page.worklogs ?? []));
+    total = page.total;
+    startAt = page.startAt + page.maxResults;
+    guard += 1;
+  } while (startAt < total && guard < 50);
+
+  return worklogs;
+};
+
+export const fetchJiraIssueDetails = async (request: IssueDetailsRequest): Promise<IssueDetailsResult> => {
+  const { settings } = request;
+  const issueKey = request.issueKey.trim().toUpperCase();
+
+  if (!issueKey) {
+    throw new JiraApiError("Choose a Jira issue first.");
+  }
+
+  const params = new URLSearchParams({
+    fields: ISSUE_DETAILS_FIELDS
+  });
+
+  const [currentUser, issue] = await Promise.all([
+    fetchCurrentUser(settings),
+    jiraRequest<JiraTicketIssue>(settings, `/rest/api/3/issue/${encodeURIComponent(issueKey)}?${params.toString()}`)
+  ]);
+
+  const worklogs = await fetchAllIssueWorklogs(settings, issue.key);
+  const myWorklogs = worklogs.filter((worklog) => worklog.author?.accountId === currentUser.accountId);
+  const myLoggedSecondsTotal = myWorklogs.reduce((sum, worklog) => sum + worklog.timeSpentSeconds, 0);
+  const details: JiraIssueDetails = {
+    ...toTicket(settings, issue),
+    description: adfToPlainText(issue.fields?.description) || undefined,
+    descriptionAdf: issue.fields?.description,
+    myLoggedSecondsTotal,
+    myWorklogCount: myWorklogs.length
+  };
+
+  return details;
 };
 
 export const fetchAssignedTickets = async (request: TicketsRequest): Promise<TicketsResult> => {

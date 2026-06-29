@@ -13,6 +13,8 @@ import type {
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
+  IssueDetailsRequest,
+  IssueDetailsResult,
   JiraConnectionResult,
   OllamaGenerateRequest,
   OllamaGenerateResult,
@@ -38,6 +40,7 @@ interface TimeBroNativeApi {
   syncBitbucketReviews: (request: BitbucketReviewSyncRequest) => Promise<BitbucketReviewSyncResult>;
   fetchAssignedTickets: (request: TicketsRequest) => Promise<TicketsResult>;
   searchJiraTickets: (request: SearchTicketsRequest) => Promise<SearchTicketsResult>;
+  fetchJiraIssueDetails: (request: IssueDetailsRequest) => Promise<IssueDetailsResult>;
   addWorklog: (request: AddWorklogRequest) => Promise<AddWorklogResult>;
   updateWorklog: (request: UpdateWorklogRequest) => Promise<UpdateWorklogResult>;
   deleteWorklog: (request: DeleteWorklogRequest) => Promise<DeleteWorklogResult>;

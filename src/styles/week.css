@@ -508,6 +508,30 @@
   flex: none;
 }
 
+.ticket-key-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ticket-key-button:hover,
+.ticket-key-button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ticket-key-button:focus-visible {
+  outline: 2px solid rgba(79, 124, 255, 0.48);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .week-grid.is-compact .ticket-key-inline {
   flex: 1 1 auto;
 }

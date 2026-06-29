@@ -393,6 +393,238 @@
   opacity: 0.55;
 }
 
+/* ============================ ticket details ============================ */
+.ticket-details-panel {
+  width: 760px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ticket-details-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ticket-details-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.ticket-details-key {
+  margin-bottom: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--blue-soft);
+}
+
+.ticket-details-hero h2 {
+  margin: 0;
+  max-width: 560px;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.12;
+  color: var(--text-bright);
+}
+
+.ticket-details-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--blue-soft);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.ticket-details-open:hover {
+  border-color: rgba(79, 124, 255, 0.48);
+  background: rgba(79, 124, 255, 0.08);
+  color: var(--text-bright);
+}
+
+.ticket-details-error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 139, 132, 0.34);
+  border-radius: 8px;
+  background: rgba(255, 139, 132, 0.08);
+  color: #ffaaa5;
+  font-size: 13px;
+}
+
+.ticket-details-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ticket-details-stat {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.ticket-details-stat span,
+.ticket-details-meta span {
+  display: block;
+  margin-bottom: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  color: var(--dim-2);
+  text-transform: uppercase;
+}
+
+.ticket-details-stat strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-bright);
+}
+
+.ticket-details-stat em {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ticket-details-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.ticket-details-meta strong {
+  display: flex;
+  align-items: center;
+  min-height: 22px;
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ticket-details-meta .epic-pill {
+  max-width: 100%;
+}
+
+.ticket-details-description {
+  margin-top: 18px;
+}
+
+.ticket-details-description p,
+.adf-renderer p {
+  margin: 10px 0 0;
+}
+
+.ticket-details-description > p,
+.adf-renderer {
+  max-height: 190px;
+  overflow: auto;
+}
+
+.ticket-details-description p,
+.adf-renderer {
+  white-space: pre-wrap;
+  color: var(--text-strong);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.adf-renderer h1,
+.adf-renderer h2,
+.adf-renderer h3,
+.adf-renderer h4,
+.adf-renderer h5,
+.adf-renderer h6 {
+  margin: 13px 0 6px;
+  color: var(--text-bright);
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.adf-renderer ul,
+.adf-renderer ol {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  white-space: normal;
+}
+
+.adf-renderer li + li {
+  margin-top: 4px;
+}
+
+.adf-renderer a {
+  color: var(--blue-soft);
+  text-decoration: none;
+}
+
+.adf-renderer a:hover {
+  text-decoration: underline;
+}
+
+.adf-renderer code {
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--line-soft);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.adf-renderer pre {
+  margin: 10px 0 0;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.adf-renderer pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.adf-renderer blockquote {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--blue);
+  background: var(--line-soft);
+  color: var(--dim);
+}
+
+.adf-renderer hr {
+  margin: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
 .personal-note-form {
   display: flex;
   flex-direction: column;

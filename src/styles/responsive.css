@@ -466,6 +466,24 @@
     padding-right: 10px;
   }
 
+  .ticket-details-panel {
+    max-width: calc(100vw - 28px);
+  }
+
+  .ticket-details-hero {
+    flex-direction: column;
+  }
+
+  .ticket-details-hero h2 {
+    max-width: none;
+    font-size: 21px;
+  }
+
+  .ticket-details-stat-grid,
+  .ticket-details-meta {
+    grid-template-columns: 1fr;
+  }
+
   .inline-actions {
     display: grid;
     grid-template-columns: 1fr;

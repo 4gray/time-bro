@@ -1,13 +1,17 @@
 import type { ComponentProps } from "react";
 import { ReleaseNotesDialog } from "../components/ReleaseNotesDialog";
 import { SnackbarStack } from "../components/SnackbarStack";
+import { TicketDetailsDialog } from "../components/TicketDetailsDialog";
 import { TimeEntryModalLayer } from "../components/TimeEntryModalLayer";
 
 type TimeEntryModalLayerProps = ComponentProps<typeof TimeEntryModalLayer>;
 type ReleaseNotesDialogProps = ComponentProps<typeof ReleaseNotesDialog>;
+type TicketDetailsDialogProps = ComponentProps<typeof TicketDetailsDialog>;
 type SnackbarStackProps = ComponentProps<typeof SnackbarStack>;
 
 export interface AppOverlaysProps extends TimeEntryModalLayerProps {
+  ticketDetailsDialog?: Omit<TicketDetailsDialogProps, "onClose">;
+  onCloseTicketDetails?: TicketDetailsDialogProps["onClose"];
   releaseNotesDialogInfo?: ReleaseNotesDialogProps["updateInfo"];
   releaseHistory: ReleaseNotesDialogProps["releaseHistory"];
   isLoadingReleaseHistory: ReleaseNotesDialogProps["isLoadingReleaseHistory"];
@@ -22,6 +26,8 @@ export interface AppOverlaysProps extends TimeEntryModalLayerProps {
 }
 
 export const AppOverlays = ({
+  ticketDetailsDialog,
+  onCloseTicketDetails,
   releaseNotesDialogInfo,
   releaseHistory,
   isLoadingReleaseHistory,
@@ -37,6 +43,10 @@ export const AppOverlays = ({
 }: AppOverlaysProps) => (
   <>
     <TimeEntryModalLayer {...timeEntryModalLayerProps} />
+
+    {ticketDetailsDialog && (
+      <TicketDetailsDialog {...ticketDetailsDialog} onClose={onCloseTicketDetails ?? (() => undefined)} />
+    )}
 
     {releaseNotesDialogInfo && (
       <ReleaseNotesDialog

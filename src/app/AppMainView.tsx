@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { LoadingView } from "../components/LoadingView";
 import type { AppView } from "../components/Sidebar";
+import { TicketDetailsProvider, type OpenTicketDetails } from "../components/TicketDetailsContext";
 import { AppMonthRoute } from "./AppMonthRoute";
 import { AppReconRoute } from "./AppReconRoute";
 import { AppReportsRoute } from "./AppReportsRoute";
@@ -101,6 +102,7 @@ export interface AppMainViewProps {
   handleSkipRecurring: AppWeekRouteProps["handleSkipRecurring"];
   handleDeleteRecurringOccurrence: AppWeekRouteProps["handleDeleteRecurringOccurrence"];
   openSettings: () => void;
+  openTicketDetails: OpenTicketDetails;
   settingsSection: AppSettingsRouteProps["initialSection"];
   syncState: "synced" | "stale" | "syncing";
   syncLabel: string;
@@ -189,6 +191,7 @@ export const AppMainView = ({
   handleSkipRecurring,
   handleDeleteRecurringOccurrence,
   openSettings,
+  openTicketDetails,
   settingsSection,
   syncState,
   syncLabel
@@ -354,5 +357,9 @@ export const AppMainView = ({
     );
   }
 
-  return <main className="main-area">{content}</main>;
+  return (
+    <TicketDetailsProvider value={openTicketDetails}>
+      <main className="main-area">{content}</main>
+    </TicketDetailsProvider>
+  );
 };

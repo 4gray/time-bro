@@ -31,6 +31,7 @@ import { useSidebarState } from "./app/useSidebarState";
 import { useSnackbars } from "./app/useSnackbars";
 import { useSyncControls } from "./app/useSyncControls";
 import { useThemeMode } from "./app/useThemeMode";
+import { useTicketDetails } from "./app/useTicketDetails";
 import { useTickets } from "./app/useTickets";
 import { useWeekActions } from "./app/useWeekActions";
 import { useWeekStorage } from "./app/useWeekStorage";
@@ -355,6 +356,14 @@ export const App = () => {
     isDemo,
     showSuccess
   });
+  const ticketDetails = useTicketDetails({
+    settings,
+    isDemo,
+    weekState,
+    syncResult,
+    tickets,
+    selectedTicket
+  });
 
   useAppLifecycleEffects({
     isDemo,
@@ -437,6 +446,21 @@ export const App = () => {
           onDeletePersonalNote={handleDeletePersonalNote}
           getRecurringCandidates={recurringCandidatesForDate}
           onLogRecurring={handleConfirmRecurring}
+          ticketDetailsDialog={
+            ticketDetails.issueKey
+              ? {
+                  issueKey: ticketDetails.issueKey,
+                  details: ticketDetails.details,
+                  localDetails: ticketDetails.localDetails,
+                  weekLoggedSeconds: ticketDetails.weekLoggedSeconds,
+                  weekWorklogCount: ticketDetails.weekWorklogCount,
+                  weekRangeLabel: weekState.weekRangeLabel,
+                  isLoading: ticketDetails.isLoading,
+                  error: ticketDetails.error
+                }
+              : undefined
+          }
+          onCloseTicketDetails={ticketDetails.closeTicketDetails}
           releaseNotesDialogInfo={releaseNotesDialogInfo}
           onCloseReleaseNotes={closeReleaseNotes}
           onDownloadUpdate={downloadCurrentUpdate}
@@ -534,6 +558,7 @@ export const App = () => {
         handleSkipRecurring={handleSkipRecurring}
         handleDeleteRecurringOccurrence={handleDeleteRecurringOccurrence}
         openSettings={openAiSettings}
+        openTicketDetails={ticketDetails.openTicketDetails}
         settingsSection={settingsSection}
         syncState={syncState}
         syncLabel={syncLabel}

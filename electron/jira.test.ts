@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { searchJiraTickets } from "./jira";
+import { fetchJiraIssueDetails, searchJiraTickets } from "./jira";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -33,6 +33,14 @@ const jiraSearchResponse = (issues: unknown[] = []) =>
       }
     }
   );
+
+const jsonResponse = (body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json"
+    }
+  });
 
 describe("searchJiraTickets", () => {
   afterEach(() => {
@@ -139,6 +147,88 @@ describe("searchJiraTickets", () => {
       statusName: "Refused",
       statusCategory: "done",
       assigneeDisplayName: "Sam Rivera"
+    });
+  });
+});
+
+describe("fetchJiraIssueDetails", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("requests Jira issue basics and sums only the current user's worklogs", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77") {
+        return jsonResponse({
+          id: "10001",
+          key: "OPS-77",
+          fields: {
+            summary: "Pair on incident review notes",
+            description: {
+              type: "doc",
+              version: 1,
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Write the incident follow-up." }]
+                }
+              ]
+            },
+            aggregatetimespent: 12_600,
+            project: { key: "OPS", name: "Operations" },
+            status: {
+              name: "In Progress",
+              statusCategory: { key: "indeterminate" }
+            },
+            assignee: { displayName: "Sam Rivera" },
+            issuetype: { name: "Task", hierarchyLevel: 0 }
+          }
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/worklog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 3,
+          worklogs: [
+            { id: "1", author: { accountId: "me" }, started: "2026-06-22T09:00:00.000+0000", timeSpentSeconds: 3600 },
+            { id: "2", author: { accountId: "other" }, started: "2026-06-22T10:00:00.000+0000", timeSpentSeconds: 7200 },
+            { id: "3", author: { accountId: "me" }, started: "2026-06-23T09:00:00.000+0000", timeSpentSeconds: 1800 }
+          ]
+        });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchJiraIssueDetails({ settings, issueKey: "ops-77" });
+    const issueRequest = fetchMock.mock.calls
+      .map((call) => new URL(String(call[0])))
+      .find((url) => url.pathname === "/rest/api/3/issue/OPS-77");
+
+    expect(issueRequest?.searchParams.get("fields")?.split(",")).toContain("description");
+    expect(result).toMatchObject({
+      key: "OPS-77",
+      summary: "Pair on incident review notes",
+      description: "Write the incident follow-up.",
+      descriptionAdf: {
+        type: "doc",
+        version: 1
+      },
+      statusName: "In Progress",
+      statusCategory: "indeterminate",
+      assigneeDisplayName: "Sam Rivera",
+      loggedSecondsTotal: 12_600,
+      myLoggedSecondsTotal: 5400,
+      myWorklogCount: 2
     });
   });
 });

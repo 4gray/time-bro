@@ -12,6 +12,8 @@ import type {
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
+  IssueDetailsRequest,
+  IssueDetailsResult,
   JiraConnectionResult,
   OllamaGenerateRequest,
   OllamaGenerateResult,
@@ -48,6 +50,9 @@ const timeBroApi = {
   },
   searchJiraTickets: (request: SearchTicketsRequest): Promise<SearchTicketsResult> => {
     return ipcRenderer.invoke("jira:search-tickets", request);
+  },
+  fetchJiraIssueDetails: (request: IssueDetailsRequest): Promise<IssueDetailsResult> => {
+    return ipcRenderer.invoke("jira:fetch-issue-details", request);
   },
   addWorklog: (request: AddWorklogRequest): Promise<AddWorklogResult> => {
     return ipcRenderer.invoke("jira:add-worklog", request);

@@ -6,6 +6,7 @@ import {
   addWorklog,
   deleteWorklog,
   fetchAssignedTickets,
+  fetchJiraIssueDetails,
   searchJiraTickets,
   testJiraConnection,
   syncJiraWorklogs,
@@ -28,6 +29,7 @@ import type {
   AppSettings,
   BitbucketReviewSyncRequest,
   DeleteWorklogRequest,
+  IssueDetailsRequest,
   OllamaGenerateRequest,
   OllamaListModelsRequest,
   OpenReleasePageResult,
@@ -160,6 +162,10 @@ ipcMain.handle("jira:fetch-tickets", (_event, request: TicketsRequest) => {
 
 ipcMain.handle("jira:search-tickets", (_event, request: SearchTicketsRequest) => {
   return searchJiraTickets(request);
+});
+
+ipcMain.handle("jira:fetch-issue-details", (_event, request: IssueDetailsRequest) => {
+  return fetchJiraIssueDetails(request);
 });
 
 ipcMain.handle("jira:add-worklog", (_event, request: AddWorklogRequest) => {

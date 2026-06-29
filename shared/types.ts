@@ -242,6 +242,13 @@ export interface JiraTicket {
   url: string;
 }
 
+export interface JiraIssueDetails extends JiraTicket {
+  description?: string;
+  descriptionAdf?: unknown;
+  myLoggedSecondsTotal: number;
+  myWorklogCount: number;
+}
+
 export interface PersonalNote {
   id: string;
   weekKey: string;
@@ -340,6 +347,13 @@ export interface SearchTicketsResult {
   query: string;
   issues: JiraTicket[];
 }
+
+export interface IssueDetailsRequest {
+  settings: AppSettings;
+  issueKey: string;
+}
+
+export type IssueDetailsResult = JiraIssueDetails;
 
 export interface AddWorklogRequest {
   settings: AppSettings;

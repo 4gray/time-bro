@@ -11,6 +11,8 @@ import type {
   BitbucketReviewSyncResult,
   DeleteWorklogRequest,
   DeleteWorklogResult,
+  IssueDetailsRequest,
+  IssueDetailsResult,
   JiraConnectionResult,
   OllamaGenerateRequest,
   OllamaGenerateResult,
@@ -138,6 +140,16 @@ export const nativeApi = {
     }
 
     return bridge.searchJiraTickets(request);
+  },
+
+  fetchJiraIssueDetails(request: IssueDetailsRequest): Promise<IssueDetailsResult> {
+    const bridge = getNativeBridge();
+
+    if (!bridge) {
+      return Promise.reject(new Error("Open the Electron app to fetch Jira issue details."));
+    }
+
+    return bridge.fetchJiraIssueDetails(request);
   },
 
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult> {
