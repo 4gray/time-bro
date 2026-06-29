@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "renderer",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5273", "--strictPort"],
-      "port": 5273
+      "name": "landing",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "http-server", "docs", "-p", "4399", "-c-1"],
+      "port": 4399
     }
   ]
 }
