@@ -6,8 +6,33 @@ interface ReleaseNotesMarkdownProps {
 }
 
 const GITHUB_REPOSITORY_URL = GITHUB_RELEASES_URL.replace(/\/releases$/, "");
+const GITHUB_RAW_REPOSITORY_URL = GITHUB_RAW_MAIN_URL.replace(/\/main\/$/, "/");
 
 const normalizeRelativePath = (path: string) => path.trim().replace(/^\.?\//, "").replace(/^\/+/, "");
+
+const isSafeGitHubImageUrl = (url: URL) => {
+  if (url.protocol !== "https:") {
+    return false;
+  }
+
+  if (url.hostname === "raw.githubusercontent.com") {
+    return url.toString().startsWith(GITHUB_RAW_REPOSITORY_URL);
+  }
+
+  if (url.hostname === "github.com") {
+    return (
+      url.pathname.startsWith(new URL(`${GITHUB_REPOSITORY_URL}/releases/download/`).pathname) ||
+      url.pathname.startsWith(new URL(`${GITHUB_REPOSITORY_URL}/assets/`).pathname) ||
+      url.pathname.startsWith("/user-attachments/assets/")
+    );
+  }
+
+  return (
+    url.hostname === "user-images.githubusercontent.com" ||
+    (url.hostname === "objects.githubusercontent.com" &&
+      url.pathname.startsWith("/github-production-release-asset-"))
+  );
+};
 
 const getSafeMarkdownUrl = (candidate: string, kind: "image" | "link") => {
   const trimmed = candidate.trim();
@@ -33,7 +58,7 @@ const getSafeMarkdownUrl = (candidate: string, kind: "image" | "link") => {
   try {
     const url = new URL(trimmed);
     if (kind === "image") {
-      return url.protocol === "https:" ? url.toString() : undefined;
+      return isSafeGitHubImageUrl(url) ? url.toString() : undefined;
     }
 
     return url.protocol === "https:" || url.protocol === "mailto:" ? url.toString() : undefined;
@@ -56,7 +81,9 @@ const parseInline = (text: string): ReactNode[] => {
     }
 
     if (match[1] !== undefined) {
-      const src = getSafeMarkdownUrl(match[2] ?? "", "image");
+      const rawImageUrl = match[2] ?? "";
+      const src = getSafeMarkdownUrl(rawImageUrl, "image");
+      const fallbackHref = getSafeMarkdownUrl(rawImageUrl, "link");
       nodes.push(
         src ? (
           <img
@@ -67,6 +94,10 @@ const parseInline = (text: string): ReactNode[] => {
             loading="lazy"
             decoding="async"
           />
+        ) : fallbackHref ? (
+          <a key={`image-link-${index}`} href={fallbackHref} target="_blank" rel="noreferrer">
+            {match[1] || fallbackHref}
+          </a>
         ) : (
           match[1]
         )

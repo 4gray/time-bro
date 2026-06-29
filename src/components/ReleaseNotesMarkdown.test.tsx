@@ -14,6 +14,8 @@ describe("ReleaseNotesMarkdown", () => {
           "- Keep `screenshots` tidy.",
           "",
           "![Week screenshot](screenshots/v1.4.0/dark-week.png)",
+          "![GitHub attachment](https://github.com/user-attachments/assets/abc123)",
+          "![Tracking pixel](https://third-party.example/pixel.png)",
           "",
           "[Release](https://github.com/4gray/time-bro/releases/tag/v1.4.0)",
           "[Unsafe](javascript:alert(1))",
@@ -27,6 +29,9 @@ describe("ReleaseNotesMarkdown", () => {
     expect(markup).toContain("<code>screenshots</code>");
     expect(markup).toContain(`${GITHUB_RAW_MAIN_URL}screenshots/v1.4.0/dark-week.png`);
     expect(markup).toContain('class="release-notes-image"');
+    expect(markup).toContain('src="https://github.com/user-attachments/assets/abc123"');
+    expect(markup).not.toContain('src="https://third-party.example/pixel.png"');
+    expect(markup).toContain('href="https://third-party.example/pixel.png"');
     expect(markup).toContain('href="https://github.com/4gray/time-bro/releases/tag/v1.4.0"');
     expect(markup).not.toContain("javascript:alert");
     expect(markup).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
