@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote, RecurringEvent } from "../../shared/types";
+import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory, RecurringEvent } from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import {
   AddTimeDurationPicker,
@@ -45,12 +45,14 @@ export interface AddTimeModalProps {
     text: string;
     timeSpentSeconds: number;
     startedISO: string;
+    category?: PersonalNoteCategory;
   }) => Promise<boolean>;
   onUpdatePersonalNote?: (payload: {
     title?: string;
     text: string;
     timeSpentSeconds: number;
     startedISO: string;
+    category?: PersonalNoteCategory;
   }) => Promise<boolean>;
   /** Returns the recurring events scheduled on a day that are not yet logged. */
   getRecurringCandidates?: (dateKey: string) => RecurringEvent[];
@@ -201,6 +203,9 @@ export const AddTimeModal = ({
   const [note, setNote] = useState(editingWorklog?.comment ?? "");
   const [personalNoteTitle, setPersonalNoteTitle] = useState(editingPersonalNote?.title ?? "");
   const [personalNote, setPersonalNote] = useState(editingPersonalNote?.text ?? "");
+  const [personalNoteCategory, setPersonalNoteCategory] = useState<PersonalNoteCategory>(
+    editingPersonalNote?.category ?? "firefighting"
+  );
   const [personalNoteSeconds, setPersonalNoteSeconds] = useState(initialPersonalSeconds);
   const [personalDurationMode, setPersonalDurationMode] = useState<DurationMode>(initialPersonalPreset ? "preset" : "custom");
   const [personalCustomAmount, setPersonalCustomAmount] = useState(customHoursAmount(initialPersonalSeconds));
@@ -286,7 +291,8 @@ export const AddTimeModal = ({
         title: personalNoteTitle,
         text: personalNote,
         timeSpentSeconds: personalNoteSeconds,
-        startedISO
+        startedISO,
+        category: personalNoteCategory
       });
       if (ok) {
         setPersonalNoteTitle("");
@@ -352,6 +358,7 @@ export const AddTimeModal = ({
     setNote(editingWorklog?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
+    setPersonalNoteCategory(editingPersonalNote?.category ?? "firefighting");
     setPersonalNoteSeconds(localNoteSeconds);
     setPersonalDurationMode(hasPersonalPreset ? "preset" : "custom");
     setPersonalCustomAmount(customHoursAmount(localNoteSeconds));
@@ -585,6 +592,31 @@ export const AddTimeModal = ({
                 onChange={(event) => setPersonalNote(event.target.value)}
                 rows={4}
               />
+              <div className="personal-note-section">
+                <div className="modal-label">TYPE</div>
+                <div className="note-category-tabs" role="radiogroup" aria-label="Note type">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={personalNoteCategory === "firefighting"}
+                    className={`is-fire ${personalNoteCategory === "firefighting" ? "active" : ""}`}
+                    onClick={() => setPersonalNoteCategory("firefighting")}
+                  >
+                    <span className="ring-legend-dot" style={{ background: "var(--ring-fire)" }} />
+                    Firefighting
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={personalNoteCategory === "meeting"}
+                    className={`is-meeting ${personalNoteCategory === "meeting" ? "active" : ""}`}
+                    onClick={() => setPersonalNoteCategory("meeting")}
+                  >
+                    <span className="ring-legend-dot" style={{ background: "var(--ring-meeting)" }} />
+                    Meeting
+                  </button>
+                </div>
+              </div>
               <div className="personal-note-section">
                 <div className="modal-label">
                   <Calendar size={13} strokeWidth={1.8} />

@@ -16,6 +16,10 @@
   margin-top: 4px;
 }
 
+.reports-ring-legend {
+  margin-top: 12px;
+}
+
 .reports-header .big-figure {
   font-size: var(--figure-standard);
   line-height: 1;

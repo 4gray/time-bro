@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AppSettings, SyncResult, WeekState } from "../../shared/types";
+import type { AppSettings, PersonalNote, SyncResult, WeekState } from "../../shared/types";
 import { buildWeekState, DEFAULT_SETTINGS } from "./week";
 import { buildMonthState, getMonthAnchor, getMonthWeekStarts } from "./month";
 import { toLocalDateKey } from "../utils/date";
@@ -144,5 +144,39 @@ describe("month calculations", () => {
     ]);
     expect(month.weeks.every((week) => week.days.length === 1)).toBe(true);
     expect(month.targetHours).toBe(32);
+  });
+
+  it("carries a per-category ring breakdown onto each in-month day", () => {
+    const weekStart = new Date(2026, 5, 15, 12);
+    const today = new Date(2026, 5, 17, 12);
+    const stamp = "2026-06-15T10:00:00.000Z";
+    const sync: SyncResult = {
+      weekKey: "2026-06-15",
+      weekStartISO: weekStart.toISOString(),
+      weekEndExclusiveISO: weekStart.toISOString(),
+      syncedAt: today.toISOString(),
+      accountId: "test-account",
+      trackedSeconds: 7200,
+      worklogCount: 1,
+      issueCount: 1,
+      daySummaries: {
+        "2026-06-15": {
+          trackedSeconds: 7200,
+          issues: [{ id: "i", key: "ABC-1", summary: "s", loggedSeconds: 7200 }],
+          worklogs: []
+        }
+      }
+    };
+    const notes: PersonalNote[] = [
+      { id: "n1", weekKey: "2026-06-15", dateKey: "2026-06-15", text: "1:1", timeSpentSeconds: 1800, startedISO: stamp, category: "meeting", createdAt: stamp, updatedAt: stamp },
+      { id: "n2", weekKey: "2026-06-15", dateKey: "2026-06-15", text: "incident", timeSpentSeconds: 900, startedISO: stamp, category: "firefighting", createdAt: stamp, updatedAt: stamp }
+    ];
+    const week = buildWeekState(weekStart, DEFAULT_SETTINGS, { weekKey: "2026-06-15", skippedDates: [] }, sync, notes, today);
+    const month = buildMonthState(getMonthAnchor(JUNE), today, DEFAULT_SETTINGS, [week]);
+    const cell = month.weeks.flatMap((w) => w.days).find((day) => day.dateKey === "2026-06-15");
+
+    expect(cell?.ticketHours).toBe(2);
+    expect(cell?.meetingHours).toBe(0.5); // meeting-tagged note
+    expect(cell?.fireHours).toBe(0.25); // firefighting note
   });
 });

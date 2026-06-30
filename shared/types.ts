@@ -249,6 +249,13 @@ export interface JiraIssueDetails extends JiraTicket {
   myWorklogCount: number;
 }
 
+/**
+ * How a personal note counts toward the day rings. "meeting" pulls the note into
+ * the Meetings ring (ad-hoc syncs, 1:1s, interviews) instead of leaving it in
+ * the catch-all; anything else (including undefined) stays "firefighting".
+ */
+export type PersonalNoteCategory = "meeting" | "firefighting";
+
 export interface PersonalNote {
   id: string;
   weekKey: string;
@@ -258,6 +265,8 @@ export interface PersonalNote {
   text: string;
   timeSpentSeconds: number;
   startedISO: string;
+  /** Ring bucket for this note. Undefined is treated as "firefighting". */
+  category?: PersonalNoteCategory;
   createdAt: string;
   updatedAt: string;
 }

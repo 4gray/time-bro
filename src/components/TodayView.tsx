@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calendar, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory } from "../../shared/types";
 import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
-import { ProgressRing } from "./ProgressRing";
+import { activitySegments } from "../domain/activity";
+import { DayRing } from "./DayRing";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -19,6 +20,7 @@ interface PersonalNotePayload {
   text: string;
   timeSpentSeconds: number;
   startedISO: string;
+  category?: PersonalNoteCategory;
 }
 
 interface TodayViewProps {
@@ -87,6 +89,7 @@ export const TodayView = ({
   const [worklogComment, setWorklogComment] = useState("");
   const [personalNoteTitle, setPersonalNoteTitle] = useState("");
   const [personalNoteText, setPersonalNoteText] = useState("");
+  const [personalNoteCategory, setPersonalNoteCategory] = useState<PersonalNoteCategory>("firefighting");
 
   useEffect(() => {
     if (selectedTicket?.key) {
@@ -110,6 +113,22 @@ export const TodayView = ({
   const meterPct = dailyTargetHours > 0 ? Math.min((todayTrackedHours / dailyTargetHours) * 100, 100) : 0;
   const trackedH = Math.floor(todayTrackedHours);
   const trackedM = Math.round((todayTrackedHours - trackedH) * 60);
+
+  // The day's three rings. Tickets come from worklogs; notes split by category
+  // (meeting-tagged ones join the recurring rituals in Meetings, the rest are
+  // firefighting); recurring meetings are the tracked remainder on top.
+  const ticketSeconds = todayWorklogs.reduce((sum, worklog) => sum + worklog.timeSpentSeconds, 0);
+  const meetingNoteSeconds = personalNotes.reduce(
+    (sum, note) => sum + (note.category === "meeting" ? note.timeSpentSeconds : 0),
+    0
+  );
+  const fireSeconds = personalNotes.reduce(
+    (sum, note) => sum + (note.category === "meeting" ? 0 : note.timeSpentSeconds),
+    0
+  );
+  const recurringSeconds = Math.max(0, todayTrackedHours * 3600 - ticketSeconds - meetingNoteSeconds - fireSeconds);
+  const meetingSeconds = recurringSeconds + meetingNoteSeconds;
+  const ringSegments = activitySegments({ ticket: ticketSeconds, meeting: meetingSeconds, fire: fireSeconds });
 
   const applyDuration = (seconds: number) => {
     setDurationSeconds(seconds);
@@ -146,7 +165,8 @@ export const TodayView = ({
         title: personalNoteTitle,
         text: personalNoteText,
         timeSpentSeconds: durationSeconds,
-        startedISO
+        startedISO,
+        category: personalNoteCategory
       });
       if (ok) {
         setPersonalNoteTitle("");
@@ -182,7 +202,16 @@ export const TodayView = ({
     <div className="view view-scroll">
       <div className="today-header">
         <div className="week-headline">
-          <ProgressRing pct={meterPct} ariaLabel={`${Math.round(meterPct)} percent of daily target`} />
+          <DayRing
+            className="day-ring--hero"
+            segments={ringSegments}
+            targetHours={dailyTargetHours}
+            size={88}
+            stroke={11}
+            ariaLabel={`${Math.round(meterPct)} percent of daily target`}
+          >
+            <span className="day-ring-num">{todayDate.getDate()}</span>
+          </DayRing>
           <div>
             <div className="eyebrow">
               {new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" })
@@ -200,6 +229,15 @@ export const TodayView = ({
                 <div className="today-meta-label">LOGGED OF {formatHours(dailyTargetHours)}</div>
                 <div className="meter-text">{formatClock(remainingHours * 3600)} left</div>
               </div>
+            </div>
+            <div className="ring-legend today-ring-legend">
+              {ringSegments.map((segment) => (
+                <span key={segment.key} className={`ring-legend-item${segment.hours <= 0 ? " is-zero" : ""}`}>
+                  <span className="ring-legend-dot" style={{ background: segment.color }} />
+                  {segment.label}
+                  <span className="ring-legend-hours">{formatDuration(segment.hours)}</span>
+                </span>
+              ))}
             </div>
           </div>
         </div>
@@ -242,13 +280,38 @@ export const TodayView = ({
               />
             </>
           ) : (
-            <div className="today-local-target">
-              <span>
-                <PenLine size={13} strokeWidth={1.9} />
-                LOCAL
-              </span>
-              <strong>Personal note</strong>
-            </div>
+            <>
+              <div className="today-local-target">
+                <span>
+                  <PenLine size={13} strokeWidth={1.9} />
+                  LOCAL
+                </span>
+                <strong>Personal note</strong>
+              </div>
+              <div className="field-label composer-section compact">TYPE</div>
+              <div className="note-category-tabs" role="radiogroup" aria-label="Note type">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={personalNoteCategory === "firefighting"}
+                  className={`is-fire ${personalNoteCategory === "firefighting" ? "active" : ""}`}
+                  onClick={() => setPersonalNoteCategory("firefighting")}
+                >
+                  <span className="ring-legend-dot" style={{ background: "var(--ring-fire)" }} />
+                  Firefighting
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={personalNoteCategory === "meeting"}
+                  className={`is-meeting ${personalNoteCategory === "meeting" ? "active" : ""}`}
+                  onClick={() => setPersonalNoteCategory("meeting")}
+                >
+                  <span className="ring-legend-dot" style={{ background: "var(--ring-meeting)" }} />
+                  Meeting
+                </button>
+              </div>
+            </>
           )}
 
           <div className="field-label composer-section">DURATION</div>

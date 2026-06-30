@@ -69,10 +69,12 @@ export const App = () => {
     demoScenario
   });
   const { syncResult, setSyncResult, personalNotes, setPersonalNotes } = useAppWeekDataState({
-    demoSyncResult: demoScenario?.syncResult
+    demoSyncResult: demoScenario?.syncResult,
+    demoPersonalNotes: demoScenario?.personalNotes
   });
   const { recurringEvents, setRecurringEvents, recurringOccurrences, setRecurringOccurrences } = useAppRecurringState({
-    isDemo
+    isDemo,
+    demoRecurringOccurrences: demoScenario?.recurringOccurrences
   });
   const { reviewTargetMode, setReviewTargetMode } = useAppReviewTargetState();
   const { snackbars, dismissSnackbar, showSnackbar, showSuccess, showError, showInfo } = useSnackbars();

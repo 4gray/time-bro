@@ -7,6 +7,9 @@ import type {
   JiraIssueTypeInfo,
   JiraTicket,
   JiraWorklog,
+  PersonalNote,
+  PersonalNoteCategory,
+  RecurringOccurrence,
   SyncDayBucket,
   SyncResult,
   TicketsResult,
@@ -25,6 +28,10 @@ export interface DemoScenario {
   tickets: TicketsResult;
   favoriteKeys: string[];
   selectedTicket?: JiraTicket;
+  /** Local-only firefighting notes — populate the day rings' coral arc. */
+  personalNotes: PersonalNote[];
+  /** Confirmed recurring rituals — populate the day rings' meeting arc. */
+  recurringOccurrences: RecurringOccurrence[];
 }
 
 const DEMO_JIRA_BASE_URL = "https://timebro-demo.example.test";
@@ -790,9 +797,95 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     })
   ];
 
+  const noteAt = (
+    id: string,
+    dateKey: string,
+    time: string,
+    durationSeconds: number,
+    title: string,
+    text: string,
+    category?: PersonalNoteCategory
+  ): PersonalNote => {
+    const startedISO = localStartISO(dateKey, time);
+    return {
+      id,
+      weekKey: mondayKey,
+      dateKey,
+      title,
+      text,
+      timeSpentSeconds: durationSeconds,
+      startedISO,
+      category,
+      createdAt: startedISO,
+      updatedAt: startedISO
+    };
+  };
+
+  const occurrenceAt = (eventId: string, dateKey: string, durationSeconds: number): RecurringOccurrence => {
+    const stamp = localStartISO(dateKey, "09:00");
+    return {
+      eventId,
+      weekKey: mondayKey,
+      dateKey,
+      status: "confirmed",
+      timeSpentSeconds: durationSeconds,
+      createdAt: stamp,
+      updatedAt: stamp
+    };
+  };
+
+  // Firefighting — the untracked-but-real work that fills each day's coral arc.
+  const personalNotes: PersonalNote[] = [
+    noteAt(
+      "demo-note-1",
+      mondayKey,
+      "11:05",
+      seconds(0, 45),
+      "Prod incident triage",
+      "Paged on the sync outage — traced it to the stale worklog window and filed the fix."
+    ),
+    noteAt(
+      "demo-note-2",
+      tuesdayKey,
+      "14:20",
+      seconds(0, 40),
+      "Pairing & mentoring",
+      "Paired with a teammate on the ticket-picker refactor.",
+      "meeting"
+    ),
+    noteAt(
+      "demo-note-3",
+      todayKey,
+      "13:15",
+      seconds(0, 35),
+      "Slack firefighting",
+      "Unblocked two threads and answered a release question."
+    ),
+    noteAt(
+      "demo-note-4",
+      todayKey,
+      "16:05",
+      seconds(0, 25),
+      "Ops review",
+      "Walked ops through the reconstruction flow.",
+      "meeting"
+    )
+  ];
+
+  // Meetings — confirmed recurring rituals that fill each day's purple arc.
+  const recurringOccurrences: RecurringOccurrence[] = [
+    occurrenceAt("rec-daily", mondayKey, seconds(0, 15)),
+    occurrenceAt("rec-plan", mondayKey, seconds(1)),
+    occurrenceAt("rec-daily", tuesdayKey, seconds(0, 15)),
+    occurrenceAt("rec-daily", todayKey, seconds(0, 15)),
+    occurrenceAt("rec-refine", todayKey, seconds(0, 45))
+  ];
+
   return {
     today,
     weekStart,
+    personalNotes,
+    recurringOccurrences,
     settings: {
       jiraBaseUrl: DEMO_JIRA_BASE_URL,
       jiraEmail: "demo.user@example.test",

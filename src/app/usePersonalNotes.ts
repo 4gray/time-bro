@@ -1,5 +1,5 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
-import type { PersonalNote } from "../../shared/types";
+import type { PersonalNote, PersonalNoteCategory } from "../../shared/types";
 import {
   formatPersonalNoteCount,
   groupPersonalNotesByWeek,
@@ -20,6 +20,7 @@ export interface PersonalNotePayload {
   text: string;
   timeSpentSeconds: number;
   startedISO: string;
+  category?: PersonalNoteCategory;
 }
 
 interface UsePersonalNotesOptions {
@@ -141,6 +142,7 @@ export const usePersonalNotes = ({
         text: payload.text.trim(),
         timeSpentSeconds: Math.round(payload.timeSpentSeconds),
         startedISO: payload.startedISO,
+        category: payload.category,
         createdAt: now,
         updatedAt: now
       };
@@ -205,6 +207,7 @@ export const usePersonalNotes = ({
         text: payload.text.trim(),
         timeSpentSeconds: Math.round(payload.timeSpentSeconds),
         startedISO: payload.startedISO,
+        category: payload.category,
         updatedAt: new Date().toISOString()
       };
 

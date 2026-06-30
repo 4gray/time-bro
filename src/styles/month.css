@@ -185,6 +185,25 @@
   display: block;
 }
 
+.month-day.has-ring {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+}
+
+.month-day-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.month-day-ring {
+  flex: none;
+}
+
 .month-day.is-clickable {
   cursor: pointer;
   transition: border-color 150ms ease, transform 150ms ease;
@@ -443,6 +462,12 @@
   gap: 8px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.month-legend-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
 }
 
 .month-legend-swatch {

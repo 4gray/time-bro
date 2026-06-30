@@ -1,0 +1,142 @@
+/* ===================== ACTIVITY DAY RINGS ===================== */
+/* The day's three buckets. teal already means "Jira" across the app, so
+   tickets keep it; meetings borrow purple; firefighting takes a warm coral. */
+:root {
+  --ring-ticket: var(--teal);
+  --ring-meeting: var(--purple);
+  --ring-fire: #e8917e;
+}
+
+:root.theme-light {
+  --ring-fire: #cf5a33;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.theme-dark) {
+    --ring-fire: #cf5a33;
+  }
+}
+
+.day-ring {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+}
+
+.day-ring svg {
+  display: block;
+}
+
+.day-ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.day-ring-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text-bright);
+}
+
+.day-ring-pct {
+  font-size: 0.62em;
+  font-weight: 700;
+  color: var(--dim-2);
+}
+
+.day-ring--hero .day-ring-num {
+  font-size: 28px;
+}
+
+.day-ring--meter .day-ring-num {
+  font-size: 19px;
+}
+
+/* legend shared by Today + Reports headers */
+.ring-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.ring-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.ring-legend-item.is-zero {
+  opacity: 0.45;
+}
+
+.ring-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.ring-legend-hours {
+  color: var(--text-strong);
+  font-weight: 500;
+}
+
+/* note "type" selector (Today composer + Add Time modal) */
+.note-category-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.note-category-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.note-category-tabs button .ring-legend-dot {
+  opacity: 0.5;
+  transition: opacity 150ms ease;
+}
+
+.note-category-tabs button.active .ring-legend-dot {
+  opacity: 1;
+}
+
+.note-category-tabs button.active.is-fire {
+  color: var(--ring-fire);
+  background: color-mix(in srgb, var(--ring-fire) 15%, transparent);
+}
+
+.note-category-tabs button.active.is-meeting {
+  color: var(--ring-meeting);
+  background: color-mix(in srgb, var(--ring-meeting) 15%, transparent);
+}

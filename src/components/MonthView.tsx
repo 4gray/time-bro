@@ -1,6 +1,8 @@
 import { Search } from "lucide-react";
 import type { MonthState } from "../domain/month";
+import { activitySegmentsFromHours } from "../domain/activity";
 import { formatDuration, formatHours, fromLocalDateKey } from "../utils/date";
+import { DayRing } from "./DayRing";
 import { MonthNavigator } from "./MonthNavigator";
 import { ProgressRing } from "./ProgressRing";
 
@@ -149,19 +151,30 @@ export const MonthView = ({
                   <button
                     key={day.dateKey}
                     type="button"
-                    className={`month-day is-clickable status-${day.status}`}
+                    className={`month-day is-clickable has-ring status-${day.status}`}
                     onClick={() => onSelectWeek(fromLocalDateKey(day.dateKey))}
                     title={`${day.dateKey} — ${formatHours(day.trackedHours)} logged`}
                   >
-                    <div className="month-day-top">
+                    <div className="month-day-info">
                       <span className="month-day-num">{day.dayNumber}</span>
                       <span className="month-day-hours">
                         {day.status === "today" ? "TODAY" : formatHours(day.trackedHours)}
                       </span>
                     </div>
-                    <div className="month-day-track">
-                      <span className="month-day-fill" style={{ width: `${Math.max(day.fillPct, 4)}%` }} />
-                    </div>
+                    <DayRing
+                      className="month-day-ring"
+                      segments={activitySegmentsFromHours({
+                        ticket: day.ticketHours,
+                        meeting: day.meetingHours,
+                        fire: day.fireHours
+                      })}
+                      targetHours={day.targetHours || day.trackedHours}
+                      size={44}
+                      stroke={6}
+                      gapDegrees={0}
+                      trackColor="var(--line-soft)"
+                      ariaLabel={`${formatHours(day.trackedHours)} logged`}
+                    />
                   </button>
                 )
               )}
@@ -189,6 +202,16 @@ export const MonthView = ({
       </div>
 
       <div className="month-legend">
+        <span className="month-legend-item">
+          <span className="ring-legend-dot" style={{ background: "var(--ring-ticket)" }} /> tickets
+        </span>
+        <span className="month-legend-item">
+          <span className="ring-legend-dot" style={{ background: "var(--ring-meeting)" }} /> meetings
+        </span>
+        <span className="month-legend-item">
+          <span className="ring-legend-dot" style={{ background: "var(--ring-fire)" }} /> firefighting
+        </span>
+        <span className="month-legend-divider" />
         <span className="month-legend-item">
           <span className="month-legend-swatch status-full" /> on target (≥{Math.round(monthState.gapThresholdHours + 1)}h)
         </span>

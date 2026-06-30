@@ -3,11 +3,12 @@ import type { PersonalNote, SyncResult } from "../../shared/types";
 
 interface UseAppWeekDataStateOptions {
   demoSyncResult?: SyncResult;
+  demoPersonalNotes?: PersonalNote[];
 }
 
-export const useAppWeekDataState = ({ demoSyncResult }: UseAppWeekDataStateOptions = {}) => {
+export const useAppWeekDataState = ({ demoSyncResult, demoPersonalNotes }: UseAppWeekDataStateOptions = {}) => {
   const [syncResult, setSyncResult] = useState<SyncResult | undefined>(() => demoSyncResult);
-  const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>([]);
+  const [personalNotes, setPersonalNotes] = useState<PersonalNote[]>(() => demoPersonalNotes ?? []);
 
   return {
     syncResult,

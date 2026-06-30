@@ -33,6 +33,10 @@
   padding-bottom: 9px;
 }
 
+.today-ring-legend {
+  margin-top: 13px;
+}
+
 .today-meta-label {
   font-family: var(--font-mono);
   font-size: 11.5px;

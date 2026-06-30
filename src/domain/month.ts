@@ -1,5 +1,6 @@
 import type { AppSettings, WeekState, WeekdayNumber } from "../../shared/types";
 import { WEEKDAY_OPTIONS, normalizeWorkingDays } from "../../shared/weekdays";
+import { dayActivitySeconds } from "./activity";
 import {
   addDays,
   fromLocalDateKey,
@@ -27,6 +28,10 @@ export interface MonthDay {
   status: MonthDayStatus;
   /** Bar fill, 0–100, of tracked against the daily target. */
   fillPct: number;
+  /** Per-category hours that compose the day ring. */
+  ticketHours: number;
+  meetingHours: number;
+  fireHours: number;
 }
 
 export interface MonthWeek {
@@ -165,7 +170,10 @@ export const buildMonthState = (
             trackedHours: 0,
             targetHours: 0,
             status: "other",
-            fillPct: 0
+            fillPct: 0,
+            ticketHours: 0,
+            meetingHours: 0,
+            fireHours: 0
           };
         }
 
@@ -208,13 +216,18 @@ export const buildMonthState = (
           hoursToFill += Math.max(dailyTarget - day.trackedHours, 0);
         }
 
+        const activity = dayActivitySeconds(day);
+
         return {
           dateKey: day.dateKey,
           dayNumber,
           trackedHours: day.trackedHours,
           targetHours: dayTarget,
           status,
-          fillPct: dailyTarget > 0 ? Math.min(100, Math.round((day.trackedHours / dailyTarget) * 100)) : 0
+          fillPct: dailyTarget > 0 ? Math.min(100, Math.round((day.trackedHours / dailyTarget) * 100)) : 0,
+          ticketHours: activity.ticket / 3600,
+          meetingHours: activity.meeting / 3600,
+          fireHours: activity.fire / 3600
         };
       });
 

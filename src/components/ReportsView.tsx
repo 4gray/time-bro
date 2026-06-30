@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import type { JiraEpicInfo, JiraIssueTypeInfo, WeekState } from "../../shared/types";
+import { activitySegments, dayActivitySeconds, sumActivitySeconds } from "../domain/activity";
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
-import { ProgressRing } from "./ProgressRing";
+import { DayRing } from "./DayRing";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { WeekNavigator } from "./WeekNavigator";
 
@@ -108,11 +109,26 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
   const targetPct =
     weekState.weeklyTargetHours > 0 ? Math.min((total / weekState.weeklyTargetHours) * 100, 100) : 0;
 
+  // Where the week went, by category — the aggregate of every day's ring.
+  const weekRingSegments = activitySegments(sumActivitySeconds(weekState.days.map(dayActivitySeconds)));
+
   return (
     <div className="view view-scroll">
       <div className="reports-header">
         <div className="week-headline">
-          <ProgressRing pct={targetPct} ariaLabel={`${Math.round(targetPct)} percent of weekly target`} />
+          <DayRing
+            className="day-ring--meter"
+            segments={weekRingSegments}
+            targetHours={weekState.weeklyTargetHours}
+            size={78}
+            stroke={9}
+            ariaLabel={`${Math.round(targetPct)} percent of weekly target`}
+          >
+            <span className="day-ring-num">
+              {Math.round(targetPct)}
+              <span className="day-ring-pct">%</span>
+            </span>
+          </DayRing>
           <div>
             <div className="eyebrow">REPORTS — WEEK {weekNumber}</div>
             <div className="reports-figure-row">
@@ -128,6 +144,15 @@ export const ReportsView = ({ weekState, onPreviousWeek, onCurrentWeek, onNextWe
               ) : (
                 <span className="delta on">On target</span>
               )}
+            </div>
+            <div className="ring-legend reports-ring-legend">
+              {weekRingSegments.map((segment) => (
+                <span key={segment.key} className={`ring-legend-item${segment.hours <= 0 ? " is-zero" : ""}`}>
+                  <span className="ring-legend-dot" style={{ background: segment.color }} />
+                  {segment.label}
+                  <span className="ring-legend-hours">{formatDuration(segment.hours)}</span>
+                </span>
+              ))}
             </div>
           </div>
         </div>
