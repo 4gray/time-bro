@@ -18,6 +18,8 @@ export default defineConfig({
     port: 4173
   },
   test: {
-    exclude: ["dist/**", "dist-electron/**", "node_modules/**"]
+    // `**/` so nested node_modules (e.g. under .claude/worktrees/*) are excluded
+    // too, not just the top-level one — otherwise Vitest globs dependency specs.
+    exclude: ["dist/**", "dist-electron/**", "**/node_modules/**", ".claude/**"]
   }
 });
