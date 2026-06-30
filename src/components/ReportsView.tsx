@@ -12,6 +12,7 @@ import {
 import { formatDuration, formatHours, fromLocalDateKey, getIsoWeekNumber } from "../utils/date";
 import { DayRing } from "./DayRing";
 import { TicketKeyLink } from "./TicketKeyLink";
+import { TimeSplit } from "./TimeSplit";
 import { WeekNavigator } from "./WeekNavigator";
 
 interface ReportsViewProps {
@@ -410,6 +411,7 @@ export const ReportsView = ({ weekState, weekStates, onPreviousWeek, onCurrentWe
   const total = weekState.trackedWeekHours;
   const remaining = weekState.weeklyTargetHours - total;
   const billablePct = total > 0 ? Math.round((weekState.jiraTrackedWeekHours / total) * 100) : 0;
+  const localWeekHours = Math.max(total - weekState.jiraTrackedWeekHours, 0);
   const targetPct =
     weekState.weeklyTargetHours > 0 ? Math.min((total / weekState.weeklyTargetHours) * 100, 100) : 0;
 
@@ -449,6 +451,14 @@ export const ReportsView = ({ weekState, weekStates, onPreviousWeek, onCurrentWe
                 <span className="delta on">On target</span>
               )}
             </div>
+            {total > 0.01 && (
+              <TimeSplit
+                billableHours={weekState.jiraTrackedWeekHours}
+                localHours={localWeekHours}
+                size="lg"
+                className="reports-split"
+              />
+            )}
             <div className="ring-legend reports-ring-legend">
               {weekRingSegments.map((segment) => (
                 <span key={segment.key} className={`ring-legend-item${segment.hours <= 0 ? " is-zero" : ""}`}>

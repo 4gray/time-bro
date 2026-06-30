@@ -46,6 +46,31 @@ export const dayActivitySeconds = (day: DayTrackingSummary): ActivitySeconds => 
   };
 };
 
+/**
+ * The billable axis, orthogonal to the activity categories: ticket work is
+ * synced to Jira (billable), while meetings and firefighting live only locally
+ * (real, but not yet officially tracked). Surfaced so the UI can nudge toward
+ * getting every worked hour into Jira.
+ */
+export interface BillableSplit {
+  /** Hours synced to Jira worklogs — official / billable. */
+  billableHours: number;
+  /** Hours that exist only locally (notes + recurring) — not yet in Jira. */
+  localHours: number;
+  /** billableHours + localHours, for convenience. */
+  totalHours: number;
+}
+
+export const billableSplitFromSeconds = (seconds: ActivitySeconds): BillableSplit => {
+  const billableHours = seconds.ticket / 3600;
+  const localHours = (seconds.meeting + seconds.fire) / 3600;
+  return { billableHours, localHours, totalHours: billableHours + localHours };
+};
+
+/** Billable (Jira) vs local (not-yet-tracked) split for a single resolved day. */
+export const dayBillableSplit = (day: DayTrackingSummary): BillableSplit =>
+  billableSplitFromSeconds(dayActivitySeconds(day));
+
 /** Fold per-category seconds across many days (week / month aggregate). */
 export const sumActivitySeconds = (parts: ActivitySeconds[]): ActivitySeconds =>
   parts.reduce<ActivitySeconds>(

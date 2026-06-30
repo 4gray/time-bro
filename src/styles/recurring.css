@@ -5,9 +5,9 @@
    the EVENT eyebrow, title + text, and the dashed "local" left border. The
    only addition is a two-button (edit + delete) action group. */
 
-/* recurring time shares the neutral "local" segment treatment with notes */
+/* recurring time shares the "local / not yet in Jira" hatch with notes */
 .seg.is-recurring {
-  background: var(--border-strong);
+  background: var(--local-hatch);
 }
 
 .day-rec-entry.is-editing {

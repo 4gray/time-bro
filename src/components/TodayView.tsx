@@ -4,6 +4,7 @@ import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory } from
 import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { activitySegments } from "../domain/activity";
 import { DayRing } from "./DayRing";
+import { TimeSplit } from "./TimeSplit";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 import { TicketKeyLink } from "./TicketKeyLink";
 
@@ -130,6 +131,11 @@ export const TodayView = ({
   const meetingSeconds = recurringSeconds + meetingNoteSeconds;
   const ringSegments = activitySegments({ ticket: ticketSeconds, meeting: meetingSeconds, fire: fireSeconds });
 
+  // Billable (Jira worklogs) vs local (meetings + firefighting) — what's
+  // official versus what still needs to land in Jira.
+  const billableHours = ticketSeconds / 3600;
+  const localHours = Math.max(todayTrackedHours - billableHours, 0);
+
   const applyDuration = (seconds: number) => {
     setDurationSeconds(seconds);
     setDurationText(formatClock(seconds));
@@ -230,6 +236,14 @@ export const TodayView = ({
                 <div className="meter-text">{formatClock(remainingHours * 3600)} left</div>
               </div>
             </div>
+            {todayTrackedHours > 0.01 && (
+              <TimeSplit
+                billableHours={billableHours}
+                localHours={localHours}
+                size="lg"
+                className="today-split"
+              />
+            )}
             <div className="ring-legend today-ring-legend">
               {ringSegments.map((segment) => (
                 <span key={segment.key} className={`ring-legend-item${segment.hours <= 0 ? " is-zero" : ""}`}>

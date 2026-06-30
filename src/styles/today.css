@@ -37,6 +37,10 @@
   margin-top: 13px;
 }
 
+.today-split {
+  margin-top: 14px;
+}
+
 .today-meta-label {
   font-family: var(--font-mono);
   font-size: 11.5px;

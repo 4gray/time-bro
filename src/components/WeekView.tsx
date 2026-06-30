@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
+import { Ban, Check, CloudUpload, MessageSquare, Palmtree, Pencil, PenLine, Plus, Undo2 } from "lucide-react";
 import type {
   DayTrackingSummary,
   JiraTicket,
@@ -15,8 +15,10 @@ import {
   fromLocalDateKey,
   toLocalDateKey
 } from "../utils/date";
+import { dayActivitySeconds } from "../domain/activity";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
+import { TimeSplit } from "./TimeSplit";
 import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
 import { TicketKeyLink } from "./TicketKeyLink";
 import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
@@ -129,6 +131,14 @@ const DayColumn = ({
   const noteHours = day.personalNotes.reduce((sum, note) => sum + note.timeSpentSeconds / 3600, 0);
   const recurringHours = day.recurringEntries.reduce((sum, entry) => sum + entry.timeSpentSeconds / 3600, 0);
   const totalLogged = day.trackedHours;
+  // Billable (Jira worklogs) vs local (meetings + firefighting) — the same axis
+  // the day rings split on, surfaced as a glanceable "is it in Jira yet?" read.
+  const activity = dayActivitySeconds(day);
+  const billableHours = activity.ticket / 3600;
+  const meetingHours = activity.meeting / 3600;
+  const fireHours = activity.fire / 3600;
+  const localHours = meetingHours + fireHours;
+  const hasSplit = totalLogged > 0.01;
   const remaining = Math.max(day.targetHours - totalLogged, 0);
   const emptyColor = isFuture ? "var(--line-soft)" : "var(--line)";
   const canConfirmRecurring = Boolean(onConfirmRecurring && onSkipRecurring);
@@ -171,6 +181,18 @@ const DayColumn = ({
   };
   const closePop = () => setPop(null);
   const activeEntry = pop ? logEntries.find((entry) => entry.issue.key === pop.key && entry.hasPop) : undefined;
+
+  // Billable-split detail, rendered in a fixed portal like the worklog popover
+  // so it escapes the column's overflow:hidden clip.
+  const [splitPop, setSplitPop] = useState<{ left: number; bottom: number } | null>(null);
+  const openSplit = (anchor: HTMLElement) => {
+    const rect = anchor.getBoundingClientRect();
+    const width = 244;
+    const left = Math.min(Math.max(rect.left, 10), window.innerWidth - width - 10);
+    const bottom = window.innerHeight - rect.top + 9;
+    setSplitPop({ left, bottom });
+  };
+  const closeSplit = () => setSplitPop(null);
 
   return (
     <div
@@ -218,23 +240,39 @@ const DayColumn = ({
         </div>
       ) : (
         <>
-          <div className="day-hours">
-            <span className={`tracked ${trackedClass}`}>{formatHours(day.trackedHours)}</span>
-            <span className="target">/ {formatHours(day.targetHours)}</span>
-          </div>
+          <div
+            className="day-track"
+            tabIndex={hasSplit ? 0 : undefined}
+            onMouseEnter={hasSplit ? (event) => openSplit(event.currentTarget) : undefined}
+            onMouseLeave={hasSplit ? closeSplit : undefined}
+            onFocus={hasSplit ? (event) => openSplit(event.currentTarget) : undefined}
+            onBlur={hasSplit ? closeSplit : undefined}
+            aria-label={
+              hasSplit
+                ? `${formatDuration(billableHours)} billable in Jira, ${formatDuration(localHours)} local`
+                : undefined
+            }
+          >
+            <div className="day-hours">
+              <span className={`tracked ${trackedClass}`}>{formatHours(day.trackedHours)}</span>
+              <span className="target">/ {formatHours(day.targetHours)}</span>
+            </div>
 
-          <div className="seg-bar">
-            {day.issues.map((issue) => (
-              <span
-                key={issue.key}
-                className="seg"
-                style={{ flexGrow: Math.max(issue.loggedSeconds / 3600, 0.001), background: colorOf(issue.key).seg }}
-              />
-            ))}
-            {noteHours > 0.01 && <span className="seg is-local-note" style={{ flexGrow: noteHours }} />}
-            {recurringHours > 0.01 && <span className="seg is-recurring" style={{ flexGrow: recurringHours }} />}
-            {remaining > 0.01 && <span className="seg" style={{ flexGrow: remaining, background: emptyColor }} />}
-            {totalLogged < 0.01 && <span className="seg" style={{ flexGrow: day.targetHours || 8, background: emptyColor }} />}
+            <div className="seg-bar">
+              {day.issues.map((issue) => (
+                <span
+                  key={issue.key}
+                  className="seg"
+                  style={{ flexGrow: Math.max(issue.loggedSeconds / 3600, 0.001), background: colorOf(issue.key).seg }}
+                />
+              ))}
+              {noteHours > 0.01 && <span className="seg is-local-note" style={{ flexGrow: noteHours }} />}
+              {recurringHours > 0.01 && <span className="seg is-recurring" style={{ flexGrow: recurringHours }} />}
+              {remaining > 0.01 && <span className="seg" style={{ flexGrow: remaining, background: emptyColor }} />}
+              {totalLogged < 0.01 && <span className="seg" style={{ flexGrow: day.targetHours || 8, background: emptyColor }} />}
+            </div>
+
+            {hasSplit && <TimeSplit billableHours={billableHours} localHours={localHours} className="day-split" />}
           </div>
 
           {pendingRecurring.length > 0 && onConfirmRecurring && onSkipRecurring && (
@@ -397,6 +435,64 @@ const DayColumn = ({
                     <span>{comment}</span>
                   </div>
                 ))}
+          </div>,
+          document.body
+        )}
+
+      {splitPop &&
+        createPortal(
+          <div className="split-pop wl-pop-fixed" style={{ left: splitPop.left, bottom: splitPop.bottom }}>
+            <div className="split-pop-head">
+              <span className="split-pop-title">
+                {day.isToday ? "Today" : day.weekdayName} {date.getDate()}
+              </span>
+              <span className="split-pop-total">
+                {formatHours(day.trackedHours)} / {formatHours(day.targetHours)}
+              </span>
+            </div>
+            <div className="split-pop-row">
+              <span className="split-pop-dot is-billable" />
+              <span className="split-pop-label">
+                Billable <em>in Jira</em>
+              </span>
+              <span className="split-pop-val">{formatDuration(billableHours)}</span>
+            </div>
+            <div className="split-pop-row">
+              <span className="split-pop-dot is-local" />
+              <span className="split-pop-label">
+                Local <em>not synced</em>
+              </span>
+              <span className="split-pop-val is-local">{formatDuration(localHours)}</span>
+            </div>
+            {(meetingHours > 0.01 || fireHours > 0.01) && (
+              <div className="split-pop-sub">
+                {meetingHours > 0.01 && (
+                  <span>
+                    <span className="split-pop-dot is-meeting" />
+                    Meetings {formatDuration(meetingHours)}
+                  </span>
+                )}
+                {fireHours > 0.01 && (
+                  <span>
+                    <span className="split-pop-dot is-fire" />
+                    Firefighting {formatDuration(fireHours)}
+                  </span>
+                )}
+              </div>
+            )}
+            <div className={`split-pop-foot ${localHours > 0.01 ? "is-nudge" : "is-clear"}`}>
+              {localHours > 0.01 ? (
+                <>
+                  <CloudUpload size={14} strokeWidth={1.9} />
+                  <span>{formatDuration(localHours)} isn’t in Jira yet — log it to make the day fully billable.</span>
+                </>
+              ) : (
+                <>
+                  <Check size={14} strokeWidth={2.2} />
+                  <span>Every tracked hour is in Jira.</span>
+                </>
+              )}
+            </div>
           </div>,
           document.body
         )}

@@ -5,6 +5,12 @@
   --ring-ticket: var(--teal);
   --ring-meeting: var(--purple);
   --ring-fire: #e8917e;
+  /* "not yet in Jira" pending hatch — the local side of the billable split */
+  --local-hatch: repeating-linear-gradient(
+    115deg,
+    var(--amber) 0 2px,
+    color-mix(in srgb, var(--amber) 20%, transparent) 2px 5px
+  );
 }
 
 :root.theme-light {
@@ -93,6 +99,61 @@
 .ring-legend-hours {
   color: var(--text-strong);
   font-weight: 500;
+}
+
+/* ===== billable vs local split — the "is it official yet?" readout ===== */
+.time-split {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.time-split.is-lg {
+  font-size: 12.5px;
+  gap: 6px 16px;
+}
+
+.ts-billable,
+.ts-local {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ts-billable {
+  color: var(--muted);
+}
+
+.ts-billable.is-clear {
+  color: var(--green);
+}
+
+.ts-local {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.ts-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--teal);
+}
+
+.time-split.is-lg .ts-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.ts-icon {
+  flex: none;
 }
 
 /* note "type" selector (Today composer + Add Time modal) */

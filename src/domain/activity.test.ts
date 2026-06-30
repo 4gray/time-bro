@@ -3,7 +3,9 @@ import type { DayTrackingSummary, JiraIssueSummary, PersonalNote, RecurringEntry
 import {
   activitySegments,
   activitySegmentsFromHours,
+  billableSplitFromSeconds,
   dayActivitySeconds,
+  dayBillableSplit,
   ringSegmentFractions,
   sumActivitySeconds
 } from "./activity";
@@ -70,6 +72,34 @@ describe("dayActivitySeconds", () => {
     const result = dayActivitySeconds(day({ personalNotes: [note(600)] }));
     expect(result.meeting).toBe(0);
     expect(result.fire).toBe(600);
+  });
+});
+
+describe("billable split", () => {
+  it("counts ticket seconds as billable and meetings + firefighting as local", () => {
+    const split = billableSplitFromSeconds({ ticket: 3600 * 4, meeting: 3600, fire: 1800 });
+    expect(split.billableHours).toBe(4);
+    expect(split.localHours).toBe(1.5); // 1h meeting + 0.5h fire
+    expect(split.totalHours).toBe(5.5);
+  });
+
+  it("derives the day split from worklogs, recurring rituals and notes", () => {
+    const split = dayBillableSplit(
+      day({
+        issues: [issue(3600 * 4)],
+        recurringEntries: [recurring(1800)], // meeting → local
+        personalNotes: [note(3600, "firefighting")] // fire → local
+      })
+    );
+    expect(split.billableHours).toBe(4);
+    expect(split.localHours).toBe(1.5);
+    expect(split.totalHours).toBe(5.5);
+  });
+
+  it("reports a fully local day as zero billable", () => {
+    const split = dayBillableSplit(day({ personalNotes: [note(3600)] }));
+    expect(split.billableHours).toBe(0);
+    expect(split.localHours).toBe(1);
   });
 });
 

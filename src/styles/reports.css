@@ -20,6 +20,10 @@
   margin-top: 12px;
 }
 
+.reports-split {
+  margin-top: 13px;
+}
+
 .reports-header .big-figure {
   font-size: var(--figure-standard);
   line-height: 1;
