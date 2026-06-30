@@ -5,6 +5,7 @@ import {
   parseAiDrafts,
   type AiDrafts
 } from "../domain/enhancePrompt";
+import { RECAP_POLISH_SYSTEM_PROMPT, buildRecapPolishPrompt } from "../domain/recapPolishPrompt";
 import type { ReconstructDay } from "../domain/reconstruct";
 import { nativeApi } from "./native";
 
@@ -80,5 +81,32 @@ export const computeAiDrafts = async (day: ReconstructDay, connection: OllamaCon
     return parseAiDrafts(result.response);
   } catch {
     return EMPTY_AI_DRAFTS;
+  }
+};
+
+/**
+ * Rewrites the deterministic recap text into 2–3 spoken sentences via the local
+ * model. Every failure path — empty input, no bridge, `ok:false`, empty
+ * response, or a throw — returns the original `recapText` unchanged, so the
+ * caller always has the deterministic list. Never sends data off-device.
+ */
+export const polishRecap = async (recapText: string, connection: OllamaConnection): Promise<string> => {
+  if (!recapText.trim()) {
+    return recapText;
+  }
+  try {
+    const result = await nativeApi.generateWithOllama({
+      endpoint: connection.endpoint,
+      model: connection.model,
+      system: RECAP_POLISH_SYSTEM_PROMPT,
+      prompt: buildRecapPolishPrompt(recapText)
+      // No `format` — we want prose, not JSON.
+    });
+    if (!result.ok || !result.response) {
+      return recapText;
+    }
+    return result.response.trim() || recapText;
+  } catch {
+    return recapText;
   }
 };

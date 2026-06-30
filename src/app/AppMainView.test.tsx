@@ -95,6 +95,7 @@ const baseProps = (): AppMainViewProps => ({
   todayTrackedHours: 0,
   todayDailyTargetHours: 8,
   touchedNotLogged: [],
+  recapDaySummary: undefined,
   settings,
   settingsDraft: settings,
   isSettingsDirty: false,

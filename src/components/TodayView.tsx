@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calendar, Clock, Loader2, MessageSquare, Pencil, PenLine } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory } from "../../shared/types";
+import type {
+  AppSettings,
+  DayTrackingSummary,
+  JiraTicket,
+  JiraWorklog,
+  PersonalNote,
+  PersonalNoteCategory
+} from "../../shared/types";
 import { formatClock, formatDuration, formatHm24, formatHours, parseDurationToSeconds, toLocalDateKey } from "../utils/date";
 import { activitySegments } from "../domain/activity";
 import { DayRing } from "./DayRing";
+import { RecapCard } from "./RecapCard";
 import { TimeSplit } from "./TimeSplit";
 import { TicketPicker, type TicketSearchHandler } from "./TicketPicker";
 import { TicketKeyLink } from "./TicketKeyLink";
@@ -35,6 +43,10 @@ interface TodayViewProps {
   todayTrackedHours: number;
   dailyTargetHours: number;
   touchedNotLogged: JiraTicket[];
+  /** Previous working day's summary, for the rail recap card. */
+  recapDaySummary?: DayTrackingSummary;
+  /** App settings — the recap card reads the optional AI-polish config. */
+  settings: AppSettings;
   reminderTime: string;
   remindersEnabled: boolean;
   isConfigured: boolean;
@@ -70,6 +82,8 @@ export const TodayView = ({
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
+  recapDaySummary,
+  settings,
   reminderTime,
   remindersEnabled,
   isConfigured,
@@ -500,6 +514,7 @@ export const TodayView = ({
         </div>
 
         <aside className="today-rail">
+          <RecapCard daySummary={recapDaySummary} settings={settings} />
           <div className="rail-label">TOUCHED TODAY · NOT LOGGED</div>
           <div>
             {touchedNotLogged.length === 0 ? (

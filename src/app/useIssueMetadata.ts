@@ -35,6 +35,9 @@ export interface IssueMetadata {
   issueTypesByKey: Record<string, JiraIssueTypeInfo>;
   todayKey: string;
   todaySummary?: DayTrackingSummary;
+  /** Previous working day in the visible week (Tue–Fri). Undefined on the
+   * week's first working day — the cross-week case is resolved separately. */
+  prevDaySummary?: DayTrackingSummary;
   todayBucket?: SyncDayBucket;
   todayWorklogs: JiraWorklog[];
   todayPersonalNotes: PersonalNote[];
@@ -97,6 +100,14 @@ export const buildIssueMetadata = ({
 
   const todayKey = toLocalDateKey(currentDate);
   const todaySummary = weekState.days.find((day) => day.dateKey === todayKey);
+  // The previous working day within the visible week — the last configured,
+  // non-skipped day before today. `days` is weekday-ascending; empty on the
+  // week's first working day (the Monday → last-Friday case crosses the week
+  // boundary and is resolved separately).
+  const priorWorkingDays = weekState.days.filter(
+    (day) => day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey < todayKey
+  );
+  const prevDaySummary = priorWorkingDays[priorWorkingDays.length - 1];
   const todayBucket = visibleSyncResult?.daySummaries[todayKey];
   const todayWorklogs = todayBucket?.worklogs ?? EMPTY_WORKLOGS;
   const todayPersonalNotes =
@@ -114,6 +125,7 @@ export const buildIssueMetadata = ({
     issueTypesByKey,
     todayKey,
     todaySummary,
+    prevDaySummary,
     todayBucket,
     todayWorklogs,
     todayPersonalNotes,

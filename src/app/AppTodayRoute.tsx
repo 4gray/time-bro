@@ -14,6 +14,8 @@ export interface AppTodayRouteProps {
   todayTrackedHours: TodayViewProps["todayTrackedHours"];
   dailyTargetHours: TodayViewProps["dailyTargetHours"];
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
+  recapDaySummary: TodayViewProps["recapDaySummary"];
+  settings: TodayViewProps["settings"];
   reminderTime: TodayViewProps["reminderTime"];
   remindersEnabled: TodayViewProps["remindersEnabled"];
   isConfigured: TodayViewProps["isConfigured"];
@@ -37,6 +39,8 @@ export const AppTodayRoute = ({
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
+  recapDaySummary,
+  settings,
   reminderTime,
   remindersEnabled,
   isConfigured,
@@ -59,6 +63,8 @@ export const AppTodayRoute = ({
     todayTrackedHours={todayTrackedHours}
     dailyTargetHours={dailyTargetHours}
     touchedNotLogged={touchedNotLogged}
+    recapDaySummary={recapDaySummary}
+    settings={settings}
     reminderTime={reminderTime}
     remindersEnabled={remindersEnabled}
     isConfigured={isConfigured}

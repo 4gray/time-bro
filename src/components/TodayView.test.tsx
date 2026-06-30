@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { JiraTicket, JiraWorklog } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog } from "../../shared/types";
 import { formatHm24 } from "../utils/date";
 import { TodayView } from "./TodayView";
+
+const settings = { aiEnabled: false, ollamaEndpoint: "http://localhost:11434", ollamaModel: "llama3.1:8b" } as AppSettings;
 
 const ticket: JiraTicket = {
   id: "133470",
@@ -66,6 +68,7 @@ describe("TodayView", () => {
         todayTrackedHours={1}
         dailyTargetHours={8}
         touchedNotLogged={[touchedTicket]}
+        settings={settings}
         reminderTime="17:00"
         remindersEnabled={true}
         isConfigured={true}

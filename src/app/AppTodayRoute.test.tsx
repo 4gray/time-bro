@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog, PersonalNote } from "../../shared/types";
 import { AppTodayRoute, type AppTodayRouteProps } from "./AppTodayRoute";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -83,6 +83,8 @@ const note = {
 const noop = () => undefined;
 const asyncTrue = async () => true;
 
+const settings = { aiEnabled: false, ollamaEndpoint: "http://localhost:11434", ollamaModel: "llama3.1:8b" } as AppSettings;
+
 const baseProps = (): AppTodayRouteProps => ({
   currentDate,
   selectedTicket: ticket,
@@ -94,6 +96,8 @@ const baseProps = (): AppTodayRouteProps => ({
   todayTrackedHours: 5,
   dailyTargetHours: 8,
   touchedNotLogged: [ticket],
+  recapDaySummary: undefined,
+  settings,
   reminderTime: "17:30",
   remindersEnabled: true,
   isConfigured: true,
@@ -145,6 +149,12 @@ describe("AppTodayRoute", () => {
     expect(rendered?.getAttribute("data-logging")).toBe("true");
     expect(todayViewProps[0]?.issueUrlsByKey).toEqual({ "FTDM-101": ticket.url });
     expect(todayViewProps[0]?.touchedNotLogged).toEqual([ticket]);
+  });
+
+  it("forwards the previous working day's summary to TodayView", () => {
+    const recapDaySummary = { dateKey: "2026-06-16", trackedHours: 6 } as AppTodayRouteProps["recapDaySummary"];
+    renderRoute({ recapDaySummary });
+    expect(todayViewProps[0]?.recapDaySummary).toBe(recapDaySummary);
   });
 
   it("passes TodayView actions through unchanged", () => {

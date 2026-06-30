@@ -24,6 +24,7 @@ import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
 import { useMonthState } from "./app/useMonthState";
 import { usePersonalNotes } from "./app/usePersonalNotes";
+import { usePrevWorkingDay } from "./app/usePrevWorkingDay";
 import { useRecurringActions } from "./app/useRecurringActions";
 import { useReleaseUpdates } from "./app/useReleaseUpdates";
 import { useReportsHistory } from "./app/useReportsHistory";
@@ -243,6 +244,7 @@ export const App = () => {
     issueTypesByKey,
     todayKey,
     todaySummary,
+    prevDaySummary,
     todayWorklogs,
     todayPersonalNotes,
     todayTrackedHours,
@@ -256,6 +258,23 @@ export const App = () => {
     tickets,
     selectedTicket
   });
+
+  // Recap's previous working day: the in-week day when one exists (Tue–Fri),
+  // else the prior week's last working day (the Monday → last-Friday case).
+  const prevDayCrossWeek = usePrevWorkingDay({
+    isTodayView: view === "today",
+    isBooting,
+    currentDate,
+    settings,
+    visibleWeekState: weekState,
+    recurringEvents,
+    recurringOccurrences,
+    demoWeekStart: demoScenario?.weekStart,
+    demoWeekOverride: demoScenario?.weekOverride,
+    demoSyncResult: demoScenario?.syncResult,
+    onError: showError
+  });
+  const recapDaySummary = prevDaySummary ?? prevDayCrossWeek;
 
   const addTimeDateOptions = weekState.activeWorkingDates;
   const { isSyncing, runSync } = useJiraSync({
@@ -506,6 +525,7 @@ export const App = () => {
         todayTrackedHours={todayTrackedHours}
         todayDailyTargetHours={todaySummary?.targetHours ?? 0}
         touchedNotLogged={touchedNotLogged}
+        recapDaySummary={recapDaySummary}
         settings={settings}
         settingsDraft={settingsDraft}
         isSettingsDirty={isSettingsDirty}

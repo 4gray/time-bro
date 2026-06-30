@@ -33,6 +33,7 @@ export interface AppMainViewProps {
   todayTrackedHours: AppTodayRouteProps["todayTrackedHours"];
   todayDailyTargetHours: AppTodayRouteProps["dailyTargetHours"];
   touchedNotLogged: AppTodayRouteProps["touchedNotLogged"];
+  recapDaySummary: AppTodayRouteProps["recapDaySummary"];
   settings: AppReviewRouteProps["settings"];
   settingsDraft: AppSettingsRouteProps["settingsDraft"];
   isSettingsDirty: boolean;
@@ -123,6 +124,7 @@ export const AppMainView = ({
   todayTrackedHours,
   todayDailyTargetHours,
   touchedNotLogged,
+  recapDaySummary,
   settings,
   settingsDraft,
   isSettingsDirty,
@@ -216,6 +218,8 @@ export const AppMainView = ({
         todayTrackedHours={todayTrackedHours}
         dailyTargetHours={todayDailyTargetHours}
         touchedNotLogged={touchedNotLogged}
+        recapDaySummary={recapDaySummary}
+        settings={settings}
         reminderTime={settings.reminderTime}
         remindersEnabled={settings.remindersEnabled}
         isConfigured={isConfigured}
