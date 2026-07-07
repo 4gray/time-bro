@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   ReminderScheduleResult,
   SyncResult
 } from "../../shared/types";
@@ -57,6 +58,17 @@ const reviewResult: BitbucketReviewSyncResult = {
   sessions: []
 };
 
+const jiraActivityResult: JiraActivitySyncResult = {
+  weekKey: "2026-06-15",
+  weekStartISO: "2026-06-15T00:00:00.000Z",
+  weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+  syncedAt: "2026-06-17T12:00:00.000Z",
+  accountId: "account-1",
+  issueCount: 0,
+  activityCount: 0,
+  activities: []
+};
+
 const scheduledReminder: ReminderScheduleResult = {
   scheduled: true,
   reason: "scheduled",
@@ -78,6 +90,7 @@ interface HarnessProps {
 let container: HTMLDivElement;
 let root: Root;
 let runSync: ReturnType<typeof vi.fn<() => Promise<SyncResult | undefined>>>;
+let runJiraActivitySync: ReturnType<typeof vi.fn<() => Promise<JiraActivitySyncResult | undefined>>>;
 let runReviewSync: ReturnType<typeof vi.fn<() => Promise<BitbucketReviewSyncResult | undefined>>>;
 let scheduleReminder: ReturnType<typeof vi.fn<AppLifecycleClient["scheduleReminder"]>>;
 let client: AppLifecycleClient;
@@ -104,6 +117,7 @@ function Harness({
     remainingWeekHours,
     todayDateKey,
     runSync,
+    runJiraActivitySync,
     runReviewSync,
     client
   });
@@ -126,6 +140,7 @@ const flushAsyncEffects = async () => {
 
 beforeEach(() => {
   runSync = vi.fn(async () => syncResult);
+  runJiraActivitySync = vi.fn(async () => jiraActivityResult);
   runReviewSync = vi.fn(async () => reviewResult);
   scheduleReminder = vi.fn(async () => scheduledReminder);
   client = { scheduleReminder };
@@ -146,36 +161,43 @@ describe("useAppLifecycleEffects", () => {
     await flushAsyncEffects();
 
     expect(runSync).not.toHaveBeenCalled();
+    expect(runJiraActivitySync).not.toHaveBeenCalled();
     expect(runReviewSync).not.toHaveBeenCalled();
     expect(scheduleReminder).not.toHaveBeenCalled();
   });
 
-  it("waits for boot to finish, then runs Jira sync followed by Bitbucket review sync once", async () => {
+  it("waits for boot to finish, then runs Jira syncs followed by Bitbucket review sync once", async () => {
     renderHarness({ isBooting: true, isBitbucketReady: true });
     await flushAsyncEffects();
 
     expect(runSync).not.toHaveBeenCalled();
+    expect(runJiraActivitySync).not.toHaveBeenCalled();
     expect(runReviewSync).not.toHaveBeenCalled();
 
     renderHarness({ isBooting: false, isBitbucketReady: true });
     await flushAsyncEffects();
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).toHaveBeenCalledTimes(1);
+    expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runJiraActivitySync.mock.invocationCallOrder[0]);
+    expect(runJiraActivitySync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
     expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
 
     renderHarness({ isBooting: false, isBitbucketReady: true, remainingWeekHours: 5 });
     await flushAsyncEffects();
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).toHaveBeenCalledTimes(1);
   });
 
-  it("runs only Jira startup sync when Bitbucket is not ready", async () => {
+  it("runs only Jira startup syncs when Bitbucket is not ready", async () => {
     renderHarness({ isBitbucketReady: false });
     await flushAsyncEffects();
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).not.toHaveBeenCalled();
   });
 
@@ -187,6 +209,7 @@ describe("useAppLifecycleEffects", () => {
     await flushAsyncEffects();
 
     expect(runSync).not.toHaveBeenCalled();
+    expect(runJiraActivitySync).not.toHaveBeenCalled();
     expect(runReviewSync).not.toHaveBeenCalled();
   });
 

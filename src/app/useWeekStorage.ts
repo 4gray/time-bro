@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
@@ -12,6 +13,7 @@ import { buildDefaultRecurringEvents } from "../domain/recurring";
 import {
   getBitbucketReviewResult,
   getFavoriteKeys,
+  getJiraActivityResult,
   getPersonalNotes,
   getRecurringEvents,
   getRecurringOccurrences,
@@ -26,6 +28,7 @@ export interface WeekStorageClient {
   getSettings(): Promise<AppSettings>;
   getWeekOverride(weekKey: string): Promise<WeekOverride>;
   getSyncResult(weekKey: string): Promise<SyncResult | undefined>;
+  getJiraActivityResult(weekKey: string): Promise<JiraActivitySyncResult | undefined>;
   getFavoriteKeys(): Promise<string[]>;
   getPersonalNotes(weekKey: string): Promise<PersonalNote[]>;
   getBitbucketReviewResult(weekKey: string): Promise<BitbucketReviewSyncResult | undefined>;
@@ -43,6 +46,7 @@ interface UseWeekStorageOptions {
   setSettingsDraft: (settings: AppSettings) => void;
   setWeekOverride: (override: WeekOverride) => void;
   setSyncResult: (result: SyncResult | undefined) => void;
+  setJiraActivityResult: (result: JiraActivitySyncResult | undefined) => void;
   setFavoriteKeys: (keys: string[]) => void;
   setPersonalNotes: (notes: PersonalNote[]) => void;
   setBitbucketReviewResult: (result: BitbucketReviewSyncResult | undefined) => void;
@@ -56,6 +60,7 @@ const defaultStorage: WeekStorageClient = {
   getSettings,
   getWeekOverride,
   getSyncResult,
+  getJiraActivityResult,
   getFavoriteKeys,
   getPersonalNotes,
   getBitbucketReviewResult,
@@ -73,6 +78,7 @@ export const useWeekStorage = ({
   setSettingsDraft,
   setWeekOverride,
   setSyncResult,
+  setJiraActivityResult,
   setFavoriteKeys,
   setPersonalNotes,
   setBitbucketReviewResult,
@@ -96,6 +102,7 @@ export const useWeekStorage = ({
         storedSettings,
         storedOverride,
         storedSyncResult,
+        storedJiraActivityResult,
         storedFavorites,
         storedPersonalNotes,
         storedBitbucketReviewResult,
@@ -105,6 +112,7 @@ export const useWeekStorage = ({
         storage.getSettings(),
         storage.getWeekOverride(weekKey),
         storage.getSyncResult(weekKey),
+        storage.getJiraActivityResult(weekKey),
         storage.getFavoriteKeys(),
         storage.getPersonalNotes(weekKey),
         storage.getBitbucketReviewResult(weekKey),
@@ -132,6 +140,7 @@ export const useWeekStorage = ({
       setSettingsDraft(storedSettings);
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
+      setJiraActivityResult(storedJiraActivityResult);
       setFavoriteKeys(storedFavorites);
       setPersonalNotes(storedPersonalNotes);
       setBitbucketReviewResult(storedBitbucketReviewResult);
@@ -157,6 +166,7 @@ export const useWeekStorage = ({
     isDemo,
     setBitbucketReviewResult,
     setFavoriteKeys,
+    setJiraActivityResult,
     setIsBooting,
     setPersonalNotes,
     setRecurringEvents,
@@ -187,12 +197,14 @@ export const useWeekStorage = ({
       const [
         storedOverride,
         storedSyncResult,
+        storedJiraActivityResult,
         storedPersonalNotes,
         storedBitbucketReviewResult,
         storedRecurringOccurrences
       ] = await Promise.all([
         storage.getWeekOverride(weekKey),
         storage.getSyncResult(weekKey),
+        storage.getJiraActivityResult(weekKey),
         storage.getPersonalNotes(weekKey),
         storage.getBitbucketReviewResult(weekKey),
         storage.getRecurringOccurrences(weekKey)
@@ -204,6 +216,7 @@ export const useWeekStorage = ({
 
       setWeekOverride(storedOverride);
       setSyncResult(storedSyncResult);
+      setJiraActivityResult(storedJiraActivityResult);
       setPersonalNotes(storedPersonalNotes);
       setBitbucketReviewResult(storedBitbucketReviewResult);
       setRecurringOccurrences(storedRecurringOccurrences);
@@ -223,6 +236,7 @@ export const useWeekStorage = ({
     isBooting,
     isDemo,
     setBitbucketReviewResult,
+    setJiraActivityResult,
     setPersonalNotes,
     setRecurringOccurrences,
     setSyncResult,

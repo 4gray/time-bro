@@ -53,12 +53,14 @@ let container: HTMLDivElement;
 let root: Root;
 let api: SyncControlsApi | undefined;
 let runSync: ReturnType<typeof vi.fn<() => Promise<void>>>;
+let runJiraActivitySync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 let runReviewSync: ReturnType<typeof vi.fn<(settings?: AppSettings) => Promise<void>>>;
 
 interface HarnessProps {
   currentSettings?: AppSettings;
   currentSyncResult?: SyncResult;
   isSyncing?: boolean;
+  isSyncingJiraActivity?: boolean;
   isSyncingReviews?: boolean;
 }
 
@@ -66,14 +68,17 @@ function Harness({
   currentSettings = settings,
   currentSyncResult,
   isSyncing = false,
+  isSyncingJiraActivity = false,
   isSyncingReviews = false
 }: HarnessProps) {
   api = useSyncControls({
     settings: currentSettings,
     syncResult: currentSyncResult,
     isSyncing,
+    isSyncingJiraActivity,
     isSyncingReviews,
     runSync,
+    runJiraActivitySync,
     runReviewSync
   });
   return null;
@@ -95,6 +100,7 @@ const renderHarness = (props: HarnessProps = {}) => {
 beforeEach(() => {
   api = undefined;
   runSync = vi.fn(async () => undefined);
+  runJiraActivitySync = vi.fn(async () => undefined);
   runReviewSync = vi.fn(async () => undefined);
   container = document.createElement("div");
   document.body.appendChild(container);
@@ -123,13 +129,18 @@ describe("useSyncControls", () => {
     expect(getApi().syncState).toBe("syncing");
     expect(getApi().syncLabel).toBe("SYNCING…");
 
+    renderHarness({ isSyncingJiraActivity: true });
+
+    expect(getApi().syncState).toBe("syncing");
+    expect(getApi().syncLabel).toBe("SYNCING…");
+
     renderHarness({ isSyncing: true });
 
     expect(getApi().syncState).toBe("syncing");
     expect(getApi().syncLabel).toBe("SYNCING…");
   });
 
-  it("runs Jira sync before Bitbucket review sync when Bitbucket is configured", async () => {
+  it("runs Jira syncs before Bitbucket review sync when Bitbucket is configured", async () => {
     renderHarness();
 
     await act(async () => {
@@ -137,8 +148,12 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledWith(settings);
     expect(runReviewSync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).toHaveBeenCalledWith(settings);
+    expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runJiraActivitySync.mock.invocationCallOrder[0]);
+    expect(runJiraActivitySync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
     expect(runSync.mock.invocationCallOrder[0]).toBeLessThan(runReviewSync.mock.invocationCallOrder[0]);
   });
 
@@ -150,15 +165,27 @@ describe("useSyncControls", () => {
     });
 
     expect(runSync).toHaveBeenCalledTimes(1);
+    expect(runJiraActivitySync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).not.toHaveBeenCalled();
   });
 
-  it("does not run Bitbucket review sync when Jira sync rejects", async () => {
+  it("does not run later syncs when Jira worklog sync rejects", async () => {
     runSync.mockRejectedValueOnce(new Error("Jira unavailable"));
     renderHarness();
 
     await expect(getApi().handleSync()).rejects.toThrow("Jira unavailable");
 
+    expect(runJiraActivitySync).not.toHaveBeenCalled();
+    expect(runReviewSync).not.toHaveBeenCalled();
+  });
+
+  it("does not run Bitbucket review sync when Jira activity sync rejects", async () => {
+    runJiraActivitySync.mockRejectedValueOnce(new Error("Jira activity unavailable"));
+    renderHarness();
+
+    await expect(getApi().handleSync()).rejects.toThrow("Jira activity unavailable");
+
+    expect(runSync).toHaveBeenCalledTimes(1);
     expect(runReviewSync).not.toHaveBeenCalled();
   });
 });

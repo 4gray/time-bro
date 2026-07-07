@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   autoDistribute,
   buildCommitSignals,
+  buildJiraActivitySignals,
   buildReconstructDay,
   buildSignals,
   formatReconDuration,
   getReconstructSummary,
   type ReconstructCommitGroup,
   type ReconstructInput,
+  type ReconstructJiraActivity,
   type ReconstructLocalEntry,
   type ReconstructReviewSession,
   type ReconstructWorklog
@@ -57,6 +59,19 @@ const localEntry = (overrides: Partial<ReconstructLocalEntry> = {}): Reconstruct
   startedISO: "2026-06-15T10:00:00",
   timeSpentSeconds: 45 * 60,
   note: "Planning without a Jira ticket",
+  ...overrides
+});
+
+const jiraActivity = (overrides: Partial<ReconstructJiraActivity> = {}): ReconstructJiraActivity => ({
+  id: "jira:TB-22:comment:10000:created:2026-06-15T10:15:00",
+  kind: "comment",
+  issueKey: "TB-22",
+  issueSummary: "Wire immediate worklog refresh",
+  title: "Commented on TB-22",
+  description: "Commented on TB-22: left a rollout note.",
+  occurredAt: "2026-06-15T10:15:00",
+  estimatedSeconds: 15 * 60,
+  confidence: "medium",
   ...overrides
 });
 
@@ -126,6 +141,39 @@ describe("buildSignals", () => {
     expect(other.title).toBe("Review: schema migration");
     expect(other.confidence).toBe("high");
   });
+
+  it("maps Jira comments and status changes to placeable signals, with field edits as markers", () => {
+    const signals = buildJiraActivitySignals([
+      jiraActivity({
+        id: "field",
+        kind: "field-change",
+        title: "Updated Jira fields on TB-22",
+        description: "Changed priority on TB-22.",
+        occurredAt: "2026-06-15T13:20:00",
+        estimatedSeconds: 0,
+        confidence: "low"
+      }),
+      jiraActivity({
+        id: "status",
+        kind: "status-change",
+        title: "Moved TB-22",
+        description: "Changed TB-22 status from \"To Do\" to \"In Progress\".",
+        occurredAt: "2026-06-15T09:30:00",
+        estimatedSeconds: 10 * 60
+      })
+    ]);
+
+    expect(signals.map((signal) => signal.id)).toEqual(["status", "field"]);
+    expect(signals[0]).toMatchObject({
+      kind: "jira",
+      key: "TB-22",
+      durationMinutes: 10,
+      isMarker: false,
+      confidence: "med",
+      startHour: 9
+    });
+    expect(signals[1]).toMatchObject({ isMarker: true, durationMinutes: 0, confidence: "low" });
+  });
 });
 
 describe("buildReconstructDay", () => {
@@ -192,6 +240,42 @@ describe("buildReconstructDay", () => {
     expect(row?.key).toBe("FTDM-328");
     expect(row?.naiveDescription).toContain("Add auth middleware");
     expect(day.reconstructedMinutes).toBe(95);
+  });
+
+  it("reconstructs an active day from Jira activity signals", () => {
+    const day = buildReconstructDay(
+      input({
+        worklogs: [],
+        reviewSessions: [],
+        commits: [],
+        jiraActivities: [
+          jiraActivity({ occurredAt: "2026-06-15T10:15:00", estimatedSeconds: 15 * 60 }),
+          jiraActivity({
+            id: "jira:TB-22:changelog:status",
+            kind: "status-change",
+            title: "Moved TB-22",
+            description: "Changed TB-22 status from \"To Do\" to \"In Progress\".",
+            occurredAt: "2026-06-15T12:00:00",
+            estimatedSeconds: 10 * 60
+          }),
+          jiraActivity({
+            id: "jira:TB-22:changelog:priority",
+            kind: "field-change",
+            title: "Updated Jira fields on TB-22",
+            description: "Changed priority on TB-22.",
+            occurredAt: "2026-06-15T14:00:00",
+            estimatedSeconds: 0,
+            confidence: "low"
+          })
+        ]
+      })
+    );
+
+    expect(day.signals.filter((signal) => signal.kind === "jira")).toHaveLength(3);
+    expect(day.reconstructedMinutes).toBe(25);
+    expect(day.sendCount).toBe(2);
+    expect(day.unplacedSignalIds).not.toContain("jira:TB-22:changelog:priority");
+    expect(day.rows.some((row) => row.kind === "filled" && row.signalKind === "jira")).toBe(true);
   });
 
   it("counts private notes and confirmed local events as locked local time", () => {

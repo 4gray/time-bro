@@ -102,6 +102,7 @@ const baseProps = (): AppMainViewProps => ({
   weekState,
   personalNotes: [],
   syncResult: undefined,
+  jiraActivityResult: undefined,
   monthState,
   visibleBitbucketReviewResult: undefined,
   tickets: { inProgress: [{}], recentlyClosed: [{}, {}] } as AppMainViewProps["tickets"],

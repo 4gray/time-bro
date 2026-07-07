@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
@@ -13,6 +14,7 @@ export interface AppReconRouteProps {
   currentDate: Date;
   settings: AppSettings;
   syncResult?: SyncResult;
+  jiraActivityResult?: JiraActivitySyncResult;
   reviewResult?: BitbucketReviewSyncResult;
   localWeekKey: string;
   personalNotes: PersonalNote[];
@@ -30,6 +32,7 @@ export const AppReconRoute = ({
   currentDate,
   settings,
   syncResult,
+  jiraActivityResult,
   reviewResult,
   localWeekKey,
   personalNotes,
@@ -46,6 +49,7 @@ export const AppReconRoute = ({
     currentDate,
     settings,
     syncResult,
+    jiraActivityResult,
     reviewResult,
     localWeekKey,
     personalNotes,

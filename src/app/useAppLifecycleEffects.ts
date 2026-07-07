@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   ReminderSchedulePayload,
   ReminderScheduleResult,
   SyncResult
@@ -23,6 +24,7 @@ interface UseAppLifecycleEffectsOptions {
   remainingWeekHours: number;
   todayDateKey: string;
   runSync: () => Promise<SyncResult | undefined>;
+  runJiraActivitySync: () => Promise<JiraActivitySyncResult | undefined>;
   runReviewSync: () => Promise<BitbucketReviewSyncResult | undefined>;
   client?: AppLifecycleClient;
 }
@@ -38,6 +40,7 @@ export const useAppLifecycleEffects = ({
   remainingWeekHours,
   todayDateKey,
   runSync,
+  runJiraActivitySync,
   runReviewSync,
   client = nativeApi
 }: UseAppLifecycleEffectsOptions) => {
@@ -56,11 +59,12 @@ export const useAppLifecycleEffects = ({
 
     void (async () => {
       await runSync();
+      await runJiraActivitySync();
       if (isBitbucketReady) {
         await runReviewSync();
       }
     })();
-  }, [isBitbucketReady, isBooting, isConfigured, isDemo, runReviewSync, runSync]);
+  }, [isBitbucketReady, isBooting, isConfigured, isDemo, runJiraActivitySync, runReviewSync, runSync]);
 
   useEffect(() => {
     if (isDemo) {

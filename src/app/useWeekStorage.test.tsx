@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
@@ -49,6 +50,17 @@ const buildSyncResult = (weekKey: string): SyncResult => ({
   daySummaries: {}
 });
 
+const buildJiraActivityResult = (weekKey: string): JiraActivitySyncResult => ({
+  weekKey,
+  weekStartISO: `${weekKey}T00:00:00.000Z`,
+  weekEndExclusiveISO: `${weekKey}T00:00:00.000Z`,
+  syncedAt: "2026-06-17T10:00:00.000Z",
+  accountId: "account-1",
+  issueCount: 1,
+  activityCount: 0,
+  activities: []
+});
+
 const buildReviewResult = (weekKey: string): BitbucketReviewSyncResult => ({
   weekKey,
   weekStartISO: `${weekKey}T00:00:00.000Z`,
@@ -89,6 +101,7 @@ let storage: WeekStorageClient;
 let getSettings: ReturnType<typeof vi.fn<WeekStorageClient["getSettings"]>>;
 let getWeekOverride: ReturnType<typeof vi.fn<WeekStorageClient["getWeekOverride"]>>;
 let getSyncResult: ReturnType<typeof vi.fn<WeekStorageClient["getSyncResult"]>>;
+let getJiraActivityResult: ReturnType<typeof vi.fn<WeekStorageClient["getJiraActivityResult"]>>;
 let getFavoriteKeys: ReturnType<typeof vi.fn<WeekStorageClient["getFavoriteKeys"]>>;
 let getPersonalNotes: ReturnType<typeof vi.fn<WeekStorageClient["getPersonalNotes"]>>;
 let getBitbucketReviewResult: ReturnType<typeof vi.fn<WeekStorageClient["getBitbucketReviewResult"]>>;
@@ -99,6 +112,7 @@ let setSettings: ReturnType<typeof vi.fn<(value: AppSettings) => void>>;
 let setSettingsDraft: ReturnType<typeof vi.fn<(value: AppSettings) => void>>;
 let setWeekOverride: ReturnType<typeof vi.fn<(value: WeekOverride) => void>>;
 let setSyncResult: ReturnType<typeof vi.fn<(value: SyncResult | undefined) => void>>;
+let setJiraActivityResult: ReturnType<typeof vi.fn<(value: JiraActivitySyncResult | undefined) => void>>;
 let setFavoriteKeys: ReturnType<typeof vi.fn<(value: string[]) => void>>;
 let setPersonalNotes: ReturnType<typeof vi.fn<(value: PersonalNote[]) => void>>;
 let setBitbucketReviewResult: ReturnType<typeof vi.fn<(value: BitbucketReviewSyncResult | undefined) => void>>;
@@ -125,6 +139,7 @@ function Harness({
     setSettingsDraft,
     setWeekOverride,
     setSyncResult,
+    setJiraActivityResult,
     setFavoriteKeys,
     setPersonalNotes,
     setBitbucketReviewResult,
@@ -166,6 +181,7 @@ beforeEach(() => {
   getSettings = vi.fn(async () => settings);
   getWeekOverride = vi.fn(async (weekKey) => buildOverride(weekKey, weekKey === "2026-06-22" ? ["2026-06-23"] : []));
   getSyncResult = vi.fn(async (weekKey) => buildSyncResult(weekKey));
+  getJiraActivityResult = vi.fn(async (weekKey) => buildJiraActivityResult(weekKey));
   getFavoriteKeys = vi.fn(async () => ["TB-1"]);
   getPersonalNotes = vi.fn(async (weekKey) => [buildNote(`note-${weekKey}`, weekKey)]);
   getBitbucketReviewResult = vi.fn(async (weekKey) => buildReviewResult(weekKey));
@@ -176,6 +192,7 @@ beforeEach(() => {
     getSettings,
     getWeekOverride,
     getSyncResult,
+    getJiraActivityResult,
     getFavoriteKeys,
     getPersonalNotes,
     getBitbucketReviewResult,
@@ -187,6 +204,7 @@ beforeEach(() => {
   setSettingsDraft = vi.fn();
   setWeekOverride = vi.fn();
   setSyncResult = vi.fn();
+  setJiraActivityResult = vi.fn();
   setFavoriteKeys = vi.fn();
   setPersonalNotes = vi.fn();
   setBitbucketReviewResult = vi.fn();
@@ -215,6 +233,7 @@ describe("useWeekStorage", () => {
     expect(getSettings).toHaveBeenCalledTimes(1);
     expect(getWeekOverride).toHaveBeenCalledWith(weekKey);
     expect(getSyncResult).toHaveBeenCalledWith(weekKey);
+    expect(getJiraActivityResult).toHaveBeenCalledWith(weekKey);
     expect(getFavoriteKeys).toHaveBeenCalledTimes(1);
     expect(getPersonalNotes).toHaveBeenCalledWith(weekKey);
     expect(getBitbucketReviewResult).toHaveBeenCalledWith(weekKey);
@@ -227,6 +246,7 @@ describe("useWeekStorage", () => {
     expect(setSettingsDraft).toHaveBeenCalledWith(settings);
     expect(setWeekOverride).toHaveBeenCalledWith(buildOverride(weekKey));
     expect(setSyncResult).toHaveBeenCalledWith(buildSyncResult(weekKey));
+    expect(setJiraActivityResult).toHaveBeenCalledWith(buildJiraActivityResult(weekKey));
     expect(setFavoriteKeys).toHaveBeenCalledWith(["TB-1"]);
     expect(setPersonalNotes).toHaveBeenCalledWith([buildNote(`note-${weekKey}`, weekKey)]);
     expect(setBitbucketReviewResult).toHaveBeenCalledWith(buildReviewResult(weekKey));
@@ -253,11 +273,13 @@ describe("useWeekStorage", () => {
 
     getWeekOverride.mockClear();
     getSyncResult.mockClear();
+    getJiraActivityResult.mockClear();
     getPersonalNotes.mockClear();
     getBitbucketReviewResult.mockClear();
     getRecurringOccurrences.mockClear();
     setWeekOverride.mockClear();
     setSyncResult.mockClear();
+    setJiraActivityResult.mockClear();
     setPersonalNotes.mockClear();
     setBitbucketReviewResult.mockClear();
     setRecurringOccurrences.mockClear();
@@ -271,10 +293,12 @@ describe("useWeekStorage", () => {
 
     const nextWeekKey = toLocalDateKey(nextWeekStart);
     expect(getSyncResult).toHaveBeenCalledWith(nextWeekKey);
+    expect(getJiraActivityResult).toHaveBeenCalledWith(nextWeekKey);
     expect(getPersonalNotes).toHaveBeenCalledWith(nextWeekKey);
     expect(getBitbucketReviewResult).toHaveBeenCalledWith(nextWeekKey);
     expect(getRecurringOccurrences).toHaveBeenCalledWith(nextWeekKey);
     expect(setSyncResult).toHaveBeenCalledWith(buildSyncResult(nextWeekKey));
+    expect(setJiraActivityResult).toHaveBeenCalledWith(buildJiraActivityResult(nextWeekKey));
     expect(setPersonalNotes).toHaveBeenCalledWith([buildNote(`note-${nextWeekKey}`, nextWeekKey)]);
     expect(setBitbucketReviewResult).toHaveBeenCalledWith(buildReviewResult(nextWeekKey));
     expect(setRecurringOccurrences).toHaveBeenCalledWith([buildOccurrence(nextWeekKey)]);

@@ -28,6 +28,7 @@ const render = (overrides: Partial<ComponentProps<typeof AppReconRoute>> = {}) =
       currentDate={new Date(2026, 5, 17, 9, 0, 0)}
       settings={settings}
       syncResult={undefined}
+      jiraActivityResult={undefined}
       reviewResult={undefined}
       localWeekKey="2026-06-15"
       personalNotes={[]}

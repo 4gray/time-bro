@@ -13,6 +13,7 @@ import type {
   DeleteWorklogResult,
   IssueDetailsRequest,
   IssueDetailsResult,
+  JiraActivitySyncResult,
   JiraConnectionResult,
   OllamaGenerateRequest,
   OllamaGenerateResult,
@@ -96,6 +97,23 @@ export const nativeApi = {
     }
 
     return bridge.syncJiraWorklogs(request);
+  },
+
+  syncJiraActivity(request: SyncRequest): Promise<JiraActivitySyncResult> {
+    const bridge = getNativeBridgeWithMethod("syncJiraActivity");
+
+    if (!bridge) {
+      const hasStaleBridge = Boolean(getNativeBridge());
+      return Promise.reject(
+        new Error(
+          hasStaleBridge
+            ? "Restart TimeBro to finish enabling Jira activity sync. The current window is using an older native bridge."
+            : "Open the Electron app to sync Jira activity."
+        )
+      );
+    }
+
+    return bridge.syncJiraActivity(request);
   },
 
   syncBitbucketReviews(request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> {

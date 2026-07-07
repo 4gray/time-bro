@@ -26,6 +26,7 @@ interface UseSettingsActionsOptions {
   client?: SettingsActionsClient;
   saveSettings?: (settings: AppSettings) => Promise<void>;
   runSync: (settingsForSync?: AppSettings) => Promise<SyncResult | undefined>;
+  runJiraActivitySync?: (settingsForSync?: AppSettings) => Promise<unknown>;
   loadTickets: (settingsForLoad?: AppSettings) => Promise<unknown>;
   setSettings: (settings: AppSettings) => void;
   setSettingsDraft: (settings: AppSettings) => void;
@@ -71,6 +72,7 @@ export const useSettingsActions = ({
   client = nativeApi,
   saveSettings = saveSettingsToStorage,
   runSync,
+  runJiraActivitySync,
   loadTickets,
   setSettings,
   setSettingsDraft,
@@ -100,6 +102,7 @@ export const useSettingsActions = ({
       if (result.ok) {
         await saveSettings(cleanedSettings);
         await runSync(cleanedSettings);
+        await runJiraActivitySync?.(cleanedSettings);
         setSettings(cleanedSettings);
         setSettingsDraft(cleanedSettings);
         showSuccess(result.message);
@@ -114,6 +117,7 @@ export const useSettingsActions = ({
     [
       client,
       loadTickets,
+      runJiraActivitySync,
       runSync,
       saveSettings,
       setSettings,

@@ -1,6 +1,7 @@
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
@@ -11,7 +12,7 @@ import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -20,6 +21,7 @@ type StoreName =
   | "settings"
   | "weekOverrides"
   | "syncResults"
+  | "jiraActivityResults"
   | "favorites"
   | "personalNotes"
   | "bitbucketReviewResults"
@@ -51,6 +53,10 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("syncResults")) {
         db.createObjectStore("syncResults", { keyPath: "weekKey" });
+      }
+
+      if (!db.objectStoreNames.contains("jiraActivityResults")) {
+        db.createObjectStore("jiraActivityResults", { keyPath: "weekKey" });
       }
 
       if (!db.objectStoreNames.contains("favorites")) {
@@ -145,6 +151,14 @@ export const getSyncResult = (weekKey: string) => {
 
 export const saveSyncResult = (result: SyncResult) => {
   return writeStore("syncResults", result);
+};
+
+export const getJiraActivityResult = (weekKey: string) => {
+  return readStore<JiraActivitySyncResult>("jiraActivityResults", weekKey);
+};
+
+export const saveJiraActivityResult = (result: JiraActivitySyncResult) => {
+  return writeStore("jiraActivityResults", result);
 };
 
 export const getBitbucketReviewResult = (weekKey: string) => {

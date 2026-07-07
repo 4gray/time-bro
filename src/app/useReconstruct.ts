@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
@@ -14,6 +15,7 @@ import type {
   PlacementMap,
   ReconstructCommitGroup,
   ReconstructDay,
+  ReconstructJiraActivity,
   ReconstructLocalEntry,
   ReconstructReviewSession,
   ReconstructWorklog
@@ -23,6 +25,7 @@ import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../d
 import type { ReconstructDateLabels } from "../components/ReconstructView";
 import {
   getBitbucketReviewResult,
+  getJiraActivityResult,
   getPersonalNotes,
   getRecurringOccurrences,
   getReconstructAiDrafts,
@@ -40,6 +43,7 @@ interface UseReconstructOptions {
   currentDate: Date;
   settings: AppSettings;
   syncResult?: SyncResult;
+  jiraActivityResult?: JiraActivitySyncResult;
   reviewResult?: BitbucketReviewSyncResult;
   localWeekKey: string;
   personalNotes: PersonalNote[];
@@ -87,6 +91,7 @@ export const useReconstruct = ({
   currentDate,
   settings,
   syncResult,
+  jiraActivityResult,
   reviewResult,
   localWeekKey,
   personalNotes,
@@ -118,35 +123,39 @@ export const useReconstruct = ({
   );
   const [loaded, setLoaded] = useState<{
     sync: Record<string, SyncResult>;
+    jiraActivity: Record<string, JiraActivitySyncResult>;
     review: Record<string, BitbucketReviewSyncResult>;
     personalNotes: Record<string, PersonalNote[]>;
     recurringOccurrences: Record<string, RecurringOccurrence[]>;
-  }>({ sync: {}, review: {}, personalNotes: {}, recurringOccurrences: {} });
+  }>({ sync: {}, jiraActivity: {}, review: {}, personalNotes: {}, recurringOccurrences: {} });
 
   useEffect(() => {
     let cancelled = false;
     const keys = weekKeys.split(",").filter(Boolean);
     void (async () => {
       const sync: Record<string, SyncResult> = {};
+      const jiraActivity: Record<string, JiraActivitySyncResult> = {};
       const review: Record<string, BitbucketReviewSyncResult> = {};
       const personalNotes: Record<string, PersonalNote[]> = {};
       const recurringOccurrences: Record<string, RecurringOccurrence[]> = {};
       await Promise.all(
         keys.map(async (key) => {
-          const [s, r, notes, occurrences] = await Promise.all([
+          const [s, a, r, notes, occurrences] = await Promise.all([
             getSyncResult(key),
+            getJiraActivityResult(key),
             getBitbucketReviewResult(key),
             getPersonalNotes(key),
             getRecurringOccurrences(key)
           ]);
           if (s) sync[key] = s;
+          if (a) jiraActivity[key] = a;
           if (r) review[key] = r;
           personalNotes[key] = notes;
           recurringOccurrences[key] = occurrences;
         })
       );
       if (!cancelled) {
-        setLoaded({ sync, review, personalNotes, recurringOccurrences });
+        setLoaded({ sync, jiraActivity, review, personalNotes, recurringOccurrences });
       }
     })();
     return () => {
@@ -197,6 +206,7 @@ export const useReconstruct = ({
   const coreDay = useMemo<ReconstructDay>(() => {
     const weekKey = weekKeyOf(selDateKey);
     const sync = syncResult?.weekKey === weekKey ? syncResult : loaded.sync[weekKey];
+    const activity = jiraActivityResult?.weekKey === weekKey ? jiraActivityResult : loaded.jiraActivity[weekKey];
     const review = reviewResult?.weekKey === weekKey ? reviewResult : loaded.review[weekKey];
     const notesForWeek = weekKey === localWeekKey ? personalNotes : loaded.personalNotes[weekKey] ?? [];
     const occurrencesForWeek =
@@ -240,6 +250,19 @@ export const useReconstruct = ({
         estimatedSeconds: group.estimatedSeconds,
         confidence: group.confidence
       }));
+    const jiraActivities: ReconstructJiraActivity[] = (activity?.activities ?? [])
+      .filter((item) => item.dateKey === selDateKey)
+      .map((item) => ({
+        id: item.id,
+        kind: item.kind,
+        issueKey: item.issueKey,
+        issueSummary: item.issueSummary,
+        title: item.title,
+        description: item.description,
+        occurredAt: item.occurredAt,
+        estimatedSeconds: item.estimatedSeconds,
+        confidence: item.confidence
+      }));
     const localNoteEntries: ReconstructLocalEntry[] = notesForWeek
       .filter((note) => note.dateKey === selDateKey)
       .map((note) => ({
@@ -280,6 +303,7 @@ export const useReconstruct = ({
         localEntries: [...localNoteEntries, ...recurringEntries],
         reviewSessions,
         commits,
+        jiraActivities,
         nowMinutes
       },
       placements,
@@ -289,6 +313,7 @@ export const useReconstruct = ({
     durations,
     loaded,
     localWeekKey,
+    jiraActivityResult,
     nowMinutes,
     placements,
     personalNotes,

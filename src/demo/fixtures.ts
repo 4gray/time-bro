@@ -3,6 +3,7 @@ import type {
   BitbucketCommitGroup,
   BitbucketReviewSession,
   BitbucketReviewSyncResult,
+  JiraActivitySyncResult,
   JiraIssueSummary,
   JiraIssueTypeInfo,
   JiraTicket,
@@ -24,6 +25,7 @@ export interface DemoScenario {
   settings: AppSettings;
   weekOverride: WeekOverride;
   syncResult: SyncResult;
+  jiraActivityResult?: JiraActivitySyncResult;
   bitbucketReviewResult: BitbucketReviewSyncResult;
   tickets: TicketsResult;
   favoriteKeys: string[];

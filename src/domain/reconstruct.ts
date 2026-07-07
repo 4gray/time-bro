@@ -1,4 +1,4 @@
-import type { WeekdayNumber } from "../../shared/types";
+import type { JiraActivityKind, WeekdayNumber } from "../../shared/types";
 
 /**
  * Day Reconstruction — deterministic core engine.
@@ -156,6 +156,19 @@ export interface ReconstructCommitGroup {
   confidence: "high" | "medium" | "low";
 }
 
+/** Narrowed Jira activity shape — read-only issue touches for reconstruction context. */
+export interface ReconstructJiraActivity {
+  id: string;
+  kind: JiraActivityKind;
+  issueKey: string;
+  issueSummary: string;
+  title: string;
+  description: string;
+  occurredAt: string;
+  estimatedSeconds: number;
+  confidence: "high" | "medium" | "low";
+}
+
 export interface ReconstructInput {
   dateKey: string;
   /** ISO weekday 1..7 (Mon..Sun). */
@@ -168,6 +181,8 @@ export interface ReconstructInput {
   reviewSessions: ReconstructReviewSession[];
   /** The user's own commit runs for the day (their coding work). */
   commits?: ReconstructCommitGroup[];
+  /** The user's read-only Jira issue activity for the day (comments, created issues, changelog). */
+  jiraActivities?: ReconstructJiraActivity[];
   /**
    * Local minutes since midnight "now" — only meaningful when {@link isToday}. When set,
    * the timeline stops at the current hour (no future gap rows) and the gap is measured
@@ -275,6 +290,42 @@ export const buildCommitSignals = (commits: ReconstructCommitGroup[]): Reconstru
       };
     });
 
+const jiraActivityLabel = (kind: JiraActivityKind) => {
+  switch (kind) {
+    case "issue-created":
+      return "created issue";
+    case "comment":
+      return "comment";
+    case "status-change":
+      return "status";
+    case "field-change":
+      return "field change";
+  }
+};
+
+/** Maps the user's Jira touches to reconstruction context signals (sorted by occurrence). */
+export const buildJiraActivitySignals = (activities: ReconstructJiraActivity[]): ReconstructSignal[] =>
+  activities
+    .slice()
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+    .map((activity) => {
+      const minutes = Math.round(activity.estimatedSeconds / 60);
+      const marker = minutes <= 0 || activity.kind === "field-change";
+      return {
+        id: activity.id,
+        kind: "jira" as const,
+        key: activity.issueKey.trim().toUpperCase(),
+        title: activity.title.trim() || `Jira activity on ${activity.issueKey}`,
+        sub: ["Jira", jiraActivityLabel(activity.kind), hourLabel(activity.occurredAt)].filter(Boolean).join(" · "),
+        durationMinutes: Math.max(0, minutes),
+        isMarker: marker,
+        confidence: marker ? "low" : mapConfidence(activity.confidence),
+        startHour: localHourOf(activity.occurredAt),
+        naiveDescription:
+          activity.description.trim() || `Touched Jira issue ${activity.issueKey}: ${activity.issueSummary}.`
+      };
+    });
+
 /** Factual, model-free description for a proposed PR-review entry. */
 const naivePrDescription = (session: ReconstructReviewSession): string => {
   const count = session.commentCount;
@@ -339,7 +390,12 @@ export const buildReconstructDay = (
   durations?: Record<string, number>
 ): ReconstructDay => {
   const commits = input.commits ?? [];
-  const signals = [...buildCommitSignals(commits), ...buildSignals(input.reviewSessions)].sort(
+  const jiraActivities = input.jiraActivities ?? [];
+  const signals = [
+    ...buildCommitSignals(commits),
+    ...buildSignals(input.reviewSessions),
+    ...buildJiraActivitySignals(jiraActivities)
+  ].sort(
     (a, b) => a.startHour - b.startHour
   );
   const workingDay = isWorkingDay(input);
@@ -358,7 +414,11 @@ export const buildReconstructDay = (
   );
   const localMinutes = localEntries.reduce((sum, entry) => sum + Math.round(entry.timeSpentSeconds / 60), 0);
   const hasActivity =
-    input.worklogs.length > 0 || localEntries.length > 0 || input.reviewSessions.length > 0 || commits.length > 0;
+    input.worklogs.length > 0 ||
+    localEntries.length > 0 ||
+    input.reviewSessions.length > 0 ||
+    commits.length > 0 ||
+    jiraActivities.length > 0;
 
   // ---- day kind -----------------------------------------------------------
   let kind: ReconstructDayKind;

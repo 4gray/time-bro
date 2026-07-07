@@ -20,6 +20,7 @@ import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useDemoScenario } from "./app/useDemoScenario";
 import { useIssueMetadata } from "./app/useIssueMetadata";
+import { useJiraActivitySync } from "./app/useJiraActivitySync";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
 import { useMonthState } from "./app/useMonthState";
@@ -219,6 +220,20 @@ export const App = () => {
     showSuccess,
     showError
   });
+  const {
+    jiraActivityResult,
+    setJiraActivityResult,
+    isSyncingJiraActivity,
+    runJiraActivitySync
+  } = useJiraActivitySync({
+    settings,
+    weekKey: weekState.weekKey,
+    weekStartISO: weekState.weekStartISO,
+    weekEndExclusiveISO: weekState.weekEndExclusiveISO,
+    demoJiraActivityResult: demoScenario?.jiraActivityResult,
+    showSuccess,
+    showError
+  });
   useWeekStorage({
     isDemo,
     isBooting,
@@ -227,6 +242,7 @@ export const App = () => {
     setSettingsDraft,
     setWeekOverride,
     setSyncResult,
+    setJiraActivityResult,
     setFavoriteKeys,
     setPersonalNotes,
     setBitbucketReviewResult,
@@ -299,6 +315,7 @@ export const App = () => {
     isDemo,
     demoSyncResult: demoScenario?.syncResult,
     runSync,
+    runJiraActivitySync,
     loadTickets,
     setSettings,
     setSettingsDraft,
@@ -381,8 +398,10 @@ export const App = () => {
     settings,
     syncResult,
     isSyncing,
+    isSyncingJiraActivity,
     isSyncingReviews,
     runSync,
+    runJiraActivitySync,
     runReviewSync
   });
   const { handleToggleSkipped, handleExportWeekCsv } = useWeekActions({
@@ -412,6 +431,7 @@ export const App = () => {
     remainingWeekHours: weekState.remainingWeekHours,
     todayDateKey: todayKey,
     runSync,
+    runJiraActivitySync,
     runReviewSync
   });
 
@@ -533,6 +553,7 @@ export const App = () => {
         reportsWeekStates={reportsWeekStates}
         personalNotes={personalNotes}
         syncResult={syncResult}
+        jiraActivityResult={jiraActivityResult}
         monthState={monthState}
         visibleBitbucketReviewResult={visibleBitbucketReviewResult}
         tickets={tickets}

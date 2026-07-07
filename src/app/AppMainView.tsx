@@ -41,6 +41,7 @@ export interface AppMainViewProps {
   reportsWeekStates?: WeekState[];
   personalNotes: AppReconRouteProps["personalNotes"];
   syncResult: AppWeekRouteProps["syncResult"];
+  jiraActivityResult: AppReconRouteProps["jiraActivityResult"];
   monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: AppTicketsRouteProps["tickets"];
@@ -132,6 +133,7 @@ export const AppMainView = ({
   reportsWeekStates,
   personalNotes,
   syncResult,
+  jiraActivityResult,
   monthState,
   visibleBitbucketReviewResult,
   tickets,
@@ -264,6 +266,7 @@ export const AppMainView = ({
         currentDate={currentDate}
         settings={settings}
         syncResult={syncResult}
+        jiraActivityResult={jiraActivityResult}
         reviewResult={visibleBitbucketReviewResult}
         localWeekKey={weekState.weekKey}
         personalNotes={personalNotes}

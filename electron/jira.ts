@@ -6,6 +6,9 @@ import type {
   DeleteWorklogResult,
   IssueDetailsRequest,
   IssueDetailsResult,
+  JiraActivity,
+  JiraActivitySyncRequest,
+  JiraActivitySyncResult,
   JiraConnectionResult,
   JiraEpicInfo,
   JiraIssueDetails,
@@ -69,6 +72,57 @@ interface JiraTicketSearchResponse {
   issues?: JiraTicketIssue[];
   nextPageToken?: string;
   isLast?: boolean;
+}
+
+interface JiraActivityIssue {
+  id: string;
+  key: string;
+  fields?: {
+    summary?: string;
+    issuetype?: JiraIssueTypeResponse;
+    parent?: JiraParentResponse;
+    created?: string;
+    creator?: JiraUserResponse;
+  };
+}
+
+interface JiraActivitySearchResponse {
+  issues?: JiraActivityIssue[];
+  nextPageToken?: string;
+  isLast?: boolean;
+}
+
+interface JiraCommentResponse {
+  startAt: number;
+  maxResults: number;
+  total: number;
+  comments?: Array<{
+    id: string;
+    author?: JiraUserResponse;
+    updateAuthor?: JiraUserResponse;
+    created?: string;
+    updated?: string;
+    body?: unknown;
+  }>;
+}
+
+interface JiraChangelogItem {
+  field?: string;
+  fieldId?: string;
+  fromString?: string | null;
+  toString?: string | null;
+}
+
+interface JiraChangelogResponse {
+  startAt: number;
+  maxResults: number;
+  total: number;
+  values?: Array<{
+    id: string;
+    author?: JiraUserResponse;
+    created?: string;
+    items?: JiraChangelogItem[];
+  }>;
 }
 
 interface JiraWorklogResponse {
@@ -265,6 +319,243 @@ const normalizeEpic = (settings: AppSettings, parent?: JiraParentResponse): Jira
   };
 };
 
+const sameAccount = (user: JiraUserResponse | undefined, currentUser: JiraUserResponse) =>
+  user?.accountId === currentUser.accountId;
+
+const parseJiraDate = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
+const isWithinRange = (value: string | undefined, start: Date, endExclusive: Date) => {
+  const date = parseJiraDate(value);
+  return Boolean(date && date >= start && date < endExclusive);
+};
+
+const issueSummary = (issue: JiraActivityIssue) => issue.fields?.summary ?? "Untitled Jira issue";
+
+const activityIssueUrl = (settings: AppSettings, issueKey: string) => `${normalizeBaseUrl(settings.jiraBaseUrl)}/browse/${issueKey}`;
+
+const formatChangedValue = (value: string | null | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? `"${trimmed}"` : "empty";
+};
+
+const fieldLabel = (item: JiraChangelogItem) => item.field?.trim() || item.fieldId?.trim() || "field";
+
+const isStatusChange = (item: JiraChangelogItem) => {
+  const normalizedField = fieldLabel(item).toLowerCase();
+  return normalizedField === "status" || item.fieldId?.toLowerCase() === "status";
+};
+
+const isWorklogOrTimeTrackingChange = (item: JiraChangelogItem) => {
+  const normalized = `${item.field ?? ""} ${item.fieldId ?? ""}`.toLowerCase();
+  return [
+    "worklog",
+    "timespent",
+    "time spent",
+    "timeestimate",
+    "remaining estimate",
+    "timeoriginalestimate",
+    "original estimate",
+    "aggregatetimespent",
+    "aggregatetimeestimate",
+    "aggregatetimeoriginalestimate",
+    "timetracking",
+    "time tracking"
+  ].some((token) => normalized.includes(token));
+};
+
+const compactFieldsLabel = (items: JiraChangelogItem[]) => {
+  const labels = Array.from(new Set(items.map(fieldLabel))).filter(Boolean);
+  const visible = labels.slice(0, 3).join(", ");
+  return labels.length > 3 ? `${visible} +${labels.length - 3}` : visible || "fields";
+};
+
+const buildIssueCreatedActivity = (
+  settings: AppSettings,
+  issue: JiraActivityIssue,
+  currentUser: JiraUserResponse,
+  weekStart: Date,
+  weekEndExclusive: Date
+): JiraActivity | undefined => {
+  const created = issue.fields?.created;
+  const actor = sameAccount(issue.fields?.creator, currentUser) ? issue.fields?.creator : undefined;
+
+  if (!actor || !isWithinRange(created, weekStart, weekEndExclusive)) {
+    return undefined;
+  }
+
+  const createdDate = parseJiraDate(created)!;
+  const summary = issueSummary(issue);
+  return {
+    id: `jira:${issue.key}:created:${created}`,
+    kind: "issue-created",
+    issueId: issue.id,
+    issueKey: issue.key,
+    issueSummary: summary,
+    issueUrl: activityIssueUrl(settings, issue.key),
+    issueType: normalizeIssueType(issue.fields?.issuetype),
+    epic: normalizeEpic(settings, issue.fields?.parent),
+    actorAccountId: currentUser.accountId,
+    actorDisplayName: actor.displayName ?? currentUser.displayName,
+    dateKey: toDateKey(createdDate),
+    occurredAt: created!,
+    title: `Created Jira issue: ${summary}`,
+    description: `Created Jira issue ${issue.key}: ${summary}.`,
+    estimatedSeconds: 20 * 60,
+    confidence: "medium"
+  };
+};
+
+const buildCommentActivities = (
+  settings: AppSettings,
+  issue: JiraActivityIssue,
+  comments: NonNullable<JiraCommentResponse["comments"]>,
+  currentUser: JiraUserResponse,
+  weekStart: Date,
+  weekEndExclusive: Date
+): JiraActivity[] => {
+  const activities: JiraActivity[] = [];
+  const summary = issueSummary(issue);
+  const common = {
+    issueId: issue.id,
+    issueKey: issue.key,
+    issueSummary: summary,
+    issueUrl: activityIssueUrl(settings, issue.key),
+    issueType: normalizeIssueType(issue.fields?.issuetype),
+    epic: normalizeEpic(settings, issue.fields?.parent),
+    actorAccountId: currentUser.accountId
+  };
+
+  for (const comment of comments) {
+    const body = adfToPlainText(comment.body);
+    const createdDate = parseJiraDate(comment.created);
+    const updatedDate = parseJiraDate(comment.updated);
+
+    if (sameAccount(comment.author, currentUser) && createdDate && createdDate >= weekStart && createdDate < weekEndExclusive) {
+      activities.push({
+        ...common,
+        id: `jira:${issue.key}:comment:${comment.id}:created:${comment.created}`,
+        kind: "comment",
+        actorDisplayName: comment.author?.displayName ?? currentUser.displayName,
+        dateKey: toDateKey(createdDate),
+        occurredAt: comment.created!,
+        title: `Commented on ${issue.key}`,
+        description: body ? `Commented on ${issue.key}: ${body}` : `Commented on Jira issue ${issue.key}.`,
+        commentId: comment.id,
+        commentBody: body || undefined,
+        estimatedSeconds: 15 * 60,
+        confidence: body ? "medium" : "low"
+      });
+    }
+
+    if (
+      sameAccount(comment.updateAuthor, currentUser) &&
+      updatedDate &&
+      updatedDate >= weekStart &&
+      updatedDate < weekEndExclusive &&
+      comment.updated !== comment.created
+    ) {
+      activities.push({
+        ...common,
+        id: `jira:${issue.key}:comment:${comment.id}:updated:${comment.updated}`,
+        kind: "comment",
+        actorDisplayName: comment.updateAuthor?.displayName ?? currentUser.displayName,
+        dateKey: toDateKey(updatedDate),
+        occurredAt: comment.updated!,
+        title: `Updated comment on ${issue.key}`,
+        description: body ? `Updated a Jira comment on ${issue.key}: ${body}` : `Updated a Jira comment on ${issue.key}.`,
+        commentId: comment.id,
+        commentBody: body || undefined,
+        estimatedSeconds: 10 * 60,
+        confidence: body ? "medium" : "low"
+      });
+    }
+  }
+
+  return activities;
+};
+
+const buildChangelogActivities = (
+  settings: AppSettings,
+  issue: JiraActivityIssue,
+  histories: NonNullable<JiraChangelogResponse["values"]>,
+  currentUser: JiraUserResponse,
+  weekStart: Date,
+  weekEndExclusive: Date
+): JiraActivity[] => {
+  const summary = issueSummary(issue);
+  const activities: JiraActivity[] = [];
+  const common = {
+    issueId: issue.id,
+    issueKey: issue.key,
+    issueSummary: summary,
+    issueUrl: activityIssueUrl(settings, issue.key),
+    issueType: normalizeIssueType(issue.fields?.issuetype),
+    epic: normalizeEpic(settings, issue.fields?.parent),
+    actorAccountId: currentUser.accountId
+  };
+
+  for (const history of histories) {
+    const occurredAt = parseJiraDate(history.created);
+    if (!sameAccount(history.author, currentUser) || !occurredAt || occurredAt < weekStart || occurredAt >= weekEndExclusive) {
+      continue;
+    }
+
+    const items = (history.items ?? []).filter((item) => !isWorklogOrTimeTrackingChange(item));
+    if (items.length === 0) {
+      continue;
+    }
+
+    const statusItem = items.find(isStatusChange);
+    if (statusItem) {
+      activities.push({
+        ...common,
+        id: `jira:${issue.key}:changelog:${history.id}:status:${history.created}`,
+        kind: "status-change",
+        actorDisplayName: history.author?.displayName ?? currentUser.displayName,
+        dateKey: toDateKey(occurredAt),
+        occurredAt: history.created!,
+        title: `Moved ${issue.key}`,
+        description: `Changed ${issue.key} status from ${formatChangedValue(statusItem.fromString)} to ${formatChangedValue(statusItem.toString)}.`,
+        fieldName: fieldLabel(statusItem),
+        fromValue: statusItem.fromString ?? undefined,
+        toValue: statusItem.toString ?? undefined,
+        estimatedSeconds: 10 * 60,
+        confidence: "medium"
+      });
+      continue;
+    }
+
+    const fields = compactFieldsLabel(items);
+    const first = items[0];
+    activities.push({
+      ...common,
+      id: `jira:${issue.key}:changelog:${history.id}:fields:${history.created}`,
+      kind: "field-change",
+      actorDisplayName: history.author?.displayName ?? currentUser.displayName,
+      dateKey: toDateKey(occurredAt),
+      occurredAt: history.created!,
+      title: `Updated Jira fields on ${issue.key}`,
+      description:
+        items.length === 1
+          ? `Changed ${fieldLabel(first)} on ${issue.key} from ${formatChangedValue(first.fromString)} to ${formatChangedValue(first.toString)}.`
+          : `Updated ${fields} on Jira issue ${issue.key}.`,
+      fieldName: fields,
+      fromValue: items.length === 1 ? first.fromString ?? undefined : undefined,
+      toValue: items.length === 1 ? first.toString ?? undefined : undefined,
+      estimatedSeconds: 0,
+      confidence: "low"
+    });
+  }
+
+  return activities;
+};
+
 export const testJiraConnection = async (settings: AppSettings): Promise<JiraConnectionResult> => {
   try {
     const user = await fetchCurrentUser(settings);
@@ -439,6 +730,269 @@ export const syncJiraWorklogs = async (request: SyncRequest): Promise<SyncResult
     issueCount: candidateIssues.length,
     worklogCount: collectedWorklogs.length,
     daySummaries
+  };
+};
+
+const ACTIVITY_ISSUE_FIELDS = "summary,issuetype,parent,created,creator";
+const ACTIVITY_ISSUE_LIMIT = 50;
+const ACTIVITY_DETAIL_PAGE_LIMIT = 3;
+const ACTIVITY_DETAIL_CONCURRENCY = 4;
+
+interface ActivityIssueSearchResult {
+  issues: JiraActivityIssue[];
+  isPartial: boolean;
+  truncatedIssueCount: number;
+}
+
+interface ActivityPagedResult<T> {
+  items: T[];
+  isPartial: boolean;
+}
+
+interface ActivityIssueDetails {
+  issue: JiraActivityIssue;
+  comments: NonNullable<JiraCommentResponse["comments"]>;
+  changelogs: NonNullable<JiraChangelogResponse["values"]>;
+  isPartial: boolean;
+  skipped: boolean;
+}
+
+const mapWithConcurrency = async <Input, Output>(
+  items: Input[],
+  concurrency: number,
+  fn: (item: Input) => Promise<Output>
+): Promise<Output[]> => {
+  const results: Output[] = [];
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+};
+
+const searchActivityIssuesForUser = async (
+  settings: AppSettings,
+  userIdentifier: string,
+  weekStart: Date,
+  weekEndExclusive: Date
+): Promise<ActivityIssueSearchResult> => {
+  const weekEndInclusive = new Date(weekEndExclusive);
+  weekEndInclusive.setDate(weekEndInclusive.getDate() - 1);
+  const jql = [
+    `issuekey in updatedBy("${escapeJqlString(userIdentifier)}", "${toDateKey(weekStart)}", "${toDateKey(weekEndInclusive)}")`,
+    "ORDER BY updated DESC"
+  ].join(" ");
+
+  const issues: JiraActivityIssue[] = [];
+  let isPartial = false;
+  let nextPageToken: string | undefined;
+  let guard = 0;
+
+  do {
+    const remaining = ACTIVITY_ISSUE_LIMIT - issues.length;
+    const params = new URLSearchParams({
+      jql,
+      maxResults: String(Math.min(100, remaining)),
+      fields: ACTIVITY_ISSUE_FIELDS
+    });
+
+    if (nextPageToken) {
+      params.set("nextPageToken", nextPageToken);
+    }
+
+    const page = await jiraRequest<JiraActivitySearchResponse>(
+      settings,
+      `/rest/api/3/search/jql?${params.toString()}`
+    );
+
+    issues.push(...(page.issues ?? []));
+    nextPageToken = page.nextPageToken;
+    guard += 1;
+
+    if (issues.length >= ACTIVITY_ISSUE_LIMIT && page.isLast === false) {
+      isPartial = true;
+      break;
+    }
+
+    if (page.isLast !== false) {
+      break;
+    }
+  } while (nextPageToken && guard < 50);
+
+  if (nextPageToken && guard >= 50) {
+    isPartial = true;
+  }
+
+  return {
+    issues: issues.slice(0, ACTIVITY_ISSUE_LIMIT),
+    isPartial,
+    truncatedIssueCount: isPartial ? Math.max(1, issues.length - ACTIVITY_ISSUE_LIMIT) : 0
+  };
+};
+
+const searchActivityIssues = async (
+  settings: AppSettings,
+  currentUser: JiraUserResponse,
+  weekStart: Date,
+  weekEndExclusive: Date
+): Promise<ActivityIssueSearchResult> => {
+  const identifiers = Array.from(
+    new Set([currentUser.accountId, currentUser.displayName, settings.jiraEmail].filter((value): value is string => Boolean(value)))
+  );
+  let queryError: unknown;
+
+  for (const identifier of identifiers) {
+    try {
+      return await searchActivityIssuesForUser(settings, identifier, weekStart, weekEndExclusive);
+    } catch (error) {
+      if (error instanceof JiraApiError && error.status === 400) {
+        queryError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw queryError instanceof Error ? queryError : new JiraApiError("Unable to search Jira activity.");
+};
+
+const fetchIssueComments = async (settings: AppSettings, issueKey: string) => {
+  const comments: NonNullable<JiraCommentResponse["comments"]> = [];
+  let startAt = 0;
+  let total = 0;
+  let pageCount = 0;
+  let isPartial = false;
+
+  do {
+    const params = new URLSearchParams({
+      startAt: String(startAt),
+      maxResults: "100",
+      orderBy: "created"
+    });
+
+    const page = await jiraRequest<JiraCommentResponse>(
+      settings,
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment?${params.toString()}`
+    );
+
+    comments.push(...(page.comments ?? []));
+    total = page.total;
+    startAt = page.startAt + page.maxResults;
+    pageCount += 1;
+    if (startAt < total && pageCount >= ACTIVITY_DETAIL_PAGE_LIMIT) {
+      isPartial = true;
+      break;
+    }
+  } while (startAt < total);
+
+  return { items: comments, isPartial } satisfies ActivityPagedResult<NonNullable<JiraCommentResponse["comments"]>[number]>;
+};
+
+const fetchIssueChangelogs = async (settings: AppSettings, issueKey: string) => {
+  const histories: NonNullable<JiraChangelogResponse["values"]> = [];
+  let startAt = 0;
+  let total = 0;
+  let pageCount = 0;
+  let isPartial = false;
+
+  do {
+    const params = new URLSearchParams({
+      startAt: String(startAt),
+      maxResults: "100"
+    });
+
+    const page = await jiraRequest<JiraChangelogResponse>(
+      settings,
+      `/rest/api/3/issue/${encodeURIComponent(issueKey)}/changelog?${params.toString()}`
+    );
+
+    histories.push(...(page.values ?? []));
+    total = page.total;
+    startAt = page.startAt + page.maxResults;
+    pageCount += 1;
+    if (startAt < total && pageCount >= ACTIVITY_DETAIL_PAGE_LIMIT) {
+      isPartial = true;
+      break;
+    }
+  } while (startAt < total);
+
+  return { items: histories, isPartial } satisfies ActivityPagedResult<NonNullable<JiraChangelogResponse["values"]>[number]>;
+};
+
+export const syncJiraActivity = async (request: JiraActivitySyncRequest): Promise<JiraActivitySyncResult> => {
+  const { settings, weekStartISO, weekEndExclusiveISO, weekKey } = request;
+  const weekStart = new Date(weekStartISO);
+  const weekEndExclusive = new Date(weekEndExclusiveISO);
+  const currentUser = await fetchCurrentUser(settings);
+  const issueSearch = await searchActivityIssues(settings, currentUser, weekStart, weekEndExclusive);
+  const candidateIssues = issueSearch.issues;
+  const activitiesById = new Map<string, JiraActivity>();
+
+  const issueDetails = await mapWithConcurrency(
+    candidateIssues,
+    ACTIVITY_DETAIL_CONCURRENCY,
+    async (issue): Promise<ActivityIssueDetails> => {
+      try {
+        const [comments, changelogs] = await Promise.all([
+          fetchIssueComments(settings, issue.key),
+          fetchIssueChangelogs(settings, issue.key)
+        ]);
+        return {
+          issue,
+          comments: comments.items,
+          changelogs: changelogs.items,
+          isPartial: comments.isPartial || changelogs.isPartial,
+          skipped: false
+        };
+      } catch {
+        return { issue, comments: [], changelogs: [], isPartial: true, skipped: true };
+      }
+    }
+  );
+
+  for (const { issue, comments, changelogs } of issueDetails) {
+    const created = buildIssueCreatedActivity(settings, issue, currentUser, weekStart, weekEndExclusive);
+    if (created) {
+      activitiesById.set(created.id, created);
+    }
+
+    for (const activity of buildCommentActivities(settings, issue, comments, currentUser, weekStart, weekEndExclusive)) {
+      activitiesById.set(activity.id, activity);
+    }
+
+    for (const activity of buildChangelogActivities(settings, issue, changelogs, currentUser, weekStart, weekEndExclusive)) {
+      activitiesById.set(activity.id, activity);
+    }
+  }
+
+  const activities = Array.from(activitiesById.values()).sort(
+    (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()
+  );
+  const skippedIssueCount = issueDetails.filter((detail) => detail.skipped).length;
+  const truncatedDetailIssueCount = issueDetails.filter((detail) => detail.isPartial && !detail.skipped).length;
+  const isPartial = issueSearch.isPartial || skippedIssueCount > 0 || truncatedDetailIssueCount > 0;
+
+  return {
+    weekKey,
+    weekStartISO,
+    weekEndExclusiveISO,
+    syncedAt: new Date().toISOString(),
+    accountId: currentUser.accountId,
+    displayName: currentUser.displayName,
+    issueCount: candidateIssues.length,
+    activityCount: activities.length,
+    activities,
+    isPartial: isPartial || undefined,
+    scannedIssueCount: candidateIssues.length,
+    skippedIssueCount: skippedIssueCount || undefined,
+    truncatedIssueCount: issueSearch.truncatedIssueCount || undefined,
+    truncatedDetailIssueCount: truncatedDetailIssueCount || undefined
   };
 };
 

@@ -336,7 +336,7 @@ export const ReconstructView = ({
             <span className="recon-rail-count">{summary.unplacedLabel}</span>
           </div>
           <p className="recon-rail-help">
-            Durations are <span className="recon-em">estimates</span> from commit and PR timestamps.{" "}
+            Durations are <span className="recon-em">estimates</span> from API activity timestamps.{" "}
             <span className="recon-em">Drag a card onto an hour</span> to place it, or place them all at once.
           </p>
 
@@ -420,7 +420,7 @@ export const ReconstructView = ({
                 </div>
                 <div className="recon-rail-empty-text">
                   {isWeekend
-                    ? "No commits, PRs or CI runs detected — expected on a day off."
+                    ? "No Jira or Bitbucket activity detected — expected on a day off."
                     : "Every signal is on the timeline. Drag an entry back here to unplace it."}
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { fetchJiraIssueDetails, searchJiraTickets } from "./jira";
+import { fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity } from "./jira";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -229,6 +229,303 @@ describe("fetchJiraIssueDetails", () => {
       loggedSecondsTotal: 12_600,
       myLoggedSecondsTotal: 5400,
       myWorklogCount: 2
+    });
+  });
+});
+
+describe("syncJiraActivity", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("normalizes created issues, comments, status changes, and field-change markers by current user", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me Example" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        return jiraSearchResponse([
+          {
+            id: "10001",
+            key: "OPS-77",
+            fields: {
+              summary: "Pair on incident review notes",
+              created: "2026-06-15T09:05:00.000+0000",
+              creator: { accountId: "me", displayName: "Me Example" },
+              issuetype: { name: "Task", hierarchyLevel: 0 }
+            }
+          }
+        ]);
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/comment") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 2,
+          comments: [
+            {
+              id: "20001",
+              author: { accountId: "me", displayName: "Me Example" },
+              updateAuthor: { accountId: "me", displayName: "Me Example" },
+              created: "2026-06-15T10:30:00.000+0000",
+              updated: "2026-06-15T10:30:00.000+0000",
+              body: {
+                type: "doc",
+                version: 1,
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Left follow-up notes." }] }]
+              }
+            },
+            {
+              id: "20002",
+              author: { accountId: "other", displayName: "Other" },
+              created: "2026-06-15T11:30:00.000+0000",
+              updated: "2026-06-15T11:30:00.000+0000"
+            }
+          ]
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-77/changelog") {
+        return jsonResponse({
+          startAt: 0,
+          maxResults: 100,
+          total: 4,
+          values: [
+            {
+              id: "30001",
+              author: { accountId: "me", displayName: "Me Example" },
+              created: "2026-06-15T12:00:00.000+0000",
+              items: [{ field: "status", fromString: "To Do", toString: "In Progress" }]
+            },
+            {
+              id: "30002",
+              author: { accountId: "me", displayName: "Me Example" },
+              created: "2026-06-15T13:00:00.000+0000",
+              items: [{ field: "Priority", fromString: "Medium", toString: "High" }]
+            },
+            {
+              id: "30003",
+              author: { accountId: "me", displayName: "Me Example" },
+              created: "2026-06-15T14:00:00.000+0000",
+              items: [{ field: "timeSpent", fromString: "0", toString: "1h" }]
+            },
+            {
+              id: "30004",
+              author: { accountId: "other", displayName: "Other" },
+              created: "2026-06-15T15:00:00.000+0000",
+              items: [{ field: "status", fromString: "In Progress", toString: "Done" }]
+            }
+          ]
+        });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraActivity({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+    });
+
+    const searchRequest = fetchMock.mock.calls.map((call) => new URL(String(call[0]))).find((url) => url.pathname === "/rest/api/3/search/jql");
+    expect(searchRequest?.searchParams.get("jql")).toBe(
+      'issuekey in updatedBy("me", "2026-06-15", "2026-06-21") ORDER BY updated DESC'
+    );
+    expect(searchRequest?.searchParams.get("fields")).toBe("summary,issuetype,parent,created,creator");
+    expect(result.issueCount).toBe(1);
+    expect(result.activityCount).toBe(4);
+    expect(result.isPartial).toBeUndefined();
+    expect(result.activities.map((activity) => activity.kind)).toEqual([
+      "issue-created",
+      "comment",
+      "status-change",
+      "field-change"
+    ]);
+    expect(result.activities[1]).toMatchObject({
+      issueKey: "OPS-77",
+      title: "Commented on OPS-77",
+      commentBody: "Left follow-up notes.",
+      estimatedSeconds: 900,
+      confidence: "medium"
+    });
+    expect(result.activities[2]).toMatchObject({
+      title: "Moved OPS-77",
+      fieldName: "status",
+      fromValue: "To Do",
+      toValue: "In Progress",
+      estimatedSeconds: 600
+    });
+    expect(result.activities[3]).toMatchObject({
+      title: "Updated Jira fields on OPS-77",
+      estimatedSeconds: 0,
+      confidence: "low"
+    });
+  });
+
+  it("does not treat reporter as issue creator", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me Example" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        return jiraSearchResponse([
+          {
+            id: "10088",
+            key: "OPS-88",
+            fields: {
+              summary: "Reported by me but created by someone else",
+              created: "2026-06-15T09:05:00.000+0000",
+              creator: { accountId: "other", displayName: "Other Person" },
+              reporter: { accountId: "me", displayName: "Me Example" }
+            }
+          }
+        ]);
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-88/comment") {
+        return jsonResponse({ startAt: 0, maxResults: 100, total: 0, comments: [] });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-88/changelog") {
+        return jsonResponse({ startAt: 0, maxResults: 100, total: 0, values: [] });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraActivity({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+    });
+
+    expect(result.activities).toHaveLength(0);
+  });
+
+  it("bounds Jira activity issue scans and marks the result partial", async () => {
+    const issues = Array.from({ length: 50 }, (_, index) => ({
+      id: `limit-${index}`,
+      key: `OPS-${index + 1}`,
+      fields: {
+        summary: `Busy issue ${index + 1}`,
+        created: "2026-06-15T09:05:00.000+0000",
+        creator: { accountId: "other", displayName: "Other Person" }
+      }
+    }));
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me Example" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        expect(requestedUrl.searchParams.get("maxResults")).toBe("50");
+        return jsonResponse({ issues, isLast: false, nextPageToken: "next" });
+      }
+
+      if (requestedUrl.pathname.endsWith("/comment")) {
+        return jsonResponse({ startAt: 0, maxResults: 100, total: 0, comments: [] });
+      }
+
+      if (requestedUrl.pathname.endsWith("/changelog")) {
+        return jsonResponse({ startAt: 0, maxResults: 100, total: 0, values: [] });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraActivity({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+    });
+
+    const commentRequestCount = fetchMock.mock.calls
+      .map((call) => new URL(String(call[0])).pathname)
+      .filter((pathname) => pathname.endsWith("/comment")).length;
+    expect(commentRequestCount).toBe(50);
+    expect(result).toMatchObject({
+      issueCount: 50,
+      scannedIssueCount: 50,
+      isPartial: true,
+      truncatedIssueCount: 1
+    });
+  });
+
+  it("bounds paged comment and changelog scans per issue", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+
+      if (requestedUrl.pathname === "/rest/api/3/myself") {
+        return jsonResponse({ accountId: "me", displayName: "Me Example" });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/search/jql") {
+        return jiraSearchResponse([
+          {
+            id: "10099",
+            key: "OPS-99",
+            fields: {
+              summary: "Issue with deep activity history",
+              created: "2026-06-15T09:05:00.000+0000",
+              creator: { accountId: "other", displayName: "Other Person" }
+            }
+          }
+        ]);
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-99/comment") {
+        const startAt = Number(requestedUrl.searchParams.get("startAt") ?? "0");
+        return jsonResponse({
+          startAt,
+          maxResults: 100,
+          total: 400,
+          comments: []
+        });
+      }
+
+      if (requestedUrl.pathname === "/rest/api/3/issue/OPS-99/changelog") {
+        const startAt = Number(requestedUrl.searchParams.get("startAt") ?? "0");
+        return jsonResponse({
+          startAt,
+          maxResults: 100,
+          total: 400,
+          values: []
+        });
+      }
+
+      throw new Error(`Unexpected Jira request: ${requestedUrl.pathname}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncJiraActivity({
+      settings,
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z"
+    });
+
+    const paths = fetchMock.mock.calls.map((call) => new URL(String(call[0])).pathname);
+    expect(paths.filter((pathname) => pathname.endsWith("/comment"))).toHaveLength(3);
+    expect(paths.filter((pathname) => pathname.endsWith("/changelog"))).toHaveLength(3);
+    expect(result).toMatchObject({
+      isPartial: true,
+      truncatedDetailIssueCount: 1
     });
   });
 });

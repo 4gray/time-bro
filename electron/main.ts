@@ -8,6 +8,7 @@ import {
   fetchAssignedTickets,
   fetchJiraIssueDetails,
   searchJiraTickets,
+  syncJiraActivity,
   testJiraConnection,
   syncJiraWorklogs,
   updateWorklog
@@ -156,6 +157,10 @@ ipcMain.handle("jira:test-connection", (_event, settings: AppSettings) => {
 
 ipcMain.handle("jira:sync-worklogs", (_event, request: SyncRequest) => {
   return syncJiraWorklogs(request);
+});
+
+ipcMain.handle("jira:sync-activity", (_event, request: SyncRequest) => {
+  return syncJiraActivity(request);
 });
 
 ipcMain.handle("jira:fetch-tickets", (_event, request: TicketsRequest) => {

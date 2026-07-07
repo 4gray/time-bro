@@ -14,6 +14,7 @@ import type {
   DeleteWorklogResult,
   IssueDetailsRequest,
   IssueDetailsResult,
+  JiraActivitySyncResult,
   JiraConnectionResult,
   OllamaGenerateRequest,
   OllamaGenerateResult,
@@ -42,6 +43,9 @@ const timeBroApi = {
   },
   syncJiraWorklogs: (request: SyncRequest): Promise<SyncResult> => {
     return ipcRenderer.invoke("jira:sync-worklogs", request);
+  },
+  syncJiraActivity: (request: SyncRequest): Promise<JiraActivitySyncResult> => {
+    return ipcRenderer.invoke("jira:sync-activity", request);
   },
   syncBitbucketReviews: (request: BitbucketReviewSyncRequest): Promise<BitbucketReviewSyncResult> => {
     return ipcRenderer.invoke("bitbucket:sync-reviews", request);

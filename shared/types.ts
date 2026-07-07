@@ -87,6 +87,50 @@ export interface SyncResult {
   daySummaries: Record<string, SyncDayBucket>;
 }
 
+export type JiraActivityKind = "issue-created" | "comment" | "status-change" | "field-change";
+export type JiraActivityConfidence = "high" | "medium" | "low";
+
+export interface JiraActivity {
+  id: string;
+  kind: JiraActivityKind;
+  issueId: string;
+  issueKey: string;
+  issueSummary: string;
+  issueUrl?: string;
+  issueType?: JiraIssueTypeInfo;
+  epic?: JiraEpicInfo;
+  actorAccountId: string;
+  actorDisplayName?: string;
+  dateKey: string;
+  occurredAt: string;
+  title: string;
+  description: string;
+  fieldName?: string;
+  fromValue?: string;
+  toValue?: string;
+  commentId?: string;
+  commentBody?: string;
+  estimatedSeconds: number;
+  confidence: JiraActivityConfidence;
+}
+
+export interface JiraActivitySyncResult {
+  weekKey: string;
+  weekStartISO: string;
+  weekEndExclusiveISO: string;
+  syncedAt: string;
+  accountId: string;
+  displayName?: string;
+  issueCount: number;
+  activityCount: number;
+  activities: JiraActivity[];
+  isPartial?: boolean;
+  scannedIssueCount?: number;
+  skippedIssueCount?: number;
+  truncatedIssueCount?: number;
+  truncatedDetailIssueCount?: number;
+}
+
 export interface DayTrackingSummary {
   dateKey: string;
   dateLabel: string;
@@ -413,6 +457,8 @@ export interface SyncRequest {
   weekEndExclusiveISO: string;
   weekKey: string;
 }
+
+export type JiraActivitySyncRequest = SyncRequest;
 
 export interface BitbucketReviewSyncRequest {
   settings: AppSettings;
