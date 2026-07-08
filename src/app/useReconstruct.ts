@@ -11,17 +11,16 @@ import type {
 } from "../../shared/types";
 import { computeAiDrafts, probeOllama } from "../api/ollama";
 import { applyAiDrafts, type AiDrafts } from "../domain/enhancePrompt";
-import type {
-  PlacementMap,
-  ReconstructCommitGroup,
-  ReconstructDay,
-  ReconstructJiraActivity,
-  ReconstructLocalEntry,
-  ReconstructReviewSession,
-  ReconstructWorklog
-} from "../domain/reconstruct";
+import type { PlacementMap, ReconstructDay, ReconstructLocalEntry, ReconstructWorklog } from "../domain/reconstruct";
 import { buildDayRecurring, indexOccurrences } from "../domain/recurring";
-import { autoDistribute, buildReconstructDay, getReconstructSummary } from "../domain/reconstruct";
+import {
+  autoDistribute,
+  buildReconstructDay,
+  getReconstructSummary,
+  toReconstructCommitGroups,
+  toReconstructJiraActivities,
+  toReconstructReviewSessions
+} from "../domain/reconstruct";
 import type { ReconstructDateLabels } from "../components/ReconstructView";
 import {
   getBitbucketReviewResult,
@@ -219,50 +218,9 @@ export const useReconstruct = ({
       timeSpentSeconds: w.timeSpentSeconds,
       comment: w.comment
     }));
-    const reviewSessions: ReconstructReviewSession[] = (review?.sessions ?? [])
-      .filter((session) => session.dateKey === selDateKey)
-      .map((session) => ({
-        id: session.id,
-        jiraIssueKey: session.jiraIssueKey,
-        pullRequestId: session.pullRequestId,
-        pullRequestTitle: session.pullRequestTitle,
-        repositoryName: session.repositoryName,
-        startedISO: session.startedISO,
-        endedISO: session.endedISO,
-        estimatedSeconds: session.estimatedSeconds,
-        commentCount: session.commentCount,
-        confidence: session.confidence,
-        logged: session.status === "logged",
-        isPullRequestAuthor: session.isPullRequestAuthor
-      }));
-    const commits: ReconstructCommitGroup[] = (review?.commitGroups ?? [])
-      .filter((group) => group.dateKey === selDateKey)
-      .map((group) => ({
-        id: group.id,
-        jiraIssueKey: group.jiraIssueKey,
-        pullRequestId: group.pullRequestId,
-        branch: group.branch,
-        repositoryName: group.repositoryName,
-        primaryMessage: group.primaryMessage,
-        commitCount: group.commitCount,
-        firstCommitISO: group.firstCommitISO,
-        lastCommitISO: group.lastCommitISO,
-        estimatedSeconds: group.estimatedSeconds,
-        confidence: group.confidence
-      }));
-    const jiraActivities: ReconstructJiraActivity[] = (activity?.activities ?? [])
-      .filter((item) => item.dateKey === selDateKey)
-      .map((item) => ({
-        id: item.id,
-        kind: item.kind,
-        issueKey: item.issueKey,
-        issueSummary: item.issueSummary,
-        title: item.title,
-        description: item.description,
-        occurredAt: item.occurredAt,
-        estimatedSeconds: item.estimatedSeconds,
-        confidence: item.confidence
-      }));
+    const reviewSessions = toReconstructReviewSessions(review?.sessions, selDateKey);
+    const commits = toReconstructCommitGroups(review?.commitGroups, selDateKey);
+    const jiraActivities = toReconstructJiraActivities(activity?.activities, selDateKey);
     const localNoteEntries: ReconstructLocalEntry[] = notesForWeek
       .filter((note) => note.dateKey === selDateKey)
       .map((note) => ({

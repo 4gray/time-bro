@@ -1,8 +1,21 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AppSettings, JiraTicket, JiraWorklog } from "../../shared/types";
-import { formatHm24 } from "../utils/date";
+import type { ReconstructSignal } from "../domain/reconstruct";
 import { TodayView } from "./TodayView";
+
+const ghostSignal: ReconstructSignal = {
+  id: "sig-1",
+  kind: "commit",
+  key: "FTDM-500",
+  title: "Detected coding session",
+  sub: "web-app · 5 commits · 14:00–15:30",
+  durationMinutes: 90,
+  isMarker: false,
+  confidence: "med",
+  startHour: 14,
+  naiveDescription: "Worked on FTDM-500"
+};
 
 const settings = { aiEnabled: false, ollamaEndpoint: "http://localhost:11434", ollamaModel: "llama3.1:8b" } as AppSettings;
 
@@ -54,49 +67,69 @@ const personalNote = {
   updatedAt: "2026-06-18T12:00:00.000Z"
 };
 
-describe("TodayView", () => {
-  it("shows Jira link icons for today's selected, logged, and touched ticket keys", () => {
-    const markup = renderToStaticMarkup(
-      <TodayView
-        date={new Date("2026-06-18T10:00:00.000Z")}
-        selectedTicket={ticket}
-        ticketOptions={[ticket, touchedTicket]}
-        todayWorklogs={[worklog]}
-        personalNotes={[personalNote]}
-        issueUrlsByKey={{ [ticket.key]: ticket.url }}
-        issueTypesByKey={{ [ticket.key]: ticket.issueType, [touchedTicket.key]: touchedTicket.issueType }}
-        todayTrackedHours={1}
-        dailyTargetHours={8}
-        touchedNotLogged={[touchedTicket]}
-        settings={settings}
-        reminderTime="17:00"
-        remindersEnabled={true}
-        isConfigured={true}
-        isLogging={false}
-        onLog={async () => true}
-        onAddPersonalNote={async () => true}
-        onEditWorklog={() => undefined}
-        onEditPersonalNote={() => undefined}
-        onSelectTicket={() => undefined}
-      />
-    );
+const renderToday = (detectedSignals: ReconstructSignal[] = []) =>
+  renderToStaticMarkup(
+    <TodayView
+      date={new Date("2026-06-18T10:00:00.000Z")}
+      ticketOptions={[ticket, touchedTicket]}
+      todayWorklogs={[worklog]}
+      detectedSignals={detectedSignals}
+      personalNotes={[personalNote]}
+      todayTrackedHours={1}
+      dailyTargetHours={8}
+      touchedNotLogged={[touchedTicket]}
+      settings={settings}
+      reminderTime="17:00"
+      remindersEnabled={true}
+      onCreateAt={() => undefined}
+      onMoveWorklog={async () => true}
+      onEditWorklog={() => undefined}
+      onEditPersonalNote={() => undefined}
+    />
+  );
 
-    expect(markup).toContain("Jira worklog");
-    expect(markup).toContain("Personal note");
-    expect(markup).toContain("Open FTDM-397 in Jira");
-    expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-397");
+describe("TodayView calendar", () => {
+  it("renders worklogs and notes as calendar blocks on the day grid", () => {
+    const markup = renderToday();
+
+    expect(markup).toContain("cal-track");
+    // Worklog block — key title + summary detail.
+    expect(markup).toContain("FTDM-397");
+    expect(markup).toContain("Restructure the access domain in nx monorepo");
+    // Personal note block — falls back to its text as the title.
+    expect(markup).toContain("Mentoring and planning");
+    // Blocks are colored by role: worklog = accent, note = firefighting.
+    expect(markup).toContain("cal-block--accent");
+    expect(markup).toContain("cal-block--fire");
+  });
+
+  it("keeps the rail's touched-today tickets with their Jira links", () => {
+    const markup = renderToday();
+
+    expect(markup).toContain("TOUCHED TODAY");
     expect(markup).toContain("Open FTDM-401 in Jira");
     expect(markup).toContain("https://elevait.atlassian.net/browse/FTDM-401");
-    expect(markup).toContain("EPIC");
-    expect(markup).toContain("SUB");
-    expect(markup).toContain("Edit worklog for FTDM-397");
-    expect(markup).toContain("Edit personal note");
-    expect(markup).toContain("Mentoring and planning");
-    expect(markup).toContain("LOCAL");
-    const noteStart = new Date(personalNote.startedISO);
-    const noteEnd = new Date(noteStart.getTime() + personalNote.timeSpentSeconds * 1000);
-    expect(markup).toContain(
-      `<span class="entry-range">${formatHm24(noteStart)}–${formatHm24(noteEnd)}</span><span class="entry-dur">2h</span>`
-    );
+  });
+
+  it("keeps the header figure and daily target", () => {
+    const markup = renderToday();
+
+    expect(markup).toContain("LOGGED OF 8h");
+  });
+
+  it("renders detected-but-unlogged activity as a ghost block", () => {
+    const markup = renderToday([ghostSignal]);
+
+    expect(markup).toContain("cal-block--ghost");
+    expect(markup).toContain("FTDM-500");
+    expect(markup).toContain("Detected coding session");
+  });
+
+  it("does not ghost activity for a ticket already logged today", () => {
+    // The worklog fixture logs FTDM-397, so a signal for it must be suppressed.
+    const loggedSignal: ReconstructSignal = { ...ghostSignal, id: "sig-2", key: "FTDM-397" };
+    const markup = renderToday([loggedSignal]);
+
+    expect(markup).not.toContain("cal-block--ghost");
   });
 });

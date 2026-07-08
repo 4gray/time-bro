@@ -1,4 +1,9 @@
-import type { JiraActivityKind, WeekdayNumber } from "../../shared/types";
+import type {
+  BitbucketReviewSyncResult,
+  JiraActivityKind,
+  JiraActivitySyncResult,
+  WeekdayNumber
+} from "../../shared/types";
 
 /**
  * Day Reconstruction — deterministic core engine.
@@ -325,6 +330,70 @@ export const buildJiraActivitySignals = (activities: ReconstructJiraActivity[]):
           activity.description.trim() || `Touched Jira issue ${activity.issueKey}: ${activity.issueSummary}.`
       };
     });
+
+/**
+ * Narrow the raw synced Bitbucket/Jira results for one day into the engine's input
+ * shapes. Shared by the Reconstruct view and the Today ghost layer so both derive
+ * signals from identical mappings.
+ */
+export const toReconstructReviewSessions = (
+  sessions: BitbucketReviewSyncResult["sessions"] | undefined,
+  dateKey: string
+): ReconstructReviewSession[] =>
+  (sessions ?? [])
+    .filter((session) => session.dateKey === dateKey)
+    .map((session) => ({
+      id: session.id,
+      jiraIssueKey: session.jiraIssueKey,
+      pullRequestId: session.pullRequestId,
+      pullRequestTitle: session.pullRequestTitle,
+      repositoryName: session.repositoryName,
+      startedISO: session.startedISO,
+      endedISO: session.endedISO,
+      estimatedSeconds: session.estimatedSeconds,
+      commentCount: session.commentCount,
+      confidence: session.confidence,
+      logged: session.status === "logged",
+      isPullRequestAuthor: session.isPullRequestAuthor
+    }));
+
+export const toReconstructCommitGroups = (
+  groups: BitbucketReviewSyncResult["commitGroups"] | undefined,
+  dateKey: string
+): ReconstructCommitGroup[] =>
+  (groups ?? [])
+    .filter((group) => group.dateKey === dateKey)
+    .map((group) => ({
+      id: group.id,
+      jiraIssueKey: group.jiraIssueKey,
+      pullRequestId: group.pullRequestId,
+      branch: group.branch,
+      repositoryName: group.repositoryName,
+      primaryMessage: group.primaryMessage,
+      commitCount: group.commitCount,
+      firstCommitISO: group.firstCommitISO,
+      lastCommitISO: group.lastCommitISO,
+      estimatedSeconds: group.estimatedSeconds,
+      confidence: group.confidence
+    }));
+
+export const toReconstructJiraActivities = (
+  activities: JiraActivitySyncResult["activities"] | undefined,
+  dateKey: string
+): ReconstructJiraActivity[] =>
+  (activities ?? [])
+    .filter((item) => item.dateKey === dateKey)
+    .map((item) => ({
+      id: item.id,
+      kind: item.kind,
+      issueKey: item.issueKey,
+      issueSummary: item.issueSummary,
+      title: item.title,
+      description: item.description,
+      occurredAt: item.occurredAt,
+      estimatedSeconds: item.estimatedSeconds,
+      confidence: item.confidence
+    }));
 
 /** Factual, model-free description for a proposed PR-review entry. */
 const naivePrDescription = (session: ReconstructReviewSession): string => {

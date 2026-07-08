@@ -20,6 +20,7 @@ import { useBitbucketReviewLogging } from "./app/useBitbucketReviewLogging";
 import { useBitbucketReviewSync } from "./app/useBitbucketReviewSync";
 import { useDemoScenario } from "./app/useDemoScenario";
 import { useIssueMetadata } from "./app/useIssueMetadata";
+import { buildDaySignals } from "./domain/todaySignals";
 import { useJiraActivitySync } from "./app/useJiraActivitySync";
 import { useJiraSync } from "./app/useJiraSync";
 import { useJiraWorklogs } from "./app/useJiraWorklogs";
@@ -278,6 +279,13 @@ export const App = () => {
     selectedTicket
   });
 
+  // Today's detected-but-unlogged activity for the calendar ghost layer — derived from
+  // the same signals Reconstruct uses; no extra sync (inputs already resident).
+  const todaySignals = useMemo(
+    () => buildDaySignals(todayKey, bitbucketReviewResult, jiraActivityResult),
+    [todayKey, bitbucketReviewResult, jiraActivityResult]
+  );
+
   // Recap's previous working day: the in-week day when one exists (Tue–Fri),
   // else the prior week's last working day (the Monday → last-Friday case).
   const prevDayCrossWeek = usePrevWorkingDay({
@@ -334,6 +342,7 @@ export const App = () => {
     setLogError,
     handleAddWorklog,
     handleUpdateWorklog,
+    handleMoveWorklog,
     handleDeleteWorklog
   } = useJiraWorklogs({
     settings,
@@ -544,9 +553,9 @@ export const App = () => {
         reportTab={reportTab}
         isBooting={isBooting}
         currentDate={currentDate}
-        selectedTicket={selectedTicket}
         ticketOptions={ticketOptions}
         todayWorklogs={todayWorklogs}
+        todaySignals={todaySignals}
         todayPersonalNotes={todayPersonalNotes}
         issueUrlsByKey={issueUrlsByKey}
         issueTypesByKey={issueTypesByKey}
@@ -587,7 +596,7 @@ export const App = () => {
         recurringOccurrences={recurringOccurrences}
         isImportingPersonalNotes={isImportingPersonalNotes}
         handleAddWorklog={handleAddWorklog}
-        handleAddPersonalNote={handleAddPersonalNote}
+        handleMoveWorklog={handleMoveWorklog}
         handleSync={handleSync}
         goToPreviousWeek={goToPreviousWeek}
         goToCurrentWeek={goToCurrentWeek}
@@ -616,8 +625,6 @@ export const App = () => {
         handleSaveRecurringEvent={handleSaveRecurringEvent}
         handleDeleteRecurringEvent={handleDeleteRecurringEvent}
         handleToggleRecurringEvent={handleToggleRecurringEvent}
-        setSelectedTicket={setSelectedTicket}
-        searchTickets={searchTickets}
         openAddTime={addTimeModalActions.openAddTime}
         openEditWorklog={addTimeModalActions.openEditWorklog}
         openEditPersonalNote={addTimeModalActions.openEditPersonalNote}

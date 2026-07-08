@@ -1,0 +1,338 @@
+/* ===================== Today · calendar day view ===================== */
+
+/* The Today root drops `.view-scroll` so the header stays put and the grid scrolls
+   inside `.cal-scroll` (Google-Calendar style). */
+.today-view .today-rail {
+  overflow-y: auto;
+}
+
+.cal {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+}
+
+.cal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px 28px 28px;
+}
+
+.cal-body {
+  position: relative;
+  display: flex;
+}
+
+.cal-gutter {
+  position: relative;
+  width: 44px;
+  flex: none;
+}
+
+.cal-hour {
+  position: absolute;
+  right: 12px;
+  transform: translateY(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.cal-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  cursor: copy;
+}
+
+.cal-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--line);
+  pointer-events: none;
+}
+
+.cal-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px solid #e5484d;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.cal-now-dot {
+  position: absolute;
+  left: -4px;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+}
+
+.cal-empty {
+  position: absolute;
+  top: 14px;
+  left: 4px;
+  color: var(--dim);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* Interior gap affordance — the zone stays hoverable and lets a pointerdown bubble
+   through to the track (so drag-create still works); only the button intercepts. */
+.cal-gap {
+  position: absolute;
+  left: 4px;
+  right: 10px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cal-gap-fill {
+  opacity: 0;
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-hover);
+  color: var(--muted);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.cal-gap:hover .cal-gap-fill {
+  opacity: 1;
+}
+
+.cal-gap-fill:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+.cal-block {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 9px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--blue);
+  border-radius: 6px;
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  z-index: 2;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.cal-block:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-active);
+}
+
+.cal-block:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.cal-block--accent {
+  border-left-color: var(--blue);
+}
+.cal-block--meeting {
+  border-left-color: var(--purple);
+}
+.cal-block--fire {
+  border-left-color: var(--amber);
+}
+.cal-block--muted {
+  border-left-color: var(--faint);
+  border-style: dashed;
+  background: transparent;
+}
+
+/* Ghost layer — detected-but-unlogged activity, click to promote to a worklog. */
+.cal-block--ghost {
+  border: 1px dashed var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--dim);
+  z-index: 3;
+  cursor: pointer;
+}
+
+.cal-block--ghost .cal-block-title {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.cal-block--ghost .cal-block-detail,
+.cal-block--ghost .cal-block-meta {
+  color: var(--dim);
+}
+
+.cal-block--ghost::after {
+  content: "＋ log";
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 10px;
+  color: var(--faint);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.cal-block--ghost:hover {
+  border-color: var(--blue);
+  background: var(--bg-raised);
+}
+
+.cal-block--ghost:hover .cal-block-title {
+  color: var(--blue-soft);
+}
+
+.cal-block--ghost:hover::after {
+  opacity: 1;
+  color: var(--blue);
+}
+
+.cal-block-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cal-block-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  flex: none;
+}
+
+.cal-block-detail {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-block-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+.cal-block.is-compact {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-block.is-compact .cal-block-meta {
+  margin-left: auto;
+}
+
+.cal-block.is-draggable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.cal-block.is-dragging {
+  cursor: grabbing;
+  z-index: 6;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+/* Edge grips for resize — invisible until the block is hovered. */
+.cal-resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 3;
+  touch-action: none;
+}
+
+.cal-resize--top {
+  top: 0;
+}
+
+.cal-resize--bottom {
+  bottom: 0;
+}
+
+.cal-block.is-draggable:hover .cal-resize::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+
+.cal-resize--top::after {
+  top: 1px;
+}
+
+.cal-resize--bottom::after {
+  bottom: 1px;
+}
+
+/* Live draft while dragging out a new block. */
+.cal-block--draft {
+  border: 1.5px dashed var(--blue);
+  background: rgba(79, 124, 255, 0.14);
+  color: var(--blue-soft);
+  pointer-events: none;
+  z-index: 6;
+  justify-content: flex-end;
+}
+
+body.cal-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+body.cal-dragging .cal-track {
+  cursor: grabbing;
+}
+
+/* Below the two-column breakpoint the body stacks; give the calendar a bounded
+   height so it keeps its own scroll and the rail flows beneath a scrolling page. */
+@media (max-width: 1100px) {
+  .today-view {
+    overflow-y: auto;
+  }
+
+  .today-view .today-body {
+    flex: none;
+  }
+
+  .cal {
+    flex: none;
+    height: 62vh;
+    min-height: 340px;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}

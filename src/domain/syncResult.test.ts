@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JiraTicket, SyncResult } from "../../shared/types";
-import { mergeCreatedWorklogIntoSyncResult } from "./syncResult";
+import { mergeCreatedWorklogIntoSyncResult, mergeUpdatedWorklogIntoSyncResult } from "./syncResult";
 
 const ticket: JiraTicket = {
   id: "10002",
@@ -137,5 +137,98 @@ describe("mergeCreatedWorklogIntoSyncResult", () => {
     });
 
     expect(merged).toBe(syncResult);
+  });
+});
+
+describe("mergeUpdatedWorklogIntoSyncResult", () => {
+  // Local-time fixture so day-bucket keys line up with toLocalDateKey regardless of TZ.
+  const at = (hour: number, minute = 0) => new Date(2026, 5, 18, hour, minute).toISOString();
+  const dayKey = "2026-06-18";
+  const base = (): SyncResult => ({
+    weekKey: "2026-06-15",
+    weekStartISO: new Date(2026, 5, 15).toISOString(),
+    weekEndExclusiveISO: new Date(2026, 5, 22).toISOString(),
+    syncedAt: at(8),
+    accountId: "account-1",
+    trackedSeconds: 3600,
+    issueCount: 1,
+    worklogCount: 1,
+    daySummaries: {
+      [dayKey]: {
+        trackedSeconds: 3600,
+        issues: [{ id: "10001", key: "TB-10", summary: "Existing work", loggedSeconds: 3600, comments: ["kept"] }],
+        worklogs: [
+          {
+            id: "20001",
+            issueId: "10001",
+            issueKey: "TB-10",
+            issueSummary: "Existing work",
+            authorAccountId: "account-1",
+            started: at(8),
+            timeSpentSeconds: 3600,
+            comment: "kept"
+          }
+        ]
+      }
+    }
+  });
+
+  it("resizes a worklog in place, keeping bucket + issue + top totals consistent", () => {
+    const merged = mergeUpdatedWorklogIntoSyncResult(base(), {
+      worklogId: "20001",
+      startedISO: at(8),
+      timeSpentSeconds: 5400
+    });
+
+    expect(merged).not.toBe(base());
+    expect(merged?.trackedSeconds).toBe(5400);
+    expect(merged?.worklogCount).toBe(1);
+    expect(merged?.daySummaries[dayKey].trackedSeconds).toBe(5400);
+    expect(merged?.daySummaries[dayKey].issues[0].loggedSeconds).toBe(5400);
+    expect(merged?.daySummaries[dayKey].worklogs[0]).toMatchObject({ timeSpentSeconds: 5400, comment: "kept" });
+  });
+
+  it("moves a worklog to a new time within the same day", () => {
+    const merged = mergeUpdatedWorklogIntoSyncResult(base(), {
+      worklogId: "20001",
+      startedISO: at(10),
+      timeSpentSeconds: 3600
+    });
+
+    expect(merged?.trackedSeconds).toBe(3600);
+    expect(merged?.daySummaries[dayKey].trackedSeconds).toBe(3600);
+    expect(merged?.daySummaries[dayKey].worklogs[0].started).toBe(at(10));
+  });
+
+  it("shifts a worklog across midnight between day buckets", () => {
+    const nextDay = new Date(2026, 5, 19, 10, 0).toISOString();
+    const merged = mergeUpdatedWorklogIntoSyncResult(base(), {
+      worklogId: "20001",
+      startedISO: nextDay,
+      timeSpentSeconds: 3600
+    });
+
+    expect(merged?.trackedSeconds).toBe(3600);
+    expect(merged?.daySummaries[dayKey].trackedSeconds).toBe(0);
+    expect(merged?.daySummaries[dayKey].worklogs).toHaveLength(0);
+    expect(merged?.daySummaries[dayKey].issues[0].loggedSeconds).toBe(0);
+    expect(merged?.daySummaries["2026-06-19"].trackedSeconds).toBe(3600);
+    expect(merged?.daySummaries["2026-06-19"].worklogs).toHaveLength(1);
+    expect(merged?.daySummaries["2026-06-19"].issues[0]).toMatchObject({ key: "TB-10", loggedSeconds: 3600 });
+  });
+
+  it("returns the input unchanged when the worklog is missing", () => {
+    const input = base();
+    expect(mergeUpdatedWorklogIntoSyncResult(input, { worklogId: "nope", startedISO: at(9), timeSpentSeconds: 900 })).toBe(
+      input
+    );
+  });
+
+  it("returns the input unchanged when the new start is outside the synced week", () => {
+    const input = base();
+    const outside = new Date(2026, 6, 1, 10, 0).toISOString();
+    expect(mergeUpdatedWorklogIntoSyncResult(input, { worklogId: "20001", startedISO: outside, timeSpentSeconds: 900 })).toBe(
+      input
+    );
   });
 });

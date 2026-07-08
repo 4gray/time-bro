@@ -12,7 +12,7 @@ import type {
   UpdateWorklogResult
 } from "../../shared/types";
 import { nativeApi } from "../api/native";
-import { mergeCreatedWorklogIntoSyncResult } from "../domain/syncResult";
+import { mergeCreatedWorklogIntoSyncResult, mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
 import { saveSyncResult as saveSyncResultToStorage } from "../storage/db";
 import { formatDuration } from "../utils/date";
 
@@ -147,6 +147,63 @@ export const useJiraWorklogs = ({
     [client, editingWorklog, isDemo, loadTickets, runSync, settings, showError, showSuccess]
   );
 
+  // Drag move/resize from the calendar: apply the geometry optimistically to the
+  // cached result, persist it, then fire a single Jira update — NO full re-sync, which
+  // would flash the whole view on every drop. Roll back the cache on failure.
+  const handleMoveWorklog = useCallback(
+    async (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => {
+      const optimistic = mergeUpdatedWorklogIntoSyncResult(syncResult, {
+        worklogId: worklog.id,
+        startedISO: patch.startedISO,
+        timeSpentSeconds: patch.timeSpentSeconds,
+        comment: worklog.comment,
+        syncedAtISO: syncResult?.syncedAt
+      });
+
+      if (isDemo) {
+        if (optimistic && optimistic !== syncResult) {
+          onSyncResult(optimistic);
+        }
+        return true;
+      }
+
+      if (optimistic && optimistic !== syncResult) {
+        onSyncResult(optimistic);
+        await saveSyncResult(optimistic);
+      }
+
+      try {
+        await client.updateWorklog({
+          settings,
+          issueKey: worklog.issueKey,
+          worklogId: worklog.id,
+          timeSpentSeconds: patch.timeSpentSeconds,
+          startedISO: patch.startedISO,
+          comment: worklog.comment
+        });
+        return true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unable to update Jira worklog.";
+        setLogError(message);
+        showError(message);
+        // Reconcile from the server rather than restoring a snapshot captured at call
+        // time — a concurrent drag may have applied newer optimistic state that a stale
+        // snapshot would clobber. If the reconcile also fails, the next sync corrects it.
+        try {
+          const fresh = await runSync(settings, { queueAfterCurrent: true });
+          if (fresh) {
+            onSyncResult(fresh);
+            await saveSyncResult(fresh);
+          }
+        } catch {
+          /* leave optimistic state in place */
+        }
+        return false;
+      }
+    },
+    [client, isDemo, onSyncResult, runSync, saveSyncResult, setLogError, settings, showError, syncResult]
+  );
+
   const handleDeleteWorklog = useCallback(async () => {
     if (!editingWorklog) {
       return false;
@@ -189,6 +246,7 @@ export const useJiraWorklogs = ({
     setLogError,
     handleAddWorklog,
     handleUpdateWorklog,
+    handleMoveWorklog,
     handleDeleteWorklog
   };
 };

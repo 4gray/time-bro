@@ -1,16 +1,15 @@
 import type { ComponentProps } from "react";
 import { TodayView } from "../components/TodayView";
+import type { AddTimePrefill } from "../components/AddTimeModal";
 
 type TodayViewProps = ComponentProps<typeof TodayView>;
 
 export interface AppTodayRouteProps {
   currentDate: TodayViewProps["date"];
-  selectedTicket: TodayViewProps["selectedTicket"];
   ticketOptions: TodayViewProps["ticketOptions"];
   todayWorklogs: TodayViewProps["todayWorklogs"];
+  todaySignals: TodayViewProps["detectedSignals"];
   todayPersonalNotes: TodayViewProps["personalNotes"];
-  issueUrlsByKey: TodayViewProps["issueUrlsByKey"];
-  issueTypesByKey: TodayViewProps["issueTypesByKey"];
   todayTrackedHours: TodayViewProps["todayTrackedHours"];
   dailyTargetHours: TodayViewProps["dailyTargetHours"];
   touchedNotLogged: TodayViewProps["touchedNotLogged"];
@@ -18,24 +17,18 @@ export interface AppTodayRouteProps {
   settings: TodayViewProps["settings"];
   reminderTime: TodayViewProps["reminderTime"];
   remindersEnabled: TodayViewProps["remindersEnabled"];
-  isConfigured: TodayViewProps["isConfigured"];
-  isLogging: TodayViewProps["isLogging"];
-  handleAddWorklog: TodayViewProps["onLog"];
-  handleAddPersonalNote: TodayViewProps["onAddPersonalNote"];
+  handleMoveWorklog: TodayViewProps["onMoveWorklog"];
+  openAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   openEditWorklog: TodayViewProps["onEditWorklog"];
   openEditPersonalNote: TodayViewProps["onEditPersonalNote"];
-  setSelectedTicket: TodayViewProps["onSelectTicket"];
-  searchTickets: TodayViewProps["onSearchTickets"];
 }
 
 export const AppTodayRoute = ({
   currentDate,
-  selectedTicket,
   ticketOptions,
   todayWorklogs,
+  todaySignals,
   todayPersonalNotes,
-  issueUrlsByKey,
-  issueTypesByKey,
   todayTrackedHours,
   dailyTargetHours,
   touchedNotLogged,
@@ -43,23 +36,17 @@ export const AppTodayRoute = ({
   settings,
   reminderTime,
   remindersEnabled,
-  isConfigured,
-  isLogging,
-  handleAddWorklog,
-  handleAddPersonalNote,
+  handleMoveWorklog,
+  openAddTime,
   openEditWorklog,
-  openEditPersonalNote,
-  setSelectedTicket,
-  searchTickets
+  openEditPersonalNote
 }: AppTodayRouteProps) => (
   <TodayView
     date={currentDate}
-    selectedTicket={selectedTicket}
     ticketOptions={ticketOptions}
     todayWorklogs={todayWorklogs}
+    detectedSignals={todaySignals}
     personalNotes={todayPersonalNotes}
-    issueUrlsByKey={issueUrlsByKey}
-    issueTypesByKey={issueTypesByKey}
     todayTrackedHours={todayTrackedHours}
     dailyTargetHours={dailyTargetHours}
     touchedNotLogged={touchedNotLogged}
@@ -67,13 +54,9 @@ export const AppTodayRoute = ({
     settings={settings}
     reminderTime={reminderTime}
     remindersEnabled={remindersEnabled}
-    isConfigured={isConfigured}
-    isLogging={isLogging}
-    onLog={handleAddWorklog}
-    onAddPersonalNote={handleAddPersonalNote}
+    onCreateAt={(prefill) => openAddTime(currentDate, prefill)}
+    onMoveWorklog={handleMoveWorklog}
     onEditWorklog={openEditWorklog}
     onEditPersonalNote={openEditPersonalNote}
-    onSelectTicket={setSelectedTicket}
-    onSearchTickets={searchTickets}
   />
 );
