@@ -33,6 +33,13 @@
       "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5193", "--strictPort"],
       "port": 5193,
       "autoPort": false
+    },
+    {
+      "name": "calendar-verify",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:renderer", "--", "--port", "5198", "--strictPort"],
+      "port": 5198,
+      "autoPort": false
     }
   ]
 }

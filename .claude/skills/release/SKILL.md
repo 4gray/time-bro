@@ -16,7 +16,14 @@ The bump type comes from `$ARGUMENTS` (`$1`): `patch`, `minor`, or `major`. **De
 - Release from `main`. The `chore(release)` commits live on `main`; this project does not use release branches.
 - Confirm the bump type. Map `$1` → script: `patch`→`release:patch`, `minor`→`release:minor`, `major`→`release:major`. If `$1` is empty, use `patch`.
 - The working tree must be **clean** before bumping — `npm version` aborts on a dirty tree. So commit the actual fix/feature FIRST (step 2).
-- (Optional, recommended) Validate locally before tagging:
+- **The latest `main` CI run must be GREEN before you tag.** The release workflow re-runs the same `test` job (unit tests + renderer E2E + build), so a red pipeline on `main` fails the release too. If any commits are already on `main`, verify their CI passed before releasing:
+  ```bash
+  gh run list --workflow=ci.yml --branch main --limit 1 --json headSha,status,conclusion -q '.[0]'
+  # Require: status == "completed", conclusion == "success", and headSha == the commit you're about to tag.
+  # If it's failing or still in progress, fix/wait BEFORE bumping — never tag on a red main.
+  ```
+  ⚠️ `npm run test` does **not** run the renderer E2E (`e2e/renderer.e2e.mjs`); a UI change can pass `test` locally yet break `e2e:renderer` in CI. Always gate on the real pipeline (above) and/or `release:dry-run` (below), not `npm run test` alone.
+- (Recommended) Validate locally before tagging — this mirrors the CI `test` job exactly:
   ```bash
   npm run release:dry-run
   ```
@@ -33,6 +40,16 @@ Verify the tree is now clean (must print nothing):
 git status --porcelain
 ```
 
+### 2b. Refresh release screenshots (feature releases)
+If the release changes a primary view, refresh its screenshot for the notes/docs **before** bumping — the tag must include it, and GitHub Pages (`main:/docs`, public) serves it for the notes. Capture with the demo seed:
+```bash
+npm run screenshots -- --seed release --today 2026-06-17 --views today --out docs/screenshots/v<NEW>
+# omit --views to refresh the full set; add a second run with --themes light for light-<view> shots
+```
+- **Screenshots are auto-compressed** to a palette PNG by `scripts/capture-screenshots.mjs` (a full-view 1440×1000 shot is ~30 KB instead of ~120 KB), so committing them to `docs/` stays cheap. Do not hand-optimize.
+- Commit the PNG(s) under `docs/screenshots/v<NEW>/`. If you refreshed the whole set, also bump the `screenshots/v…/` paths in `README.md` and `docs/index.html` so they don't point at the old version.
+- Reference the shot in the notes (step 7) via its public Pages URL — it renders inline: `https://4gray.github.io/time-bro/screenshots/v<NEW>/<theme>-<view>.png` (e.g. `.../v2.1.0/dark-today.png`). Confirm it's live with `curl -sI <url>` (expect `200`) once `main` is pushed.
+
 ### 3. Bump version + create the tag
 Run the project script for the chosen bump type (default `patch`):
 ```bash
@@ -43,10 +60,10 @@ Each expands to `npm version <type> -m "chore(release): v%s"`, which in one step
 - creates a `chore(release): vX.Y.Z` commit, and
 - creates the annotated tag `vX.Y.Z`.
 
-The current version is `1.3.2`, so the next patch produces `v1.3.3`. Capture the new version and tag for later steps:
+Capture the new version and tag for later steps (read it from `package.json` — don't hardcode a version, it drifts every release):
 ```bash
-NEW=$(node -p "require('./package.json').version")   # e.g. 1.3.3
-TAG="v$NEW"                                           # e.g. v1.3.3
+NEW=$(node -p "require('./package.json').version")   # e.g. 2.1.0
+TAG="v$NEW"                                           # e.g. v2.1.0
 echo "$TAG"
 ```
 
@@ -94,12 +111,14 @@ Replace the auto-generated notes with a **curated, user-facing changelog**. Dete
 ```bash
 PREV=$(git tag --sort=-v:refname | grep -v "^$TAG$" | head -1)   # e.g. v1.3.2
 ```
-Write `/tmp/notes.md` (group changes under headings like **Highlights**, **Fixes**, **Improvements** — describe user-visible impact, not raw commit subjects) and ALWAYS end with the compare link:
+Write `/tmp/notes.md` (group changes under headings like **Highlights**, **Fixes**, **Improvements** — describe user-visible impact, not raw commit subjects). For a feature release, embed the screenshot captured in step 2b via its public Pages URL (it renders inline; a committed private-repo raw/asset URL would NOT). ALWAYS end with the compare link:
 ```markdown
 ## What's new in vX.Y.Z
 
 ### Highlights
 - ...
+
+![<view> view](https://4gray.github.io/time-bro/screenshots/vX.Y.Z/dark-<view>.png)
 
 ### Fixes
 - ...

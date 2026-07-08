@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
 import process from "node:process";
@@ -287,11 +287,14 @@ const captureOne = async ({ browser, options, baseUrl, view, theme }) => {
     );
   }
 
-  const buffer = await page.screenshot({
-    path: filePath,
-    fullPage: options.fullPage
-  });
-  await assertScreenshotLooksUseful(buffer, options.viewportSize, options.fullPage, filePath);
+  const rawBuffer = await page.screenshot({ fullPage: options.fullPage });
+  await assertScreenshotLooksUseful(rawBuffer, options.viewportSize, options.fullPage, filePath);
+  // Compress to a palette PNG (pngquant-style): flat UI screenshots quantize with no
+  // visible loss, keeping the committed docs/release-notes images small.
+  const compressed = await sharp(rawBuffer)
+    .png({ palette: true, quality: 90, effort: 10, compressionLevel: 9 })
+    .toBuffer();
+  await writeFile(filePath, compressed);
   await context.close();
 
   return filePath;
