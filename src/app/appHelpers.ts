@@ -5,7 +5,8 @@ import type {
   JiraTicket,
   PersonalNote,
   SyncResult,
-  TicketSortMode
+  TicketSortMode,
+  TicketViewSortMode
 } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 
@@ -79,6 +80,48 @@ export const compareTicketsByCreated = (sortMode: TicketSortMode) => {
     return sortMode === "createdAsc"
       ? leftTime - rightTime || left.key.localeCompare(right.key)
       : rightTime - leftTime || left.key.localeCompare(right.key);
+  };
+};
+
+const getTicketTime = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : undefined;
+};
+
+export const compareTicketsForView = (sortMode: TicketViewSortMode) => {
+  return (left: JiraTicket, right: JiraTicket) => {
+    if (sortMode === "keyAsc") {
+      return left.key.localeCompare(right.key, undefined, { numeric: true });
+    }
+
+    const leftTime =
+      sortMode === "updatedDesc"
+        ? getTicketTime(left.updatedAt) ?? getTicketTime(left.createdAt)
+        : getTicketTime(left.createdAt);
+    const rightTime =
+      sortMode === "updatedDesc"
+        ? getTicketTime(right.updatedAt) ?? getTicketTime(right.createdAt)
+        : getTicketTime(right.createdAt);
+
+    if (leftTime === undefined && rightTime === undefined) {
+      return left.key.localeCompare(right.key, undefined, { numeric: true });
+    }
+
+    if (leftTime === undefined) {
+      return 1;
+    }
+
+    if (rightTime === undefined) {
+      return -1;
+    }
+
+    return sortMode === "createdAsc"
+      ? leftTime - rightTime || left.key.localeCompare(right.key, undefined, { numeric: true })
+      : rightTime - leftTime || left.key.localeCompare(right.key, undefined, { numeric: true });
   };
 };
 

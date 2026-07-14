@@ -107,6 +107,7 @@ const ticket = ({
   statusCategory,
   loggedSecondsTotal,
   createdAt,
+  updatedAt,
   assigneeDisplayName,
   issueType
 }: Omit<JiraTicket, "projectKey" | "url">): JiraTicket => ({
@@ -119,6 +120,7 @@ const ticket = ({
   statusCategory,
   loggedSecondsTotal,
   createdAt,
+  updatedAt: updatedAt ?? createdAt,
   assigneeDisplayName: assigneeDisplayName ?? DEMO_ASSIGNEES[key.split("-")[0]],
   issueType,
   url: ticketUrl(key)

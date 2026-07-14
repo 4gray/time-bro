@@ -64,6 +64,7 @@ interface JiraTicketIssue {
     issuetype?: JiraIssueTypeResponse;
     parent?: JiraParentResponse;
     created?: string;
+    updated?: string;
     assignee?: { displayName?: string } | null;
   };
 }
@@ -996,7 +997,7 @@ export const syncJiraActivity = async (request: JiraActivitySyncRequest): Promis
   };
 };
 
-const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created,assignee";
+const TICKET_FIELDS = "summary,status,project,timetracking,aggregatetimespent,issuetype,parent,created,updated,assignee";
 const ISSUE_DETAILS_FIELDS = `${TICKET_FIELDS},description`;
 const TICKET_PAGE_SIZE = 100;
 const ASSIGNED_OPEN_TICKET_LIMIT = 500;
@@ -1070,6 +1071,7 @@ const toTicket = (settings: AppSettings, issue: JiraTicketIssue): JiraTicket => 
     statusCategory: normalizeStatusCategory(fields.status?.statusCategory?.key),
     loggedSecondsTotal,
     createdAt: fields.created,
+    updatedAt: fields.updated,
     assigneeDisplayName: fields.assignee?.displayName?.trim() || undefined,
     issueType: normalizeIssueType(fields.issuetype),
     epic: normalizeEpic(settings, fields.parent),
@@ -1137,16 +1139,17 @@ export const fetchJiraIssueDetails = async (request: IssueDetailsRequest): Promi
 export const fetchAssignedTickets = async (request: TicketsRequest): Promise<TicketsResult> => {
   const { settings } = request;
   const currentUser = await fetchCurrentUser(settings);
+  const assigneeClause = request.assignedOnly === false ? "" : "assignee = currentUser() AND ";
 
   const [openIssues, closedIssues] = await Promise.all([
     searchTickets(
       settings,
-      "assignee = currentUser() AND statusCategory != Done ORDER BY statusCategory DESC, updated DESC",
+      `${assigneeClause}statusCategory != Done ORDER BY statusCategory DESC, updated DESC`,
       ASSIGNED_OPEN_TICKET_LIMIT
     ),
     searchTickets(
       settings,
-      "assignee = currentUser() AND statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC",
+      `${assigneeClause}statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC`,
       RECENTLY_CLOSED_TICKET_LIMIT
     )
   ]);

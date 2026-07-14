@@ -125,6 +125,13 @@ const baseProps = (): AppMainViewProps => ({
   monthState,
   visibleBitbucketReviewResult: undefined,
   tickets: { inProgress: [{}], recentlyClosed: [{}, {}] } as AppMainViewProps["tickets"],
+  ticketFilters: {
+    assignedOnly: true,
+    statusCategories: ["new", "indeterminate", "done"],
+    query: "",
+    sortMode: "updatedDesc"
+  },
+  setTicketFilters: noop,
   favoriteKeys: [],
   hoursByKey: {},
   dockTickets: [],

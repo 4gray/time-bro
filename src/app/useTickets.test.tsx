@@ -45,7 +45,7 @@ const makeTicketsResult = (overrides: Partial<TicketsResult> = {}): TicketsResul
   fetchedAt: "2026-06-17T10:00:00.000Z",
   accountId: "account-1",
   inProgress: [buildTicket("TB-1"), buildTicket("TB-2")],
-  recentlyClosed: [buildTicket("TB-3")],
+  recentlyClosed: [buildTicket("TB-3", { statusName: "Done", statusCategory: "done" })],
   ...overrides
 });
 
@@ -155,6 +155,93 @@ describe("useTickets", () => {
     expect(getApi().tickets).toBe(loaded);
     expect(getApi().ticketsLoading).toBe(false);
     expect(getApi().ticketsError).toBeUndefined();
+  });
+
+  it("filters the Tickets view by multiple Jira status categories without re-fetching", async () => {
+    const loaded = makeTicketsResult({
+      inProgress: [
+        buildTicket("TODO-1", { statusName: "To Do", statusCategory: "new" }),
+        buildTicket("DOING-1", { statusName: "In Progress", statusCategory: "indeterminate" })
+      ],
+      recentlyClosed: [buildTicket("DONE-1", { statusName: "Done", statusCategory: "done" })]
+    });
+    fetchAssignedTickets.mockResolvedValue(loaded);
+
+    renderHarness({ isBooting: false });
+    await flushAsyncUpdates();
+
+    act(() => {
+      getApi().setTicketFilters({
+        assignedOnly: true,
+        statusCategories: ["new", "done"],
+        query: "",
+        sortMode: "updatedDesc"
+      });
+    });
+
+    expect(getApi().ticketViewTickets?.inProgress.map((ticket) => ticket.key)).toEqual(["TODO-1"]);
+    expect(getApi().ticketViewTickets?.recentlyClosed.map((ticket) => ticket.key)).toEqual(["DONE-1"]);
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("searches and sorts the fetched Tickets-view pool locally", async () => {
+    const loaded = makeTicketsResult({
+      inProgress: [
+        buildTicket("TB-10", {
+          summary: "Polish reports",
+          updatedAt: "2026-06-18T10:00:00.000Z"
+        }),
+        buildTicket("TB-2", {
+          summary: "Polish ticket search",
+          updatedAt: "2026-06-19T10:00:00.000Z"
+        })
+      ],
+      recentlyClosed: []
+    });
+    fetchAssignedTickets.mockResolvedValue(loaded);
+
+    renderHarness({ isBooting: false });
+    await flushAsyncUpdates();
+
+    expect(getApi().ticketViewTickets?.inProgress.map((ticket) => ticket.key)).toEqual(["TB-2", "TB-10"]);
+
+    act(() => {
+      getApi().setTicketFilters({
+        assignedOnly: true,
+        statusCategories: ["new", "indeterminate", "done"],
+        query: "ticket search",
+        sortMode: "keyAsc"
+      });
+    });
+
+    expect(getApi().ticketViewTickets?.inProgress.map((ticket) => ticket.key)).toEqual(["TB-2"]);
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads a bounded all-assignee pool when the assignment filter is turned off", async () => {
+    const assigned = makeTicketsResult({ inProgress: [buildTicket("MINE-1")] });
+    const accessible = makeTicketsResult({
+      inProgress: [buildTicket("TEAM-1", { assigneeDisplayName: "Someone Else" })],
+      recentlyClosed: []
+    });
+    fetchAssignedTickets.mockResolvedValueOnce(assigned).mockResolvedValueOnce(accessible);
+
+    renderHarness({ isBooting: false });
+    await flushAsyncUpdates();
+
+    act(() => {
+      getApi().setTicketFilters({
+        assignedOnly: false,
+        statusCategories: ["new", "indeterminate", "done"],
+        query: "",
+        sortMode: "updatedDesc"
+      });
+    });
+    await flushAsyncUpdates();
+
+    expect(fetchAssignedTickets).toHaveBeenNthCalledWith(2, { settings, assignedOnly: false });
+    expect(getApi().ticketViewTickets?.inProgress.map((ticket) => ticket.key)).toEqual(["TEAM-1"]);
+    expect(getApi().tickets?.inProgress.map((ticket) => ticket.key)).toEqual(["MINE-1"]);
   });
 
   it("reports load errors without throwing", async () => {

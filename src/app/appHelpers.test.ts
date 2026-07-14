@@ -3,6 +3,7 @@ import type { AppSettings, JiraTicket, PersonalNote } from "../../shared/types";
 import { GITHUB_RELEASES_URL } from "../../shared/releases";
 import {
   compareTicketsByCreated,
+  compareTicketsForView,
   createDemoUpdateInfo,
   formatPersonalNoteCount,
   formatReleaseVersion,
@@ -112,6 +113,30 @@ describe("app helpers", () => {
       "TB-2",
       "TB-3",
       "TB-4"
+    ]);
+  });
+
+  it("sorts Tickets-view results by update time, creation time, or natural key order", () => {
+    const tickets = [
+      { ...buildTicket("TB-10", "2026-06-18T08:00:00.000Z"), updatedAt: "2026-06-18T09:00:00.000Z" },
+      { ...buildTicket("TB-2", "2026-06-17T08:00:00.000Z"), updatedAt: "2026-06-19T09:00:00.000Z" },
+      buildTicket("TB-1", "2026-06-16T08:00:00.000Z")
+    ];
+
+    expect([...tickets].sort(compareTicketsForView("updatedDesc")).map((ticket) => ticket.key)).toEqual([
+      "TB-2",
+      "TB-10",
+      "TB-1"
+    ]);
+    expect([...tickets].sort(compareTicketsForView("createdAsc")).map((ticket) => ticket.key)).toEqual([
+      "TB-1",
+      "TB-2",
+      "TB-10"
+    ]);
+    expect([...tickets].sort(compareTicketsForView("keyAsc")).map((ticket) => ticket.key)).toEqual([
+      "TB-1",
+      "TB-2",
+      "TB-10"
     ]);
   });
 

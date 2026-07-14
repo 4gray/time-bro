@@ -48,6 +48,8 @@ export interface AppMainViewProps {
   monthState: AppMonthRouteProps["monthState"];
   visibleBitbucketReviewResult: AppReviewRouteProps["visibleBitbucketReviewResult"];
   tickets: AppTicketsRouteProps["tickets"];
+  ticketFilters: AppTicketsRouteProps["ticketFilters"];
+  setTicketFilters: AppTicketsRouteProps["setTicketFilters"];
   favoriteKeys: AppTicketsRouteProps["favoriteKeys"];
   hoursByKey: AppTicketsRouteProps["hoursByKey"];
   dockTickets: AppWeekRouteProps["dockTickets"];
@@ -143,6 +145,8 @@ export const AppMainView = ({
   monthState,
   visibleBitbucketReviewResult,
   tickets,
+  ticketFilters,
+  setTicketFilters,
   favoriteKeys,
   hoursByKey,
   dockTickets,
@@ -319,6 +323,8 @@ export const AppMainView = ({
     content = (
       <AppTicketsRoute
         tickets={tickets}
+        ticketFilters={ticketFilters}
+        setTicketFilters={setTicketFilters}
         favoriteKeys={favoriteKeys}
         hoursByKey={hoursByKey}
         weekHoursLogged={weekState.trackedWeekHours}

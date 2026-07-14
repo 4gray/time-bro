@@ -10,6 +10,8 @@ export interface AppTicketsRouteProps {
         recentlyClosed: TicketsViewProps["recentlyClosed"];
       }
     | undefined;
+  ticketFilters: TicketsViewProps["filters"];
+  setTicketFilters: TicketsViewProps["onFiltersChange"];
   favoriteKeys: TicketsViewProps["favoriteKeys"];
   hoursByKey: TicketsViewProps["hoursByKey"];
   weekHoursLogged: TicketsViewProps["weekHoursLogged"];
@@ -22,6 +24,8 @@ export interface AppTicketsRouteProps {
 
 export const AppTicketsRoute = ({
   tickets,
+  ticketFilters,
+  setTicketFilters,
   favoriteKeys,
   hoursByKey,
   weekHoursLogged,
@@ -34,6 +38,8 @@ export const AppTicketsRoute = ({
   <TicketsView
     inProgress={tickets?.inProgress ?? []}
     recentlyClosed={tickets?.recentlyClosed ?? []}
+    filters={ticketFilters}
+    onFiltersChange={setTicketFilters}
     favoriteKeys={favoriteKeys}
     hoursByKey={hoursByKey}
     weekHoursLogged={weekHoursLogged}
