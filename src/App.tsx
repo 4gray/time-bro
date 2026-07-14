@@ -116,6 +116,9 @@ export const App = () => {
   });
   const {
     tickets,
+    ticketViewTickets,
+    ticketFilters,
+    setTicketFilters,
     ticketsLoading,
     ticketsError,
     favoriteKeys,
@@ -577,7 +580,9 @@ export const App = () => {
         jiraActivityResult={jiraActivityResult}
         monthState={monthState}
         visibleBitbucketReviewResult={visibleBitbucketReviewResult}
-        tickets={tickets}
+        tickets={ticketViewTickets}
+        ticketFilters={ticketFilters}
+        setTicketFilters={setTicketFilters}
         favoriteKeys={favoriteKeys}
         hoursByKey={hoursByKey}
         dockTickets={dockTickets}

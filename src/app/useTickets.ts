@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppSettings,
   JiraTicket,
   SearchTicketsRequest,
   SearchTicketsResult,
+  TicketFilters,
   TicketSortMode,
   TicketsRequest,
   TicketsResult
@@ -11,7 +12,7 @@ import type {
 import type { DemoScenario } from "../demo/fixtures";
 import { saveFavoriteKeys as saveFavoriteKeysToStorage } from "../storage/db";
 import { nativeApi } from "../api/native";
-import { compareTicketsByCreated, isJiraConfigured } from "./appHelpers";
+import { compareTicketsByCreated, compareTicketsForView, isJiraConfigured } from "./appHelpers";
 
 export interface TicketsClient {
   fetchAssignedTickets(request: TicketsRequest): Promise<TicketsResult>;
@@ -26,6 +27,36 @@ interface UseTicketsOptions {
   saveFavoriteKeys?: (keys: string[]) => Promise<void>;
 }
 
+export const DEFAULT_TICKET_FILTERS: TicketFilters = {
+  assignedOnly: true,
+  statusCategories: ["new", "indeterminate", "done"],
+  query: "",
+  sortMode: "updatedDesc"
+};
+
+const filterTicketsForView = (
+  source: TicketsResult,
+  filters: TicketFilters,
+  assignedDisplayName?: string
+): TicketsResult => {
+  const selectedStatuses = new Set(filters.statusCategories);
+  const normalizedQuery = filters.query.trim().toLocaleLowerCase();
+  const includeTicket = (ticket: JiraTicket) =>
+    selectedStatuses.has(ticket.statusCategory as "new" | "indeterminate" | "done") &&
+    (!assignedDisplayName || ticket.assigneeDisplayName === assignedDisplayName) &&
+    (normalizedQuery.length === 0 ||
+      [ticket.key, ticket.summary, ticket.projectName, ticket.statusName, ticket.assigneeDisplayName ?? ""].some((value) =>
+        value.toLocaleLowerCase().includes(normalizedQuery)
+      ));
+  const compareTickets = compareTicketsForView(filters.sortMode);
+
+  return {
+    ...source,
+    inProgress: source.inProgress.filter(includeTicket).sort(compareTickets),
+    recentlyClosed: source.recentlyClosed.filter(includeTicket).sort(compareTickets)
+  };
+};
+
 export const useTickets = ({
   settings,
   isBooting,
@@ -36,8 +67,17 @@ export const useTickets = ({
   const [tickets, setTickets] = useState<TicketsResult | undefined>(() => demoScenario?.tickets);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState<string | undefined>();
+  const [allAccessibleTickets, setAllAccessibleTickets] = useState<TicketsResult | undefined>();
+  const [allAccessibleTicketsLoading, setAllAccessibleTicketsLoading] = useState(false);
+  const [allAccessibleTicketsError, setAllAccessibleTicketsError] = useState<string | undefined>();
+  const [ticketFilters, setTicketFiltersState] = useState<TicketFilters>(() => ({
+    ...DEFAULT_TICKET_FILTERS,
+    statusCategories: [...DEFAULT_TICKET_FILTERS.statusCategories]
+  }));
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => demoScenario?.favoriteKeys ?? []);
   const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>(() => demoScenario?.selectedTicket);
+  const ticketFiltersRef = useRef(ticketFilters);
+  const allAccessibleRequestIdRef = useRef(0);
 
   const ticketOptions = useMemo(() => {
     const map = new Map<string, JiraTicket>();
@@ -67,11 +107,59 @@ export const useTickets = ({
     return [...byKey.values()];
   }, [tickets]);
 
+  const ticketViewTickets = useMemo(() => {
+    const source = demoScenario?.tickets ?? (ticketFilters.assignedOnly ? tickets : allAccessibleTickets);
+    if (!source) {
+      return undefined;
+    }
+
+    const assignedDisplayName =
+      demoScenario && ticketFilters.assignedOnly ? demoScenario.syncResult.displayName : undefined;
+    return filterTicketsForView(source, ticketFilters, assignedDisplayName);
+  }, [allAccessibleTickets, demoScenario, ticketFilters, tickets]);
+
+  const loadAllAccessibleTickets = useCallback(
+    async (settingsForLoad: AppSettings = settings) => {
+      if (!isJiraConfigured(settingsForLoad)) {
+        setAllAccessibleTickets(undefined);
+        setAllAccessibleTicketsError(undefined);
+        return undefined;
+      }
+
+      const requestId = allAccessibleRequestIdRef.current + 1;
+      allAccessibleRequestIdRef.current = requestId;
+      setAllAccessibleTicketsLoading(true);
+      setAllAccessibleTicketsError(undefined);
+
+      try {
+        const result = await client.fetchAssignedTickets({ settings: settingsForLoad, assignedOnly: false });
+        if (allAccessibleRequestIdRef.current === requestId) {
+          setAllAccessibleTickets(result);
+        }
+        return result;
+      } catch (error) {
+        if (allAccessibleRequestIdRef.current === requestId) {
+          setAllAccessibleTicketsError(error instanceof Error ? error.message : "Unable to load tickets.");
+        }
+        return undefined;
+      } finally {
+        if (allAccessibleRequestIdRef.current === requestId) {
+          setAllAccessibleTicketsLoading(false);
+        }
+      }
+    },
+    [client, settings]
+  );
+
   const loadTickets = useCallback(
     async (settingsForLoad: AppSettings = settings) => {
       if (!isJiraConfigured(settingsForLoad)) {
+        allAccessibleRequestIdRef.current += 1;
         setTickets(undefined);
         setTicketsError(undefined);
+        setAllAccessibleTickets(undefined);
+        setAllAccessibleTicketsError(undefined);
+        setAllAccessibleTicketsLoading(false);
         return undefined;
       }
 
@@ -81,6 +169,10 @@ export const useTickets = ({
       try {
         const result = await client.fetchAssignedTickets({ settings: settingsForLoad });
         setTickets(result);
+        setAllAccessibleTickets(undefined);
+        if (!ticketFiltersRef.current.assignedOnly) {
+          void loadAllAccessibleTickets(settingsForLoad);
+        }
         return result;
       } catch (error) {
         setTicketsError(error instanceof Error ? error.message : "Unable to load tickets.");
@@ -89,7 +181,28 @@ export const useTickets = ({
         setTicketsLoading(false);
       }
     },
-    [client, settings]
+    [client, loadAllAccessibleTickets, settings]
+  );
+
+  const setTicketFilters = useCallback(
+    (nextFilters: TicketFilters) => {
+      const next = {
+        ...nextFilters,
+        statusCategories: [...nextFilters.statusCategories]
+      };
+      ticketFiltersRef.current = next;
+      setTicketFiltersState(next);
+
+      if (
+        !next.assignedOnly &&
+        !demoScenario &&
+        !allAccessibleTickets &&
+        !allAccessibleTicketsLoading
+      ) {
+        void loadAllAccessibleTickets();
+      }
+    },
+    [allAccessibleTickets, allAccessibleTicketsLoading, demoScenario, loadAllAccessibleTickets]
   );
 
   const searchTickets = useCallback(
@@ -164,8 +277,11 @@ export const useTickets = ({
 
   return {
     tickets,
-    ticketsLoading,
-    ticketsError,
+    ticketViewTickets,
+    ticketFilters,
+    setTicketFilters,
+    ticketsLoading: ticketsLoading || (!ticketFilters.assignedOnly && allAccessibleTicketsLoading),
+    ticketsError: ticketsError ?? (!ticketFilters.assignedOnly ? allAccessibleTicketsError : undefined),
     favoriteKeys,
     setFavoriteKeys,
     selectedTicket,

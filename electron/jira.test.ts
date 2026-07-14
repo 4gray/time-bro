@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AppSettings } from "../shared/types";
-import { fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity } from "./jira";
+import { fetchAssignedTickets, fetchJiraIssueDetails, searchJiraTickets, syncJiraActivity } from "./jira";
 
 const settings: AppSettings = {
   jiraBaseUrl: "https://example.atlassian.net",
@@ -41,6 +41,54 @@ const jsonResponse = (body: unknown) =>
       "Content-Type": "application/json"
     }
   });
+
+describe("fetchAssignedTickets", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("scopes both ticket buckets to the current user by default", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+      return requestedUrl.pathname === "/rest/api/3/myself"
+        ? jsonResponse({ accountId: "me" })
+        : jiraSearchResponse();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchAssignedTickets({ settings });
+
+    const jql = fetchMock.mock.calls
+      .map(([url]) => new URL(String(url)))
+      .filter((url) => url.pathname === "/rest/api/3/search/jql")
+      .map((url) => url.searchParams.get("jql"));
+    expect(jql).toEqual([
+      "assignee = currentUser() AND statusCategory != Done ORDER BY statusCategory DESC, updated DESC",
+      "assignee = currentUser() AND statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC"
+    ]);
+  });
+
+  it("can fetch accessible tickets across assignees", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const requestedUrl = new URL(String(url));
+      return requestedUrl.pathname === "/rest/api/3/myself"
+        ? jsonResponse({ accountId: "me" })
+        : jiraSearchResponse();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchAssignedTickets({ settings, assignedOnly: false });
+
+    const jql = fetchMock.mock.calls
+      .map(([url]) => new URL(String(url)))
+      .filter((url) => url.pathname === "/rest/api/3/search/jql")
+      .map((url) => url.searchParams.get("jql"));
+    expect(jql).toEqual([
+      "statusCategory != Done ORDER BY statusCategory DESC, updated DESC",
+      "statusCategory = Done AND resolved >= -14d ORDER BY resolved DESC"
+    ]);
+  });
+});
 
 describe("searchJiraTickets", () => {
   afterEach(() => {
@@ -126,6 +174,7 @@ describe("searchJiraTickets", () => {
               name: "Refused",
               statusCategory: { key: "completed" }
             },
+            updated: "2026-06-19T12:00:00.000Z",
             assignee: { displayName: "Sam Rivera" }
           }
         }
@@ -141,11 +190,13 @@ describe("searchJiraTickets", () => {
 
     const requestedUrl = new URL(String(fetchMock.mock.calls[0][0]));
     expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("status");
+    expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("updated");
     expect(requestedUrl.searchParams.get("fields")?.split(",")).toContain("assignee");
     expect(result.issues[0]).toMatchObject({
       key: "OPS-77",
       statusName: "Refused",
       statusCategory: "done",
+      updatedAt: "2026-06-19T12:00:00.000Z",
       assigneeDisplayName: "Sam Rivera"
     });
   });

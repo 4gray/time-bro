@@ -270,6 +270,16 @@ export interface BitbucketReviewSyncResult {
 
 export type TicketStatusCategory = "new" | "indeterminate" | "done" | "unknown";
 
+export type TicketFilterStatusCategory = Exclude<TicketStatusCategory, "unknown">;
+export type TicketViewSortMode = "updatedDesc" | "createdDesc" | "createdAsc" | "keyAsc";
+
+export interface TicketFilters {
+  assignedOnly: boolean;
+  statusCategories: TicketFilterStatusCategory[];
+  query: string;
+  sortMode: TicketViewSortMode;
+}
+
 export interface JiraTicket {
   id: string;
   key: string;
@@ -280,6 +290,7 @@ export interface JiraTicket {
   statusCategory: TicketStatusCategory;
   loggedSecondsTotal: number;
   createdAt?: string;
+  updatedAt?: string;
   assigneeDisplayName?: string;
   issueType?: JiraIssueTypeInfo;
   epic?: JiraEpicInfo;
@@ -376,6 +387,8 @@ export interface PendingRecurringOccurrence {
 
 export interface TicketsRequest {
   settings: AppSettings;
+  /** Defaults to true to preserve the focused, low-volume ticket query. */
+  assignedOnly?: boolean;
 }
 
 export interface TicketsResult {

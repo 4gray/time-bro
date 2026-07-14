@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { JiraTicket } from "../../shared/types";
+import type { JiraTicket, TicketFilters } from "../../shared/types";
 import { AppTicketsRoute, type AppTicketsRouteProps } from "./AppTicketsRoute";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -61,12 +61,20 @@ const closedTicket: JiraTicket = {
 };
 
 const noop = () => undefined;
+const ticketFilters: TicketFilters = {
+  assignedOnly: true,
+  statusCategories: ["new", "indeterminate", "done"],
+  query: "",
+  sortMode: "updatedDesc"
+};
 
 const baseProps = (): AppTicketsRouteProps => ({
   tickets: {
     inProgress: [ticket],
     recentlyClosed: [closedTicket]
   },
+  ticketFilters,
+  setTicketFilters: noop,
   favoriteKeys: ["FTDM-101"],
   hoursByKey: { "FTDM-101": 2 },
   weekHoursLogged: 12,
@@ -111,6 +119,7 @@ describe("AppTicketsRoute", () => {
     expect(rendered?.getAttribute("data-error")).toBe("No Jira today");
     expect(ticketsViewProps[0]?.favoriteKeys).toEqual(["FTDM-101"]);
     expect(ticketsViewProps[0]?.hoursByKey).toEqual({ "FTDM-101": 2 });
+    expect(ticketsViewProps[0]?.filters).toEqual(ticketFilters);
   });
 
   it("passes empty ticket buckets while ticket data has not loaded", () => {
