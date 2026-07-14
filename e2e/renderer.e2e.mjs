@@ -253,6 +253,23 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
   });
 });
 
+test("week switches between Summary and Timeline and remembers the choice", { timeout: 60_000 }, async () => {
+  await withDemoPage({ view: "week" }, async (page) => {
+    await page.getByRole("button", { name: "TIMELINE", exact: true }).click();
+    await page.locator(".week-timeline").waitFor();
+    assert.equal(await page.locator(".week-timeline .cal-track").count(), 4);
+    assert.ok(await page.getByText("drag a ticket onto the timeline to log time").isVisible());
+
+    await clickNav(page, "TODAY", "today");
+    await clickNav(page, "WEEK", "week");
+    await page.locator(".week-timeline").waitFor();
+
+    await page.getByRole("button", { name: "SUMMARY", exact: true }).click();
+    await page.locator(".week-grid").waitFor();
+    assert.equal(await page.locator(".week-timeline").count(), 0);
+  });
+});
+
 test("week Add Time modal creates, edits, and deletes a local note", { timeout: 60_000 }, async () => {
   await withDemoPage({ view: "week" }, async (page) => {
     await page.getByRole("button", { name: /Log time for Wednesday/i }).click();

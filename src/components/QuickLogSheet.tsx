@@ -10,6 +10,8 @@ export interface QuickLogContext {
   dateKey: string;
   dayLabel: string;
   hours: number;
+  startedMinutes?: number;
+  timelineEndMinutes?: number;
   comment: string;
 }
 
@@ -17,6 +19,7 @@ interface QuickLogSheetProps {
   context: QuickLogContext;
   color: DockColor;
   isLogging: boolean;
+  validationMessage?: string;
   onChangeHours: (hours: number) => void;
   onChangeComment: (comment: string) => void;
   onCancel: () => void;
@@ -42,6 +45,7 @@ export const QuickLogSheet = ({
   context,
   color,
   isLogging,
+  validationMessage,
   onChangeHours,
   onChangeComment,
   onCancel,
@@ -96,14 +100,14 @@ export const QuickLogSheet = ({
         onCancel();
       } else if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
         event.preventDefault();
-        if (!isLogging && context.hours > 0) {
+        if (!isLogging && context.hours > 0 && !validationMessage) {
           onConfirm();
         }
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [context.hours, isLogging, onCancel, onConfirm]);
+  }, [context.hours, isLogging, onCancel, onConfirm, validationMessage]);
 
   return (
     <div className="quicklog-overlay" role="dialog" aria-modal="true" aria-label="Log time">
@@ -184,6 +188,12 @@ export const QuickLogSheet = ({
             </div>
           )}
 
+          {validationMessage && (
+            <div className="quicklog-validation" role="alert">
+              {validationMessage}
+            </div>
+          )}
+
           <div className="quicklog-label quicklog-label-spaced">WORK DESCRIPTION</div>
           <textarea
             ref={textareaRef}
@@ -204,7 +214,7 @@ export const QuickLogSheet = ({
               type="button"
               className="quicklog-confirm"
               onClick={onConfirm}
-              disabled={isLogging || context.hours <= 0}
+              disabled={isLogging || context.hours <= 0 || Boolean(validationMessage)}
             >
               {isLogging ? <Loader2 className="spin" size={14} /> : null}
               Log {formatDuration(context.hours)} to {context.ticketKey}

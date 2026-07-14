@@ -1284,3 +1284,328 @@
 .day-col.is-skipped .day-skip:hover {
   border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
+
+/* ===================== Week · switchable shared timeline ===================== */
+
+.week-view-switch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-sunken);
+}
+
+.week-view-switch button {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.week-view-switch button:hover {
+  color: var(--text-strong);
+}
+
+.week-view-switch button.is-active {
+  color: var(--blue-soft);
+  background: var(--bg-active);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.week-view-switch button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.week-timeline {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.week-timeline-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.week-timeline-canvas {
+  min-width: 912px;
+}
+
+.week-timeline-head,
+.week-timeline-body {
+  display: grid;
+}
+
+.week-timeline-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-width: 0;
+  background: color-mix(in srgb, var(--bg) 96%, transparent);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--bg) 82%, transparent);
+}
+
+.week-tl-gutter-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 10px 13px 0;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.week-tl-day-head {
+  position: relative;
+  min-width: 0;
+  height: 90px;
+  padding: 12px 14px 11px;
+  border-left: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+
+.week-tl-day-head.is-today {
+  background: color-mix(in srgb, var(--blue) 8%, var(--bg));
+}
+
+.week-tl-day-head.is-future {
+  background: color-mix(in srgb, var(--bg-sunken) 66%, var(--bg));
+}
+
+.week-tl-day-head.is-skipped {
+  background: color-mix(in srgb, var(--amber) 6%, var(--bg));
+}
+
+.week-tl-day-title {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.week-tl-day-name {
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.week-tl-day-date {
+  color: var(--text-bright);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.week-tl-day-head.is-today .week-tl-day-name,
+.week-tl-day-head.is-today .week-tl-day-date {
+  color: var(--blue);
+}
+
+.week-tl-day-head.is-future .week-tl-day-name,
+.week-tl-day-head.is-future .week-tl-day-date,
+.week-tl-day-head.is-skipped .week-tl-day-date {
+  color: var(--faint);
+}
+
+.week-tl-day-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+}
+
+.week-tl-icon-button {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fainter);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.week-tl-day-head:hover .week-tl-icon-button,
+.week-tl-icon-button:focus-visible,
+.week-tl-icon-button.is-today,
+.week-tl-day-head.is-skipped .week-tl-icon-button.is-vacation {
+  opacity: 1;
+}
+
+.week-tl-icon-button:hover {
+  color: var(--text-strong);
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.week-tl-icon-button.is-today {
+  color: var(--bg);
+  border-color: var(--blue);
+  background: var(--blue);
+}
+
+.week-tl-icon-button.is-vacation:hover,
+.week-tl-day-head.is-skipped .week-tl-icon-button.is-vacation {
+  color: var(--amber);
+}
+
+.week-tl-day-total {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 11px;
+  white-space: nowrap;
+}
+
+.week-tl-day-total strong {
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.week-tl-day-total span {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.week-tl-day-head.is-future .week-tl-day-total strong,
+.week-tl-day-head.is-skipped .week-tl-day-total strong {
+  color: var(--faint);
+}
+
+.week-tl-progress {
+  height: 4px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line-soft);
+}
+
+.week-tl-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.week-tl-progress span.is-complete {
+  background: var(--green);
+}
+
+.week-timeline-body {
+  position: relative;
+  min-height: 0;
+}
+
+.week-tl-gutter {
+  position: relative;
+  background: var(--bg);
+}
+
+.week-tl-gutter span {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.week-tl-day {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--line-soft);
+}
+
+.week-tl-day.is-today {
+  background: color-mix(in srgb, var(--blue) 7%, transparent);
+}
+
+.week-tl-day.is-future {
+  background: color-mix(in srgb, var(--bg-sunken) 56%, transparent);
+}
+
+.week-tl-day.is-skipped {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 7%, transparent), transparent 68%);
+}
+
+.week-tl-vacation,
+.week-tl-readonly {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.week-tl-vacation {
+  gap: 13px;
+  color: var(--amber);
+}
+
+.week-tl-vacation svg {
+  opacity: 0.68;
+  filter: drop-shadow(0 7px 18px color-mix(in srgb, var(--amber) 25%, transparent));
+}
+
+.week-tl-vacation span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+}
+
+.week-tl-readonly {
+  gap: 5px;
+  pointer-events: none;
+  color: var(--faint);
+}
+
+.week-tl-readonly span {
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.week-tl-readonly small {
+  max-width: 17ch;
+  color: var(--faint);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  line-height: 1.35;
+}

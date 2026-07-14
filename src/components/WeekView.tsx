@@ -16,7 +16,14 @@ import {
   toLocalDateKey
 } from "../utils/date";
 import { dayActivitySeconds } from "../domain/activity";
+import {
+  buildCommittedItems,
+  minuteToLabel,
+  overlapsCommitted,
+  type CalendarItem
+} from "../domain/dayCalendar";
 import { ActiveWorkDock } from "./ActiveWorkDock";
+import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
 import { TimeSplit } from "./TimeSplit";
 import { QuickLogSheet, type QuickLogContext } from "./QuickLogSheet";
@@ -24,6 +31,8 @@ import { TicketKeyLink } from "./TicketKeyLink";
 import { useActiveWorkDrag, type DropTarget } from "./useActiveWorkDrag";
 import { useActiveWorkDock } from "./useActiveWorkDock";
 import { WeekHeader } from "./WeekHeader";
+import { WeekTimeline } from "./WeekTimeline";
+import { useWeekViewMode } from "./useWeekViewMode";
 import {
   PendingRecurringCard,
   RecurringEntryRow,
@@ -53,7 +62,8 @@ interface WeekViewProps {
   onPreviousWeek: () => void;
   onCurrentWeek: () => void;
   onNextWeek: () => void;
-  onAddTime: (date?: Date) => void;
+  onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
+  onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
   onEditPersonalNote: (note: PersonalNote) => void;
   onToggleSkipped: (dateKey: string) => void;
@@ -62,6 +72,58 @@ interface WeekViewProps {
   onSkipRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
   onDeleteRecurring?: (eventId: string, dateKey: string) => Promise<boolean> | void;
 }
+
+interface QuickLogStartOptions {
+  dateKey: string;
+  currentDate: Date;
+  timeSpentSeconds: number;
+  startedMinutes?: number;
+}
+
+export const quickLogStartedAt = ({
+  dateKey,
+  currentDate,
+  timeSpentSeconds,
+  startedMinutes
+}: QuickLogStartOptions) => {
+  const started = fromLocalDateKey(dateKey);
+
+  if (startedMinutes != null) {
+    started.setHours(Math.floor(startedMinutes / 60), startedMinutes % 60, 0, 0);
+    return started;
+  }
+
+  started.setHours(currentDate.getHours(), currentDate.getMinutes(), 0, 0);
+  started.setTime(started.getTime() - timeSpentSeconds * 1000);
+  return started;
+};
+
+interface QuickLogAvailabilityOptions extends QuickLogStartOptions {
+  committedItems: CalendarItem[];
+  timelineEndMinutes?: number;
+}
+
+export const isQuickLogIntervalAvailable = ({
+  dateKey,
+  currentDate,
+  timeSpentSeconds,
+  startedMinutes,
+  committedItems,
+  timelineEndMinutes
+}: QuickLogAvailabilityOptions) => {
+  const started = quickLogStartedAt({ dateKey, currentDate, timeSpentSeconds, startedMinutes });
+  if (toLocalDateKey(started) !== dateKey) {
+    return false;
+  }
+
+  const startMinutes = started.getHours() * 60 + started.getMinutes();
+  const durationMinutes = Math.max(15, Math.round(timeSpentSeconds / 60));
+  if (timelineEndMinutes != null && startMinutes + durationMinutes > timelineEndMinutes) {
+    return false;
+  }
+
+  return !overlapsCommitted(startMinutes, startMinutes + durationMinutes, committedItems);
+};
 
 const PALETTE = [
   { seg: "#5b8cff", text: "#8fb0ff" },
@@ -503,6 +565,7 @@ export const WeekView = ({
   onCurrentWeek,
   onNextWeek,
   onAddTime,
+  onMoveWorklog,
   onEditWorklog,
   onEditPersonalNote,
   onToggleSkipped,
@@ -514,6 +577,7 @@ export const WeekView = ({
   const weekStart = fromLocalDateKey(weekState.weekKey);
   const now = currentDate ?? new Date();
   const todayKey = toLocalDateKey(now);
+  const { mode: viewMode, selectMode: selectViewMode } = useWeekViewMode();
   const colorMap = buildColorMap(weekState.days);
   const colorOf = (key: string) => colorMap.get(key) ?? PALETTE[0];
 
@@ -524,7 +588,7 @@ export const WeekView = ({
 
   const dockColorMap = useMemo(() => buildDockColorMap(dockTickets), [dockTickets]);
   const dropDayMeta = useMemo(() => {
-    const map = new Map<string, { droppable: boolean; label: string; shortLabel: string }>();
+    const map = new Map<string, { droppable: boolean; label: string; shortLabel: string; blockedReason: string }>();
     for (const day of weekState.days) {
       const date = fromLocalDateKey(day.dateKey);
       const weekdayShort = day.weekdayName.slice(0, 3).toUpperCase();
@@ -532,30 +596,71 @@ export const WeekView = ({
       map.set(day.dateKey, {
         droppable: day.isConfiguredWorkingDay && !day.isSkipped && day.dateKey <= todayKey,
         label: `${weekdayShort} · ${date.getDate()} ${monthShort}`,
-        shortLabel: `${weekdayShort} ${date.getDate()}`
+        shortLabel: `${weekdayShort} ${date.getDate()}`,
+        blockedReason: day.isSkipped ? "vacation" : day.dateKey > todayKey ? "future day" : "non-working day"
       });
     }
     return map;
   }, [todayKey, weekState.days]);
 
-  const isDroppable = useCallback((dateKey: string) => dropDayMeta.get(dateKey)?.droppable ?? false, [dropDayMeta]);
+  const committedByDay = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof buildCommittedItems>>();
+    for (const day of weekState.days) {
+      const worklogs = syncResult?.daySummaries[day.dateKey]?.worklogs ?? [];
+      map.set(day.dateKey, buildCommittedItems(worklogs, day.personalNotes, day.recurringEntries));
+    }
+    return map;
+  }, [syncResult, weekState.days]);
+
+  const isDroppable = useCallback(
+    (dateKey: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => {
+      if (!dropDayMeta.get(dateKey)?.droppable) {
+        return false;
+      }
+      if (startedMinutes == null) {
+        return true;
+      }
+      const durationMinutes = Math.max(15, Math.round((hours ?? 1) * 60));
+      if (timelineEndMinutes != null && startedMinutes + durationMinutes > timelineEndMinutes) {
+        return false;
+      }
+      return !overlapsCommitted(
+        startedMinutes,
+        startedMinutes + durationMinutes,
+        committedByDay.get(dateKey) ?? []
+      );
+    },
+    [committedByDay, dropDayMeta]
+  );
 
   const handleDrop = useCallback(
-    ({ ticket, dateKey, hours }: DropTarget) => {
+    ({ ticket, dateKey, hours, startedMinutes, timelineEndMinutes }: DropTarget) => {
       const meta = dropDayMeta.get(dateKey);
       setQuickLog({
         ticketKey: ticket.key,
         ticketSummary: ticket.summary,
         dateKey,
-        dayLabel: meta?.label ?? dateKey,
+        dayLabel: `${meta?.label ?? dateKey}${startedMinutes == null ? "" : ` · ${minuteToLabel(startedMinutes)}`}`,
         hours: hours || 1,
+        startedMinutes,
+        timelineEndMinutes,
         comment: ""
       });
     },
     [dropDayMeta]
   );
 
-  const { dragging, hoverDay, hoverHours, hoverRect, isHoverBlocked, ghostRef, beginGrab } = useActiveWorkDrag({
+  const {
+    dragging,
+    hoverDay,
+    hoverHours,
+    hoverRect,
+    hoverStartedMinutes,
+    hoverSlotRect,
+    isHoverBlocked,
+    ghostRef,
+    beginGrab
+  } = useActiveWorkDrag({
     isDroppable,
     onDrop: handleDrop
   });
@@ -564,29 +669,54 @@ export const WeekView = ({
   const quickLogColor = quickLog
     ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
     : DOCK_PALETTE[0];
+  const quickLogIntervalAvailable = quickLog
+    ? Boolean(dropDayMeta.get(quickLog.dateKey)?.droppable) &&
+      isQuickLogIntervalAvailable({
+        dateKey: quickLog.dateKey,
+        currentDate: now,
+        timeSpentSeconds: Math.round(quickLog.hours * 3600),
+        startedMinutes: quickLog.startedMinutes,
+        committedItems: committedByDay.get(quickLog.dateKey) ?? [],
+        timelineEndMinutes: quickLog.timelineEndMinutes
+      })
+    : true;
+  const quickLogValidationMessage =
+    quickLog && !quickLogIntervalAvailable
+      ? "Choose a shorter duration or another time — this interval is unavailable."
+      : undefined;
 
   const confirmQuickLog = useCallback(async () => {
-    if (!quickLog || !quickLogTicket || !onDockLog) {
+    if (!quickLog || !quickLogTicket || !onDockLog || quickLogValidationMessage) {
       return;
     }
-    const started = fromLocalDateKey(quickLog.dateKey);
-    started.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    const timeSpentSeconds = Math.round(quickLog.hours * 3600);
+    const started = quickLogStartedAt({
+      dateKey: quickLog.dateKey,
+      currentDate: now,
+      timeSpentSeconds,
+      startedMinutes: quickLog.startedMinutes
+    });
     const success = await onDockLog({
       issueKey: quickLogTicket.key,
       ticket: quickLogTicket,
-      timeSpentSeconds: Math.round(quickLog.hours * 3600),
+      timeSpentSeconds,
       startedISO: started.toISOString(),
       comment: quickLog.comment.trim() || undefined
     });
     if (success) {
       setQuickLog(null);
     }
-  }, [now, onDockLog, quickLog, quickLogTicket]);
+  }, [now, onDockLog, quickLog, quickLogTicket, quickLogValidationMessage]);
 
   const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
   const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
-  const showLanes = Boolean(dragging && hoverDay && hoverRect && !isHoverBlocked);
+  const hoverBlockedReason = hoverMeta?.droppable ? "occupied time" : hoverMeta?.blockedReason ?? "read-only";
+  const showLanes = Boolean(viewMode === "summary" && dragging && hoverDay && hoverRect && !isHoverBlocked);
+  const showTimelineSlot = Boolean(
+    viewMode === "timeline" && dragging && hoverDay && hoverSlotRect && !isHoverBlocked
+  );
   const showBlocked = Boolean(dragging && hoverDay && hoverRect && isHoverBlocked);
+  const dropTagRect = viewMode === "timeline" && hoverSlotRect ? hoverSlotRect : hoverRect;
 
   return (
     <div className="view">
@@ -598,6 +728,8 @@ export const WeekView = ({
         weeklyTargetHours={weekState.weeklyTargetHours}
         isSyncing={isSyncing}
         isConfigured={isConfigured}
+        viewMode={viewMode}
+        onViewModeChange={selectViewMode}
         onSync={onSync}
         onAddTime={onAddTime}
         onPreviousWeek={onPreviousWeek}
@@ -605,32 +737,48 @@ export const WeekView = ({
         onNextWeek={onNextWeek}
       />
 
-      <div className={`week-grid ${weekState.days.length >= 6 ? "is-compact" : ""}`}>
-        {weekState.days.map((day) => {
-          const worklogsByKey = new Map<string, JiraWorklog[]>();
-          for (const log of syncResult?.daySummaries[day.dateKey]?.worklogs ?? []) {
-            const list = worklogsByKey.get(log.issueKey) ?? [];
-            list.push(log);
-            worklogsByKey.set(log.issueKey, list);
-          }
-          return (
-            <DayColumn
-              key={day.dateKey}
-              day={day}
-              todayKey={todayKey}
-              colorOf={colorOf}
-              worklogsByKey={worklogsByKey}
-              onAddTime={onAddTime}
-              onEditWorklog={onEditWorklog}
-              onEditPersonalNote={onEditPersonalNote}
-              onToggleSkipped={onToggleSkipped}
-              onConfirmRecurring={onConfirmRecurring}
-              onSkipRecurring={onSkipRecurring}
-              onDeleteRecurring={onDeleteRecurring}
-            />
-          );
-        })}
-      </div>
+      {viewMode === "summary" ? (
+        <div className={`week-grid ${weekState.days.length >= 6 ? "is-compact" : ""}`}>
+          {weekState.days.map((day) => {
+            const worklogsByKey = new Map<string, JiraWorklog[]>();
+            for (const log of syncResult?.daySummaries[day.dateKey]?.worklogs ?? []) {
+              const list = worklogsByKey.get(log.issueKey) ?? [];
+              list.push(log);
+              worklogsByKey.set(log.issueKey, list);
+            }
+            return (
+              <DayColumn
+                key={day.dateKey}
+                day={day}
+                todayKey={todayKey}
+                colorOf={colorOf}
+                worklogsByKey={worklogsByKey}
+                onAddTime={onAddTime}
+                onEditWorklog={onEditWorklog}
+                onEditPersonalNote={onEditPersonalNote}
+                onToggleSkipped={onToggleSkipped}
+                onConfirmRecurring={onConfirmRecurring}
+                onSkipRecurring={onSkipRecurring}
+                onDeleteRecurring={onDeleteRecurring}
+              />
+            );
+          })}
+        </div>
+      ) : (
+        <WeekTimeline
+          weekState={weekState}
+          syncResult={syncResult}
+          currentDate={now}
+          todayKey={todayKey}
+          onAddTime={onAddTime}
+          onMoveWorklog={onMoveWorklog}
+          onEditWorklog={onEditWorklog}
+          onEditPersonalNote={onEditPersonalNote}
+          onToggleSkipped={onToggleSkipped}
+          onConfirmRecurring={onConfirmRecurring}
+          onSkipRecurring={onSkipRecurring}
+        />
+      )}
 
       {dockTickets.length > 0 && onDockLog && (
         <ActiveWorkDock
@@ -640,6 +788,7 @@ export const WeekView = ({
           shownCount={dockShown}
           draggingKey={dragging?.key ?? null}
           now={now}
+          dragTarget={viewMode === "timeline" ? "timeline" : "day"}
           onToggleOpen={toggleDock}
           onLoadMore={loadMoreDock}
           onGrabCard={beginGrab}
@@ -682,6 +831,20 @@ export const WeekView = ({
             </div>
           )}
 
+          {showTimelineSlot && hoverSlotRect && (
+            <div
+              className="timeline-drop-slot"
+              style={{
+                left: hoverSlotRect.left,
+                top: hoverSlotRect.top,
+                width: hoverSlotRect.width,
+                height: hoverSlotRect.height
+              }}
+            >
+              <span>{hoverStartedMinutes == null ? "1h" : `${minuteToLabel(hoverStartedMinutes)} · 1h`}</span>
+            </div>
+          )}
+
           {showBlocked && hoverRect && (
             <div
               className="drop-blocked"
@@ -689,14 +852,17 @@ export const WeekView = ({
             >
               <div>
                 <Ban size={20} strokeWidth={1.8} />
-                <div className="drop-blocked-label">Can’t log to {hoverMeta?.shortLabel ?? "this day"} — future day</div>
+                <div className="drop-blocked-label">
+                  Can’t log to {hoverMeta?.shortLabel ?? "this day"} — {hoverBlockedReason}
+                </div>
               </div>
             </div>
           )}
 
-          {hoverRect && (
-            <div className="drop-tag" style={{ left: hoverRect.left + 8, top: hoverRect.top + 8 }}>
+          {dropTagRect && (viewMode === "summary" || isHoverBlocked) && (
+            <div className="drop-tag" style={{ left: dropTagRect.left + 8, top: dropTagRect.top + 8 }}>
               {hoverMeta?.shortLabel}
+              {viewMode === "timeline" && hoverStartedMinutes != null ? ` · ${minuteToLabel(hoverStartedMinutes)}` : ""}
             </div>
           )}
         </>
@@ -707,6 +873,7 @@ export const WeekView = ({
           context={quickLog}
           color={quickLogColor}
           isLogging={isLogging}
+          validationMessage={quickLogValidationMessage}
           onChangeHours={(hours) => setQuickLog((current) => (current ? { ...current, hours } : current))}
           onChangeComment={(comment) => setQuickLog((current) => (current ? { ...current, comment } : current))}
           onCancel={() => setQuickLog(null)}

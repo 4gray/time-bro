@@ -46,7 +46,11 @@ export const useAddTimeModalActions = ({
       setEditingWorklog(undefined);
       setEditingPersonalNote(undefined);
       setLogError(undefined);
-      setAddTimePrefill(prefill);
+      setAddTimePrefill(
+        prefill?.startedISO
+          ? prefill
+          : { ...prefill, retrospective: prefill?.retrospective ?? true }
+      );
       setAddModalDate(selectAddTimeDate({ currentDate, requestedDate: date, weekState }));
     },
     [currentDate, setAddModalDate, setAddTimePrefill, setEditingPersonalNote, setEditingWorklog, setLogError, weekState]
@@ -70,7 +74,7 @@ export const useAddTimeModalActions = ({
     setEditingWorklog(undefined);
     setEditingPersonalNote(undefined);
     setLogError(undefined);
-    setAddTimePrefill(undefined);
+    setAddTimePrefill({ retrospective: true });
     setAddModalDate(createTrackingShortcutDate(currentDate));
   }, [
     addModalDate,

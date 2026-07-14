@@ -1,4 +1,4 @@
-import { Loader2, Plus, RotateCw } from "lucide-react";
+import { CalendarRange, Columns3, Loader2, Plus, RotateCw } from "lucide-react";
 import { formatHours, formatWeekRangeCompact, getIsoWeekNumber } from "../utils/date";
 import { ProgressRing } from "./ProgressRing";
 import { TimeSplit } from "./TimeSplit";
@@ -13,6 +13,8 @@ export interface WeekHeaderProps {
   weeklyTargetHours: number;
   isSyncing: boolean;
   isConfigured: boolean;
+  viewMode: "summary" | "timeline";
+  onViewModeChange: (mode: "summary" | "timeline") => void;
   onSync: () => void;
   onAddTime: () => void;
   onPreviousWeek: () => void;
@@ -28,6 +30,8 @@ export const WeekHeader = ({
   weeklyTargetHours,
   isSyncing,
   isConfigured,
+  viewMode,
+  onViewModeChange,
   onSync,
   onAddTime,
   onPreviousWeek,
@@ -80,6 +84,28 @@ export const WeekHeader = ({
           <Plus size={14} strokeWidth={2.6} />
           ADD TIME
         </button>
+        <div className="week-view-switch" role="group" aria-label="Week view layout">
+          <button
+            type="button"
+            className={viewMode === "summary" ? "is-active" : ""}
+            aria-pressed={viewMode === "summary"}
+            title="Show compact day summaries"
+            onClick={() => onViewModeChange("summary")}
+          >
+            <Columns3 size={13} strokeWidth={1.9} />
+            <span>SUMMARY</span>
+          </button>
+          <button
+            type="button"
+            className={viewMode === "timeline" ? "is-active" : ""}
+            aria-pressed={viewMode === "timeline"}
+            title="Show days on a shared timeline"
+            onClick={() => onViewModeChange("timeline")}
+          >
+            <CalendarRange size={13} strokeWidth={1.9} />
+            <span>TIMELINE</span>
+          </button>
+        </div>
         <div className="week-divider" />
         <WeekNavigator
           onPreviousWeek={onPreviousWeek}
