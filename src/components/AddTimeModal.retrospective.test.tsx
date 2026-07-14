@@ -111,4 +111,36 @@ describe("AddTimeModal retrospective start", () => {
     act(() => fourHourButton?.click());
     expect(timeInput?.value).toBe("09:15");
   });
+
+  it("keeps the modal end date when a duration change crosses midnight", () => {
+    act(() => {
+      root.render(
+        <AddTimeModal
+          date={new Date(2026, 6, 14, 1, 30)}
+          dateOptions={["2026-07-13", "2026-07-14"]}
+          ticketOptions={[ticket]}
+          isConfigured={true}
+          isLogging={false}
+          prefill={{ retrospective: true }}
+          onClose={() => undefined}
+          onLog={async () => true}
+        />
+      );
+    });
+
+    const readTime = () => container.querySelector<HTMLInputElement>('input[type="time"]')?.value;
+    const selectedDate = () =>
+      container.querySelector<HTMLButtonElement>('.modal-day-option[aria-checked="true"]')?.textContent;
+
+    expect(readTime()).toBe("23:30");
+    expect(selectedDate()).toContain("13 JUL");
+
+    const oneHourButton = [...container.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "1h"
+    );
+    act(() => oneHourButton?.click());
+
+    expect(readTime()).toBe("00:30");
+    expect(selectedDate()).toContain("14 JUL");
+  });
 });

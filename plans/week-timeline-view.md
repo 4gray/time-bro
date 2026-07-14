@@ -24,10 +24,11 @@ Add a timeline mode to Week that makes every day directly editable like Today, w
 
 ## Verification
 
-- `npm run test`: 104 files, 631 tests passed on the rebased PR branch, including retrospective Add Time and quick-log coverage.
+- `npm run test`: 104 files, 632 tests passed on the rebased PR branch, including retrospective Add Time, midnight rollover, and quick-log coverage.
 - `npm run e2e:renderer`: 7 renderer scenarios passed, including mode switching and persistence.
 - `npm run build`: passed; Vite retains its existing large-chunk advisory.
 - Browser QA: inspected dark desktop and light compact layouts; checked shared alignment, sticky headers, scrolling, exact-time dock drops, add/move interactions, future/vacation read-only states, and responsive overflow.
 - Browser console: no application errors or warnings.
 - Review follow-up: exact-time dock drops are clamped to the visible window, blocked when they overlap committed work, and revalidated after Quick Log duration changes, with regression coverage for each guard.
 - Retrospective follow-up: new implicit logs end at the modal clock time, duration changes keep that end fixed, manual start edits win, and explicit Timeline starts are preserved.
+- Review follow-up: retrospective duration changes keep the original modal end date across midnight and move the selected start day when needed.

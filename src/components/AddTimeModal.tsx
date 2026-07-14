@@ -461,10 +461,16 @@ export const AddTimeModal = ({
       return;
     }
 
-    const ended = fromLocalDateKey(dateStr);
-    ended.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    const ended = new Date(date);
+    ended.setSeconds(0, 0);
     const started = new Date(ended.getTime() - seconds * 1000);
+    setDateStr(toLocalDateKey(started));
     setTimeStr(`${pad(started.getHours())}:${pad(started.getMinutes())}`);
+  };
+
+  const selectStartedDate = (nextDateKey: string) => {
+    setIsStartEdited(true);
+    setDateStr(nextDateKey);
   };
 
   const updateTicketDuration = (seconds: number) => {
@@ -632,7 +638,7 @@ export const AddTimeModal = ({
                 <div className="modal-col">
                   <div className="modal-label">STARTED</div>
                   <div className="modal-started">
-                    <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
+                    <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
                     <label className="input-chip">
                       <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
                       <input
@@ -714,7 +720,7 @@ export const AddTimeModal = ({
                   <Calendar size={13} strokeWidth={1.8} />
                   DAY
                 </div>
-                <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={setDateStr} />
+                <DaySelector dateOptions={selectableDateOptions} value={dateStr} onChange={selectStartedDate} />
                 <label className="input-chip personal-time-chip">
                   <Clock size={14} stroke="#6b7280" strokeWidth={1.7} />
                   <input
