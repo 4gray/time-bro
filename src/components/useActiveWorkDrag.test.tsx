@@ -68,7 +68,8 @@ afterEach(() => {
 // lets a test swap the parent's callbacks mid-drag to reproduce the regression.
 const performDrag = async (
   initial: { isDroppable: (d: string) => boolean; onDrop: (t: DropTarget) => void },
-  rerenderBeforeDrop?: { isDroppable: (d: string) => boolean; onDrop: (t: DropTarget) => void }
+  rerenderBeforeDrop?: { isDroppable: (d: string) => boolean; onDrop: (t: DropTarget) => void },
+  dropY = 150
 ) => {
   await act(async () => {
     root.render(<Harness isDroppable={initial.isDroppable} onDrop={initial.onDrop} />);
@@ -95,10 +96,10 @@ const performDrag = async (
 
   // Move over the droppable lane, then release.
   await act(async () => {
-    mouse("mousemove", 150, 150, document);
+    mouse("mousemove", 150, dropY, document);
   });
   await act(async () => {
-    mouse("mouseup", 150, 150, document);
+    mouse("mouseup", 150, dropY, document);
   });
 };
 
@@ -121,6 +122,17 @@ describe("useActiveWorkDrag", () => {
 
     // y=150 is one sixth into the 07:00–20:00 track: 550m, snapped to 09:15.
     expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 1, startedMinutes: 555 });
+  });
+
+  it("keeps a one-hour timeline drop inside the visible day window", async () => {
+    dayLane.setAttribute("data-drop-timeline", "true");
+    dayLane.setAttribute("data-timeline-start", "420");
+    dayLane.setAttribute("data-timeline-end", "1200");
+    const onDrop = vi.fn();
+
+    await performDrag({ isDroppable: () => true, onDrop }, undefined, 399);
+
+    expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 1, startedMinutes: 1140 });
   });
 
   // Regression: a re-render mid-drag (new isDroppable/onDrop identities) must not

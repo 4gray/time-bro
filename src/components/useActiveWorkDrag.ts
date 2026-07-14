@@ -126,7 +126,8 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
           if (Number.isFinite(startMin) && Number.isFinite(endMin) && endMin > startMin && box.height > 0) {
             const ratio = Math.max(0, Math.min(1, (event.clientY - box.top) / box.height));
             const rawMinute = startMin + ratio * (endMin - startMin);
-            startedMinutes = Math.max(startMin, Math.min(endMin - 15, Math.round(rawMinute / 15) * 15));
+            const lastFullSlotStart = Math.max(startMin, endMin - 60);
+            startedMinutes = Math.max(startMin, Math.min(lastFullSlotStart, Math.round(rawMinute / 15) * 15));
             const slotTop = box.top + ((startedMinutes - startMin) / (endMin - startMin)) * box.height;
             const slotHeight = Math.max(18, (60 / (endMin - startMin)) * box.height);
             slotRect = { left: box.left + 4, top: slotTop, width: Math.max(0, box.width - 14), height: slotHeight };
