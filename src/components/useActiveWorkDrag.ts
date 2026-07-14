@@ -17,8 +17,8 @@ export interface DropTarget {
 }
 
 interface UseActiveWorkDragOptions {
-  /** Returns true when a day column can accept a dropped ticket. */
-  isDroppable: (dateKey: string) => boolean;
+  /** Returns true when a day, and optionally its exact interval, can accept a dropped ticket. */
+  isDroppable: (dateKey: string, startedMinutes?: number, hours?: number) => boolean;
   /** Fired on a successful release over a droppable day. */
   onDrop: (target: DropTarget) => void;
 }
@@ -167,8 +167,9 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     const startedMinutes = hoverStartedMinutesRef.current;
     endDrag();
 
-    if (ticket && dateKey && isDroppableRef.current(dateKey)) {
-      onDropRef.current({ ticket, dateKey, hours: hours ?? 1, ...(startedMinutes == null ? {} : { startedMinutes }) });
+    const durationHours = hours ?? 1;
+    if (ticket && dateKey && isDroppableRef.current(dateKey, startedMinutes ?? undefined, durationHours)) {
+      onDropRef.current({ ticket, dateKey, hours: durationHours, ...(startedMinutes == null ? {} : { startedMinutes }) });
     }
   }, [endDrag, handleDragMove]);
 
@@ -251,7 +252,9 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isHoverBlocked = Boolean(hoverDay && !isDroppable(hoverDay));
+  const isHoverBlocked = Boolean(
+    hoverDay && !isDroppable(hoverDay, hoverStartedMinutes ?? undefined, hoverHours ?? undefined)
+  );
 
   return {
     dragging,

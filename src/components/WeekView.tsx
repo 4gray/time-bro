@@ -16,7 +16,7 @@ import {
   toLocalDateKey
 } from "../utils/date";
 import { dayActivitySeconds } from "../domain/activity";
-import { minuteToLabel } from "../domain/dayCalendar";
+import { buildCommittedItems, minuteToLabel, overlapsCommitted } from "../domain/dayCalendar";
 import { ActiveWorkDock } from "./ActiveWorkDock";
 import type { AddTimePrefill } from "./AddTimeModal";
 import { buildDockColorMap, DOCK_PALETTE } from "./activeWork";
@@ -546,7 +546,32 @@ export const WeekView = ({
     return map;
   }, [todayKey, weekState.days]);
 
-  const isDroppable = useCallback((dateKey: string) => dropDayMeta.get(dateKey)?.droppable ?? false, [dropDayMeta]);
+  const committedByDay = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof buildCommittedItems>>();
+    for (const day of weekState.days) {
+      const worklogs = syncResult?.daySummaries[day.dateKey]?.worklogs ?? [];
+      map.set(day.dateKey, buildCommittedItems(worklogs, day.personalNotes, day.recurringEntries));
+    }
+    return map;
+  }, [syncResult, weekState.days]);
+
+  const isDroppable = useCallback(
+    (dateKey: string, startedMinutes?: number, hours?: number) => {
+      if (!dropDayMeta.get(dateKey)?.droppable) {
+        return false;
+      }
+      if (startedMinutes == null) {
+        return true;
+      }
+      const durationMinutes = Math.max(15, Math.round((hours ?? 1) * 60));
+      return !overlapsCommitted(
+        startedMinutes,
+        startedMinutes + durationMinutes,
+        committedByDay.get(dateKey) ?? []
+      );
+    },
+    [committedByDay, dropDayMeta]
+  );
 
   const handleDrop = useCallback(
     ({ ticket, dateKey, hours, startedMinutes }: DropTarget) => {
@@ -608,6 +633,7 @@ export const WeekView = ({
 
   const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
   const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
+  const hoverBlockedReason = hoverMeta?.droppable ? "occupied time" : hoverMeta?.blockedReason ?? "read-only";
   const showLanes = Boolean(viewMode === "summary" && dragging && hoverDay && hoverRect && !isHoverBlocked);
   const showTimelineSlot = Boolean(
     viewMode === "timeline" && dragging && hoverDay && hoverSlotRect && !isHoverBlocked
@@ -750,7 +776,7 @@ export const WeekView = ({
               <div>
                 <Ban size={20} strokeWidth={1.8} />
                 <div className="drop-blocked-label">
-                  Can’t log to {hoverMeta?.shortLabel ?? "this day"} — {hoverMeta?.blockedReason ?? "read-only"}
+                  Can’t log to {hoverMeta?.shortLabel ?? "this day"} — {hoverBlockedReason}
                 </div>
               </div>
             </div>

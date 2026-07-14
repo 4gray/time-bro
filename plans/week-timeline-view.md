@@ -22,9 +22,9 @@ Add a timeline mode to Week that makes every day directly editable like Today, w
 
 ## Verification
 
-- `npm run test`: 102 files, 625 tests passed on the isolated PR branch.
+- `npm run test`: 102 files, 626 tests passed on the isolated PR branch.
 - `npm run e2e:renderer`: 7 renderer scenarios passed, including mode switching and persistence.
 - `npm run build`: passed; Vite retains its existing large-chunk advisory.
 - Browser QA: inspected dark desktop and light compact layouts; checked shared alignment, sticky headers, scrolling, exact-time dock drops, add/move interactions, future/vacation read-only states, and responsive overflow.
 - Browser console: no application errors or warnings.
-- Review follow-up: exact-time dock drops are clamped to the last full one-hour slot, with a bottom-edge regression test.
+- Review follow-up: exact-time dock drops are clamped to the last full one-hour slot and blocked when their interval overlaps committed work, with regression tests for both boundaries.
