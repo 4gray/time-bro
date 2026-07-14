@@ -60,6 +60,17 @@ vi.mock("../components/WeekView", () => ({
         >
           recurring
         </button>
+        <button
+          type="button"
+          onClick={() =>
+            (props.onMoveWorklog as (worklog: Record<string, unknown>, patch: Record<string, unknown>) => void)(
+              { id: "wl-1", issueKey: "FTDM-101" },
+              { startedISO: "2026-06-17T09:00:00.000Z", timeSpentSeconds: 3600 }
+            )
+          }
+        >
+          move
+        </button>
       </section>
     );
   }
@@ -107,6 +118,7 @@ const baseProps = (): AppWeekRouteProps => ({
   goToCurrentWeek: noop,
   goToNextWeek: noop,
   openAddTime: noop,
+  handleMoveWorklog: asyncTrue,
   openEditWorklog: noop,
   openEditPersonalNote: noop,
   handleToggleSkipped: noop,
@@ -168,6 +180,7 @@ describe("AppWeekRoute", () => {
     const handleToggleSkipped = vi.fn();
     const handleAddWorklog = vi.fn();
     const handleConfirmRecurring = vi.fn();
+    const handleMoveWorklog = vi.fn();
     renderRoute({
       handleSync,
       goToPreviousWeek,
@@ -176,7 +189,8 @@ describe("AppWeekRoute", () => {
       openAddTime,
       handleToggleSkipped,
       handleAddWorklog,
-      handleConfirmRecurring
+      handleConfirmRecurring,
+      handleMoveWorklog
     });
 
     act(() => {
@@ -188,6 +202,7 @@ describe("AppWeekRoute", () => {
       container.querySelectorAll("button")[5]?.click();
       container.querySelectorAll("button")[6]?.click();
       container.querySelectorAll("button")[7]?.click();
+      container.querySelectorAll("button")[8]?.click();
     });
 
     expect(handleSync).toHaveBeenCalledTimes(1);
@@ -202,5 +217,9 @@ describe("AppWeekRoute", () => {
       dateKey: "2026-06-17",
       timeSpentSeconds: 900
     });
+    expect(handleMoveWorklog).toHaveBeenCalledWith(
+      { id: "wl-1", issueKey: "FTDM-101" },
+      { startedISO: "2026-06-17T09:00:00.000Z", timeSpentSeconds: 3600 }
+    );
   });
 });

@@ -22,6 +22,8 @@ interface ActiveWorkDockProps {
   /** Enables view-specific click/keyboard activation, such as logging on Today. */
   onActivateCard?: (ticket: JiraTicket) => void;
   interaction?: "drag" | "select";
+  /** Week switches this copy when cards can be placed at an exact timeline time. */
+  dragTarget?: "day" | "timeline";
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -38,7 +40,8 @@ const DockCard = ({
   now,
   onGrabCard,
   onActivateCard,
-  interaction
+  interaction,
+  dragTarget
 }: {
   ticket: JiraTicket;
   color: { seg: string; text: string };
@@ -47,6 +50,7 @@ const DockCard = ({
   onGrabCard?: (ticket: JiraTicket, event: React.MouseEvent) => void;
   onActivateCard?: (ticket: JiraTicket) => void;
   interaction: "drag" | "select";
+  dragTarget: "day" | "timeline";
 }) => {
   const status = getDockStatus(ticket);
   const badge = getIssueTypeBadgeLabel(ticket.issueType);
@@ -55,7 +59,7 @@ const DockCard = ({
   const loggedHours = ticket.loggedSecondsTotal / 3600;
   const isInteractive = Boolean(onGrabCard || onActivateCard);
   const actionLabel =
-    interaction === "select" ? `Log time for ${ticket.key} today` : `Drag ${ticket.key} onto a day to log time`;
+    interaction === "select" ? `Log time for ${ticket.key} today` : `Drag ${ticket.key} onto the ${dragTarget} to log time`;
 
   return (
     <div
@@ -119,7 +123,8 @@ export const ActiveWorkDock = ({
   onLoadMore,
   onGrabCard,
   onActivateCard,
-  interaction = "drag"
+  interaction = "drag",
+  dragTarget = "day"
 }: ActiveWorkDockProps) => {
   const railRef = useRef<HTMLDivElement | null>(null);
 
@@ -160,7 +165,7 @@ export const ActiveWorkDock = ({
   const visible = tickets.slice(0, shown);
   const remaining = tickets.length - shown;
   const interactionHint =
-    interaction === "select" ? "select a card to log time today" : "drag a ticket onto a day to log time";
+    interaction === "select" ? "select a card to log time today" : `drag a ticket onto the ${dragTarget} to log time`;
   const InteractionIcon = interaction === "select" ? MousePointerClick : Hand;
 
   if (!open) {
@@ -202,6 +207,7 @@ export const ActiveWorkDock = ({
             onGrabCard={onGrabCard}
             onActivateCard={onActivateCard}
             interaction={interaction}
+            dragTarget={dragTarget}
           />
         ))}
         {remaining > 0 && (

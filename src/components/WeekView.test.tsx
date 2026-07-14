@@ -101,6 +101,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -164,6 +165,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -220,6 +222,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -250,6 +253,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}

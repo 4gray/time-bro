@@ -15,6 +15,8 @@ interface CalendarBlockProps {
   labelEndMin: number;
   dragging?: boolean;
   draggable?: boolean;
+  /** Week's narrow overlap columns show only the strongest identifier. */
+  minimal?: boolean;
   onSelect: (item: CalendarItem) => void;
   /** Stable drag starter (worklogs only); receives the gesture kind. */
   onBlockDrag?: (event: ReactPointerEvent<HTMLElement>, item: CalendarItem, kind: DragKind) => void;
@@ -67,6 +69,7 @@ const CalendarBlockImpl = ({
   labelEndMin,
   dragging,
   draggable,
+  minimal,
   onSelect,
   onBlockDrag
 }: CalendarBlockProps) => {
@@ -80,7 +83,7 @@ const CalendarBlockImpl = ({
     <div
       role="button"
       tabIndex={0}
-      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}`}
+      className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${minimal ? " is-minimal" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}`}
       style={{ top: `${top}px`, height: `${Math.max(height, 1)}px`, left, width }}
       title={detail ? `${title} · ${detail}` : title}
       // Draggable blocks start a move on pointerdown; static blocks (notes/ghosts) still

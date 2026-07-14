@@ -10,6 +10,7 @@ export interface QuickLogContext {
   dateKey: string;
   dayLabel: string;
   hours: number;
+  startedMinutes?: number;
   comment: string;
 }
 

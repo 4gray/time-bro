@@ -12,6 +12,8 @@ export interface DropTarget {
   ticket: JiraTicket;
   dateKey: string;
   hours: number;
+  /** Exact local start picked on Week's shared timeline. */
+  startedMinutes?: number;
 }
 
 interface UseActiveWorkDragOptions {
@@ -45,6 +47,8 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
   const [hoverDay, setHoverDay] = useState<string | null>(null);
   const [hoverHours, setHoverHours] = useState<number | null>(null);
   const [hoverRect, setHoverRect] = useState<DragHoverRect | null>(null);
+  const [hoverStartedMinutes, setHoverStartedMinutes] = useState<number | null>(null);
+  const [hoverSlotRect, setHoverSlotRect] = useState<DragHoverRect | null>(null);
 
   const ghostRef = useRef<HTMLDivElement | null>(null);
   const armedRef = useRef<{ ticket: JiraTicket; x: number; y: number } | null>(null);
@@ -53,6 +57,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
   const draggingRef = useRef<JiraTicket | null>(null);
   const hoverDayRef = useRef<string | null>(null);
   const hoverHoursRef = useRef<number | null>(null);
+  const hoverStartedMinutesRef = useRef<number | null>(null);
 
   // Latest-ref mirrors of the per-render callbacks. Updated every render so the
   // stable handlers always invoke the freshest `isDroppable`/`onDrop` without
@@ -73,10 +78,13 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     draggingRef.current = null;
     hoverDayRef.current = null;
     hoverHoursRef.current = null;
+    hoverStartedMinutesRef.current = null;
     setDragging(null);
     setHoverDay(null);
     setHoverHours(null);
     setHoverRect(null);
+    setHoverStartedMinutes(null);
+    setHoverSlotRect(null);
     try {
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
@@ -91,9 +99,12 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
       const element = document.elementFromPoint(event.clientX, event.clientY);
       let dateKey: string | null = null;
       let hours: number | null = null;
+      let startedMinutes: number | null = null;
+      let slotRect: DragHoverRect | null = null;
 
       if (element) {
         const laneEl = element.closest<HTMLElement>("[data-drop-hours]");
+        const timelineEl = element.closest<HTMLElement>("[data-drop-timeline]");
         const dayEl = element.closest<HTMLElement>("[data-drop-day]");
         if (laneEl) {
           const parsed = Number.parseFloat(laneEl.getAttribute("data-drop-hours") ?? "");
@@ -103,9 +114,23 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
         }
         if (dayEl) {
           dateKey = dayEl.getAttribute("data-drop-day");
-          if (dateKey && hoverDayRef.current !== dateKey) {
+          if (dateKey && (hoverDayRef.current !== dateKey || timelineEl)) {
             const box = dayEl.getBoundingClientRect();
             setHoverRect({ left: box.left, top: box.top, width: box.width, height: box.height });
+          }
+        }
+        if (timelineEl) {
+          const box = timelineEl.getBoundingClientRect();
+          const startMin = Number(timelineEl.getAttribute("data-timeline-start"));
+          const endMin = Number(timelineEl.getAttribute("data-timeline-end"));
+          if (Number.isFinite(startMin) && Number.isFinite(endMin) && endMin > startMin && box.height > 0) {
+            const ratio = Math.max(0, Math.min(1, (event.clientY - box.top) / box.height));
+            const rawMinute = startMin + ratio * (endMin - startMin);
+            startedMinutes = Math.max(startMin, Math.min(endMin - 15, Math.round(rawMinute / 15) * 15));
+            const slotTop = box.top + ((startedMinutes - startMin) / (endMin - startMin)) * box.height;
+            const slotHeight = Math.max(18, (60 / (endMin - startMin)) * box.height);
+            slotRect = { left: box.left + 4, top: slotTop, width: Math.max(0, box.width - 14), height: slotHeight };
+            hours = 1;
           }
         }
       }
@@ -122,6 +147,11 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
         hoverHoursRef.current = hours;
         setHoverHours(hours);
       }
+      if (startedMinutes !== hoverStartedMinutesRef.current) {
+        hoverStartedMinutesRef.current = startedMinutes;
+        setHoverStartedMinutes(startedMinutes);
+      }
+      setHoverSlotRect(slotRect);
     },
     [moveGhost]
   );
@@ -133,10 +163,11 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     const ticket = draggingRef.current;
     const dateKey = hoverDayRef.current;
     const hours = hoverHoursRef.current;
+    const startedMinutes = hoverStartedMinutesRef.current;
     endDrag();
 
     if (ticket && dateKey && isDroppableRef.current(dateKey)) {
-      onDropRef.current({ ticket, dateKey, hours: hours ?? 1 });
+      onDropRef.current({ ticket, dateKey, hours: hours ?? 1, ...(startedMinutes == null ? {} : { startedMinutes }) });
     }
   }, [endDrag, handleDragMove]);
 
@@ -153,6 +184,8 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
       setHoverDay(null);
       setHoverHours(null);
       setHoverRect(null);
+      setHoverStartedMinutes(null);
+      setHoverSlotRect(null);
       document.addEventListener("mousemove", handleDragMove);
       document.addEventListener("mouseup", handleDragUp);
       // Position the ghost immediately so it does not flash at the origin.
@@ -224,6 +257,8 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     hoverDay,
     hoverHours,
     hoverRect,
+    hoverStartedMinutes,
+    hoverSlotRect,
     isHoverBlocked,
     ghostRef,
     beginGrab

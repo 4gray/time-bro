@@ -383,6 +383,105 @@ body.cal-dragging .cal-track {
   cursor: grabbing;
 }
 
+/* Week hosts five calendars inside one outer scroller. The shared timeline owns
+   the hour gutter and scroll position; each embedded calendar contributes only
+   its aligned track and the exact same interaction state machine as Today. */
+.cal.cal--embedded {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.cal--embedded .cal-scroll {
+  flex: none;
+  height: 100%;
+  overflow: visible;
+  padding: 0;
+}
+
+.cal--embedded .cal-body,
+.cal--embedded .cal-track {
+  width: 100%;
+}
+
+.cal--embedded .cal-block {
+  padding-right: 6px;
+  padding-left: 6px;
+  border-radius: 5px;
+}
+
+.cal--embedded .cal-block-title {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+.cal--embedded .cal-block-detail {
+  font-size: 10.5px;
+}
+
+.cal--embedded .cal-block-meta {
+  font-size: 9.5px;
+}
+
+.cal--embedded .cal-block-head {
+  overflow: hidden;
+}
+
+.cal--embedded .cal-block.is-minimal {
+  justify-content: flex-start;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+.cal--embedded .cal-block.is-minimal .cal-block-head {
+  display: block;
+}
+
+.cal--embedded .cal-block.is-minimal .cal-block-title {
+  display: block;
+  width: 100%;
+  font-size: 10px;
+}
+
+.cal--embedded .cal-block.is-minimal .cal-block-detail,
+.cal--embedded .cal-block.is-minimal .cal-block-meta {
+  display: none;
+}
+
+.cal--embedded .cal-gap-fill {
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  padding: 3px 6px;
+  font-size: 9.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cal--embedded.is-read-only .cal-track {
+  cursor: default;
+}
+
+.week-tl-day.is-today .cal-now {
+  border-top-color: var(--blue);
+}
+
+.week-tl-day.is-today .cal-now-dot {
+  background: var(--blue);
+}
+
+.week-tl-day.is-future .cal-block,
+.week-tl-day.is-future .cal-line,
+.week-tl-day.is-future .cal-empty {
+  opacity: 0.36;
+}
+
+.week-tl-day.is-future .cal-empty {
+  display: none;
+}
+
 /* Below the two-column breakpoint the body stacks. Keep that middle region as
    the scroll surface so the Today header and active-work dock remain available. */
 @media (max-width: 1100px) {

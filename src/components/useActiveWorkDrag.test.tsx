@@ -111,6 +111,18 @@ describe("useActiveWorkDrag", () => {
     expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 2 });
   });
 
+  it("snaps a timeline drop to an exact local start time", async () => {
+    dayLane.setAttribute("data-drop-timeline", "true");
+    dayLane.setAttribute("data-timeline-start", "420");
+    dayLane.setAttribute("data-timeline-end", "1200");
+    const onDrop = vi.fn();
+
+    await performDrag({ isDroppable: () => true, onDrop });
+
+    // y=150 is one sixth into the 07:00–20:00 track: 550m, snapped to 09:15.
+    expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 1, startedMinutes: 555 });
+  });
+
   // Regression: a re-render mid-drag (new isDroppable/onDrop identities) must not
   // kill the in-flight gesture, and the drop must reach the LATEST onDrop.
   it("survives a re-render mid-drag and drops via the latest onDrop", async () => {
