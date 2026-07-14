@@ -556,7 +556,7 @@ export const WeekView = ({
   }, [syncResult, weekState.days]);
 
   const isDroppable = useCallback(
-    (dateKey: string, startedMinutes?: number, hours?: number) => {
+    (dateKey: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => {
       if (!dropDayMeta.get(dateKey)?.droppable) {
         return false;
       }
@@ -564,6 +564,9 @@ export const WeekView = ({
         return true;
       }
       const durationMinutes = Math.max(15, Math.round((hours ?? 1) * 60));
+      if (timelineEndMinutes != null && startedMinutes + durationMinutes > timelineEndMinutes) {
+        return false;
+      }
       return !overlapsCommitted(
         startedMinutes,
         startedMinutes + durationMinutes,
@@ -574,7 +577,7 @@ export const WeekView = ({
   );
 
   const handleDrop = useCallback(
-    ({ ticket, dateKey, hours, startedMinutes }: DropTarget) => {
+    ({ ticket, dateKey, hours, startedMinutes, timelineEndMinutes }: DropTarget) => {
       const meta = dropDayMeta.get(dateKey);
       setQuickLog({
         ticketKey: ticket.key,
@@ -583,6 +586,7 @@ export const WeekView = ({
         dayLabel: `${meta?.label ?? dateKey}${startedMinutes == null ? "" : ` · ${minuteToLabel(startedMinutes)}`}`,
         hours: hours || 1,
         startedMinutes,
+        timelineEndMinutes,
         comment: ""
       });
     },
@@ -608,9 +612,14 @@ export const WeekView = ({
   const quickLogColor = quickLog
     ? dockColorMap.get(quickLog.ticketKey) ?? DOCK_PALETTE[0]
     : DOCK_PALETTE[0];
+  const quickLogValidationMessage =
+    quickLog?.startedMinutes != null &&
+    !isDroppable(quickLog.dateKey, quickLog.startedMinutes, quickLog.hours, quickLog.timelineEndMinutes)
+      ? "Choose a shorter duration or another time — this interval is unavailable."
+      : undefined;
 
   const confirmQuickLog = useCallback(async () => {
-    if (!quickLog || !quickLogTicket || !onDockLog) {
+    if (!quickLog || !quickLogTicket || !onDockLog || quickLogValidationMessage) {
       return;
     }
     const started = fromLocalDateKey(quickLog.dateKey);
@@ -629,7 +638,7 @@ export const WeekView = ({
     if (success) {
       setQuickLog(null);
     }
-  }, [now, onDockLog, quickLog, quickLogTicket]);
+  }, [now, onDockLog, quickLog, quickLogTicket, quickLogValidationMessage]);
 
   const ghostColor = dragging ? dockColorMap.get(dragging.key) ?? DOCK_PALETTE[0] : DOCK_PALETTE[0];
   const hoverMeta = hoverDay ? dropDayMeta.get(hoverDay) : undefined;
@@ -796,6 +805,7 @@ export const WeekView = ({
           context={quickLog}
           color={quickLogColor}
           isLogging={isLogging}
+          validationMessage={quickLogValidationMessage}
           onChangeHours={(hours) => setQuickLog((current) => (current ? { ...current, hours } : current))}
           onChangeComment={(comment) => setQuickLog((current) => (current ? { ...current, comment } : current))}
           onCancel={() => setQuickLog(null)}

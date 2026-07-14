@@ -19,7 +19,7 @@ function Harness({
   isDroppable,
   onDrop
 }: {
-  isDroppable: (d: string, startedMinutes?: number, hours?: number) => boolean;
+  isDroppable: (d: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => boolean;
   onDrop: (t: DropTarget) => void;
 }) {
   const { beginGrab, dragging } = useActiveWorkDrag({ isDroppable, onDrop });
@@ -74,11 +74,11 @@ afterEach(() => {
 // lets a test swap the parent's callbacks mid-drag to reproduce the regression.
 const performDrag = async (
   initial: {
-    isDroppable: (d: string, startedMinutes?: number, hours?: number) => boolean;
+    isDroppable: (d: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => boolean;
     onDrop: (t: DropTarget) => void;
   },
   rerenderBeforeDrop?: {
-    isDroppable: (d: string, startedMinutes?: number, hours?: number) => boolean;
+    isDroppable: (d: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => boolean;
     onDrop: (t: DropTarget) => void;
   },
   dropY = 150
@@ -133,7 +133,13 @@ describe("useActiveWorkDrag", () => {
     await performDrag({ isDroppable: () => true, onDrop });
 
     // y=150 is one sixth into the 07:00–20:00 track: 550m, snapped to 09:15.
-    expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 1, startedMinutes: 555 });
+    expect(onDrop).toHaveBeenCalledWith({
+      ticket: TICKET,
+      dateKey: DAY_KEY,
+      hours: 1,
+      startedMinutes: 555,
+      timelineEndMinutes: 1200
+    });
   });
 
   it("keeps a one-hour timeline drop inside the visible day window", async () => {
@@ -144,7 +150,13 @@ describe("useActiveWorkDrag", () => {
 
     await performDrag({ isDroppable: () => true, onDrop }, undefined, 399);
 
-    expect(onDrop).toHaveBeenCalledWith({ ticket: TICKET, dateKey: DAY_KEY, hours: 1, startedMinutes: 1140 });
+    expect(onDrop).toHaveBeenCalledWith({
+      ticket: TICKET,
+      dateKey: DAY_KEY,
+      hours: 1,
+      startedMinutes: 1140,
+      timelineEndMinutes: 1200
+    });
   });
 
   it("blocks a timeline drop when its exact interval is occupied", async () => {
@@ -156,7 +168,7 @@ describe("useActiveWorkDrag", () => {
 
     await performDrag({ isDroppable, onDrop });
 
-    expect(isDroppable).toHaveBeenCalledWith(DAY_KEY, 555, 1);
+    expect(isDroppable).toHaveBeenCalledWith(DAY_KEY, 555, 1, 1200);
     expect(onDrop).not.toHaveBeenCalled();
   });
 

@@ -14,11 +14,13 @@ export interface DropTarget {
   hours: number;
   /** Exact local start picked on Week's shared timeline. */
   startedMinutes?: number;
+  /** End of the timeline window used to keep later duration changes in bounds. */
+  timelineEndMinutes?: number;
 }
 
 interface UseActiveWorkDragOptions {
   /** Returns true when a day, and optionally its exact interval, can accept a dropped ticket. */
-  isDroppable: (dateKey: string, startedMinutes?: number, hours?: number) => boolean;
+  isDroppable: (dateKey: string, startedMinutes?: number, hours?: number, timelineEndMinutes?: number) => boolean;
   /** Fired on a successful release over a droppable day. */
   onDrop: (target: DropTarget) => void;
 }
@@ -58,6 +60,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
   const hoverDayRef = useRef<string | null>(null);
   const hoverHoursRef = useRef<number | null>(null);
   const hoverStartedMinutesRef = useRef<number | null>(null);
+  const hoverTimelineEndMinutesRef = useRef<number | null>(null);
 
   // Latest-ref mirrors of the per-render callbacks. Updated every render so the
   // stable handlers always invoke the freshest `isDroppable`/`onDrop` without
@@ -79,6 +82,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     hoverDayRef.current = null;
     hoverHoursRef.current = null;
     hoverStartedMinutesRef.current = null;
+    hoverTimelineEndMinutesRef.current = null;
     setDragging(null);
     setHoverDay(null);
     setHoverHours(null);
@@ -100,6 +104,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
       let dateKey: string | null = null;
       let hours: number | null = null;
       let startedMinutes: number | null = null;
+      let timelineEndMinutes: number | null = null;
       let slotRect: DragHoverRect | null = null;
 
       if (element) {
@@ -132,6 +137,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
             const slotHeight = Math.max(18, (60 / (endMin - startMin)) * box.height);
             slotRect = { left: box.left + 4, top: slotTop, width: Math.max(0, box.width - 14), height: slotHeight };
             hours = 1;
+            timelineEndMinutes = endMin;
           }
         }
       }
@@ -152,6 +158,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
         hoverStartedMinutesRef.current = startedMinutes;
         setHoverStartedMinutes(startedMinutes);
       }
+      hoverTimelineEndMinutesRef.current = timelineEndMinutes;
       setHoverSlotRect(slotRect);
     },
     [moveGhost]
@@ -165,11 +172,27 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
     const dateKey = hoverDayRef.current;
     const hours = hoverHoursRef.current;
     const startedMinutes = hoverStartedMinutesRef.current;
+    const timelineEndMinutes = hoverTimelineEndMinutesRef.current;
     endDrag();
 
     const durationHours = hours ?? 1;
-    if (ticket && dateKey && isDroppableRef.current(dateKey, startedMinutes ?? undefined, durationHours)) {
-      onDropRef.current({ ticket, dateKey, hours: durationHours, ...(startedMinutes == null ? {} : { startedMinutes }) });
+    if (
+      ticket &&
+      dateKey &&
+      isDroppableRef.current(
+        dateKey,
+        startedMinutes ?? undefined,
+        durationHours,
+        timelineEndMinutes ?? undefined
+      )
+    ) {
+      onDropRef.current({
+        ticket,
+        dateKey,
+        hours: durationHours,
+        ...(startedMinutes == null ? {} : { startedMinutes }),
+        ...(timelineEndMinutes == null ? {} : { timelineEndMinutes })
+      });
     }
   }, [endDrag, handleDragMove]);
 
@@ -188,6 +211,7 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
       setHoverRect(null);
       setHoverStartedMinutes(null);
       setHoverSlotRect(null);
+      hoverTimelineEndMinutesRef.current = null;
       document.addEventListener("mousemove", handleDragMove);
       document.addEventListener("mouseup", handleDragUp);
       // Position the ghost immediately so it does not flash at the origin.
@@ -253,7 +277,13 @@ export const useActiveWorkDrag = ({ isDroppable, onDrop }: UseActiveWorkDragOpti
   }, []);
 
   const isHoverBlocked = Boolean(
-    hoverDay && !isDroppable(hoverDay, hoverStartedMinutes ?? undefined, hoverHours ?? undefined)
+    hoverDay &&
+      !isDroppable(
+        hoverDay,
+        hoverStartedMinutes ?? undefined,
+        hoverHours ?? undefined,
+        hoverTimelineEndMinutesRef.current ?? undefined
+      )
   );
 
   return {

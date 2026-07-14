@@ -166,6 +166,17 @@
   justify-content: flex-end;
 }
 
+.quicklog-validation {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 95, 87, 0.36);
+  background: rgba(255, 95, 87, 0.08);
+  color: #ff8b84;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .quicklog-comment {
   width: 100%;
   margin-top: 9px;
@@ -253,4 +264,3 @@
   opacity: 0.6;
   cursor: default;
 }
-
