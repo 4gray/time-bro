@@ -445,7 +445,11 @@ export const getSyncResult = async (weekKey: string) => {
     return stored;
   }
 
-  if (stored && (stored.accountId !== accountId || jiraSiteForResult(stored) !== jiraSite)) {
+  const storedSite = jiraSiteForResult(stored);
+  if (
+    stored &&
+    (stored.accountId !== accountId || (storedSite !== undefined && storedSite !== jiraSite))
+  ) {
     stored = undefined;
   }
 
@@ -456,9 +460,21 @@ export const getSyncResult = async (weekKey: string) => {
   // All week loaders share one in-memory IndexedDB read. Reconciliation
   // invalidates it, so already-cached weeks still see newly synced bulk logs.
   const cachedEntries = await readJiraWorklogCache();
-  const sourceWorklogs = cachedEntries
+  const ledgerWorklogs = cachedEntries
     .filter((entry) => entry.jiraSite === jiraSite && entry.authorAccountId === accountId)
     .map((entry) => entry.worklog);
+  const isLegacyStored = Boolean(stored && (!stored.jiraSite || stored.sourceWorklogs === undefined));
+  const legacyStoredWorklogs = isLegacyStored
+    ? Object.values(stored?.daySummaries ?? {})
+        .flatMap((bucket) => bucket.worklogs)
+        .filter((worklog) => worklog.authorAccountId === accountId)
+        .map(rawCachedWorklog)
+    : [];
+  const sourceWorklogs = [
+    ...new Map(
+      [...legacyStoredWorklogs, ...ledgerWorklogs].map((worklog) => [worklog.id, worklog])
+    ).values()
+  ];
   if (!stored && sourceWorklogs.length === 0) {
     return undefined;
   }
@@ -468,6 +484,14 @@ export const getSyncResult = async (weekKey: string) => {
   const summary = summarizeWorklogsForWeek(sourceWorklogs, weekStart, weekEndExclusive);
 
   if (stored) {
+    if (
+      isLegacyStored &&
+      legacyStoredWorklogs.length === 0 &&
+      Object.keys(stored.daySummaries).length > 0 &&
+      Object.keys(summary.daySummaries).length === 0
+    ) {
+      return stored;
+    }
     return {
       ...stored,
       jiraSite,

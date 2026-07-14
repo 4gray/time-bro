@@ -86,6 +86,18 @@ describe("Jira worklog ledger", () => {
     await putRawSyncResult(legacy);
 
     expect(await getSyncResult(legacy.weekKey)).toEqual(legacy);
+
+    const newlySynced = source("new-scan", site, "2026-07-14T09:00:00.000Z");
+    await saveSyncResult(
+      syncResult("2026-07-13", site, "2026-07-14T12:00:00.000Z", [newlySynced])
+    );
+    const afterContextSync = await getSyncResult(legacy.weekKey);
+    expect(afterContextSync).toMatchObject({
+      trackedSeconds: legacyWorklog.timeSpentSeconds,
+      issueCount: 1,
+      worklogCount: 1
+    });
+    expect(afterContextSync?.daySummaries["2026-07-07"].worklogs).toEqual([legacyWorklog]);
   });
 
   it("refreshes cached weeks while following the active Jira site context", async () => {
