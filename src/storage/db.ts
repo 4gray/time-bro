@@ -15,7 +15,7 @@ import { DEFAULT_SETTINGS } from "../domain/week";
 import { addDays, fromLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 11;
+const DB_VERSION = 12;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -101,8 +101,18 @@ const openDatabase = () => {
         db.createObjectStore("reconstructAiDrafts", { keyPath: "dateKey" });
       }
 
+      // Preferences introduced on the unreleased v11 schema were keyed by Jira
+      // worklog ID alone. Recreate the local-only store with site/account scope.
+      if (
+        event.oldVersion > 0 &&
+        event.oldVersion < 12 &&
+        db.objectStoreNames.contains("worklogAllocationPreferences")
+      ) {
+        db.deleteObjectStore("worklogAllocationPreferences");
+      }
+
       if (!db.objectStoreNames.contains("worklogAllocationPreferences")) {
-        db.createObjectStore("worklogAllocationPreferences", { keyPath: "worklogId" });
+        db.createObjectStore("worklogAllocationPreferences", { keyPath: "preferenceKey" });
       }
 
       // Version 10 briefly stored raw worklogs by Jira ID alone. Recreate this
@@ -315,10 +325,16 @@ export const getSyncResult = async (weekKey: string) => {
 
   const weekStart = fromLocalDateKey(weekKey);
   const weekEndExclusive = addDays(weekStart, 7);
-  const syncedAt = sourceWorklogs.reduce((latest, worklog) => {
-    const candidate = worklog.updated ?? worklog.created;
-    return candidate && candidate > latest ? candidate : latest;
-  }, new Date(0).toISOString());
+  const syncedAt = sourceWorklogs.reduce(
+    (latest, worklog) => {
+      const candidate = worklog.updated ?? worklog.created;
+      const candidateTime = candidate ? new Date(candidate).getTime() : Number.NaN;
+      return candidate && Number.isFinite(candidateTime) && candidateTime > latest.time
+        ? { time: candidateTime, value: candidate }
+        : latest;
+    },
+    { time: 0, value: new Date(0).toISOString() }
+  ).value;
 
   return {
     weekKey,

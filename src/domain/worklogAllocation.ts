@@ -194,13 +194,22 @@ export const projectWorklogsForWeek = (
   }
 
   const workingDays = normalizeWorkingDays(options.settings.workingDays);
-  const dailyCapacitySeconds = Math.max(
-    60,
-    Math.round((options.settings.weeklyTargetHours * 3600) / workingDays.length)
+  const workdayStartSeconds = DEFAULT_ALLOCATION_START_HOUR * 3600;
+  const dailyCapacitySeconds = Math.min(
+    SECONDS_PER_DAY - workdayStartSeconds,
+    Math.max(60, Math.round((options.settings.weeklyTargetHours * 3600) / workingDays.length))
   );
   const workingDaySet = new Set<number>(workingDays);
   const skippedDateSet = new Set(options.skippedDates ?? []);
-  const preferenceMap = new Map((options.preferences ?? []).map((preference) => [preference.worklogId, preference]));
+  const preferenceMap = new Map(
+    (options.preferences ?? [])
+      .filter(
+        (preference) =>
+          preference.jiraSite === syncResult.jiraSite &&
+          preference.authorAccountId === syncResult.accountId
+      )
+      .map((preference) => [preference.worklogId, preference])
+  );
   const now = options.now ?? new Date();
   const todayKey = toLocalDateKey(now);
   const weekStart = fromLocalDateKey(syncResult.weekKey);
@@ -216,7 +225,6 @@ export const projectWorklogsForWeek = (
   }
   const occupiedSeconds = new Map<string, number>();
   const blockedRanges = new Map<string, TimeRange[]>();
-  const workdayStartSeconds = DEFAULT_ALLOCATION_START_HOUR * 3600;
   const workdayEndSeconds = workdayStartSeconds + dailyCapacitySeconds;
 
   const isEligibleDate = (date: Date) => {
@@ -262,7 +270,9 @@ export const projectWorklogsForWeek = (
     const { direction, isApproximate } = inferDirection(worklog, preferenceMap);
     const anchor = fromLocalDateKey(anchorKey);
     const createdKey = dateKeyFor(worklog.created);
-    const forwardEndKey = createdKey && createdKey < todayKey ? createdKey : todayKey;
+    const inferredForwardEndKey =
+      createdKey && createdKey >= anchorKey && createdKey < todayKey ? createdKey : todayKey;
+    const forwardEndKey = isApproximate ? inferredForwardEndKey : todayKey;
     const allocations: PendingAllocation[] = [];
     let remaining = worklog.timeSpentSeconds;
     let cursor = new Date(anchor);

@@ -23,6 +23,7 @@ const sync = (weekKey: string, sources: JiraWorklog[]): SyncResult => ({
   weekEndExclusiveISO: "2026-07-20T00:00:00.000Z",
   syncedAt: "2026-07-14T18:00:00.000Z",
   accountId: "me",
+  jiraSite: "https://alpha.atlassian.net",
   trackedSeconds: 0,
   issueCount: 0,
   worklogCount: 0,
@@ -70,6 +71,9 @@ describe("projectWorklogsForWeek", () => {
 
   it("uses an explicit local preference and marks TimeBro-created allocation as exact", () => {
     const preference: WorklogAllocationPreference = {
+      preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", "bulk-1"]),
+      jiraSite: "https://alpha.atlassian.net",
+      authorAccountId: "me",
       worklogId: "bulk-1",
       direction: "forward",
       createdAt: "2026-07-14T18:00:00.000Z",
@@ -95,6 +99,76 @@ describe("projectWorklogsForWeek", () => {
       direction: "forward",
       isApproximate: false
     });
+  });
+
+  it("lets an explicit forward preference continue to today even when Jira created it earlier", () => {
+    const bulkStart = new Date(2026, 6, 13, 9, 0, 0, 0);
+    const preference: WorklogAllocationPreference = {
+      preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", "bulk-1"]),
+      jiraSite: "https://alpha.atlassian.net",
+      authorAccountId: "me",
+      worklogId: "bulk-1",
+      direction: "forward",
+      createdAt: bulkStart.toISOString(),
+      updatedAt: bulkStart.toISOString()
+    };
+    const result = projectWorklogsForWeek(
+      sync("2026-07-13", [
+        worklog({
+          started: bulkStart.toISOString(),
+          created: new Date(2026, 6, 10, 9, 0, 0, 0).toISOString(),
+          timeSpentSeconds: 16 * 3600
+        })
+      ]),
+      {
+        settings: DEFAULT_SETTINGS,
+        preferences: [preference],
+        now: new Date(2026, 6, 14, 18, 0, 0, 0)
+      }
+    )!;
+
+    expect(projectedHours(result)).toEqual({ "2026-07-13": 8, "2026-07-14": 8 });
+  });
+
+  it("ignores an exact preference saved for another Jira site", () => {
+    const preference: WorklogAllocationPreference = {
+      preferenceKey: JSON.stringify(["https://beta.atlassian.net", "me", "bulk-1"]),
+      jiraSite: "https://beta.atlassian.net",
+      authorAccountId: "me",
+      worklogId: "bulk-1",
+      direction: "forward",
+      createdAt: "2026-07-14T18:00:00.000Z",
+      updatedAt: "2026-07-14T18:00:00.000Z"
+    };
+    const result = projectWorklogsForWeek(sync("2026-07-13", [worklog({ timeSpentSeconds: 16 * 3600 })]), {
+      settings: DEFAULT_SETTINGS,
+      preferences: [preference],
+      now: new Date("2026-07-14T18:00:00.000Z")
+    })!;
+
+    expect(result.daySummaries["2026-07-14"].worklogs[0].allocation).toMatchObject({
+      direction: "backward",
+      isApproximate: true
+    });
+  });
+
+  it("caps configured daily capacity at the remaining hours in the calendar day", () => {
+    const result = projectWorklogsForWeek(
+      sync("2026-07-13", [worklog({ timeSpentSeconds: 30 * 3600 })]),
+      {
+        settings: { ...DEFAULT_SETTINGS, weeklyTargetHours: 100 },
+        now: new Date("2026-07-14T18:00:00.000Z")
+      }
+    )!;
+    const allocations = Object.values(result.daySummaries).flatMap((bucket) => bucket.worklogs);
+
+    expect(allocations.map((entry) => entry.allocation!.timeSpentSeconds / 3600)).toEqual([15, 15]);
+    for (const entry of allocations) {
+      const start = new Date(entry.allocation!.started);
+      expect(start.getHours() * 3600 + start.getMinutes() * 60 + entry.allocation!.timeSpentSeconds).toBeLessThanOrEqual(
+        24 * 3600
+      );
+    }
   });
 
   it("fills around ordinary worklogs before exposing unavoidable overflow", () => {
@@ -151,6 +225,9 @@ describe("projectWorklogsForWeek", () => {
       timeSpentSeconds: 16 * 3600
     });
     const preference: WorklogAllocationPreference = {
+      preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", bulk.id]),
+      jiraSite: "https://alpha.atlassian.net",
+      authorAccountId: "me",
       worklogId: bulk.id,
       direction: "forward",
       createdAt: bulkStart.toISOString(),

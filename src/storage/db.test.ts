@@ -1,8 +1,13 @@
 // @vitest-environment node
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import type { JiraWorklog, SyncResult } from "../../shared/types";
-import { getSyncResult, saveSyncResult } from "./db";
+import type { JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import {
+  getSyncResult,
+  getWorklogAllocationPreferences,
+  saveSyncResult,
+  saveWorklogAllocationPreference
+} from "./db";
 
 const source = (id: string, jiraSite: string, started: string): JiraWorklog => ({
   id,
@@ -67,5 +72,40 @@ describe("Jira worklog ledger", () => {
     const synthesizedLatestWeek = await getSyncResult("2026-08-03");
     expect(synthesizedLatestWeek?.jiraSite).toBe(siteB);
     expect(synthesizedLatestWeek?.sourceWorklogs).toEqual([b2]);
+  });
+
+  it("orders synthesized sync timestamps by instant instead of Jira date syntax", async () => {
+    const site = "https://dates.atlassian.net";
+    const earlier = source("offset-earlier", site, "2026-08-03T09:00:00.000Z");
+    earlier.updated = "2026-08-04T02:30:00.000+0200";
+    const later = source("z-later", site, "2026-08-04T09:00:00.000Z");
+    later.updated = "2026-08-04T01:00:00.000Z";
+
+    await saveSyncResult(syncResult("2026-08-03", site, "2026-08-05T12:00:00.000Z", [earlier, later]));
+    const synthesized = await getSyncResult("2026-08-10");
+
+    expect(synthesized?.syncedAt).toBe(later.updated);
+  });
+
+  it("stores equal worklog preference IDs independently by Jira site", async () => {
+    const timestamp = "2026-08-05T12:00:00.000Z";
+    const preference = (jiraSite: string, direction: WorklogAllocationPreference["direction"]): WorklogAllocationPreference => ({
+      preferenceKey: JSON.stringify([jiraSite, "same-account", "shared-id"]),
+      jiraSite,
+      authorAccountId: "same-account",
+      worklogId: "shared-id",
+      direction,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    });
+
+    await saveWorklogAllocationPreference(preference("https://alpha.atlassian.net", "backward"));
+    await saveWorklogAllocationPreference(preference("https://beta.atlassian.net", "forward"));
+    const stored = (await getWorklogAllocationPreferences()).filter(
+      (entry) => entry.worklogId === "shared-id"
+    );
+
+    expect(stored).toHaveLength(2);
+    expect(stored.map((entry) => entry.direction).sort()).toEqual(["backward", "forward"]);
   });
 });

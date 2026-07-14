@@ -62,6 +62,9 @@ export type WorklogAllocationDirection = "backward" | "forward";
  * creates or mutates additional Jira records.
  */
 export interface WorklogAllocationPreference {
+  preferenceKey: string;
+  jiraSite: string;
+  authorAccountId: string;
   worklogId: string;
   direction: WorklogAllocationDirection;
   createdAt: string;

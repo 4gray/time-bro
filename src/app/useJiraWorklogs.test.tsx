@@ -64,6 +64,7 @@ const syncResult = (overrides: Partial<SyncResult> = {}): SyncResult => ({
   weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
   syncedAt: "2026-06-18T08:00:00.000Z",
   accountId: "account-1",
+  jiraSite: "https://example.atlassian.net",
   displayName: "Dev User",
   trackedSeconds: 0,
   issueCount: 0,
@@ -283,7 +284,13 @@ describe("useJiraWorklogs", () => {
       comment: payload.comment
     });
     expect(saveWorklogAllocationPreference).toHaveBeenCalledWith(
-      expect.objectContaining({ worklogId: "bulk-20002", direction: "backward" })
+      expect.objectContaining({
+        preferenceKey: JSON.stringify(["https://example.atlassian.net", "account-1", "bulk-20002"]),
+        jiraSite: "https://example.atlassian.net",
+        authorAccountId: "account-1",
+        worklogId: "bulk-20002",
+        direction: "backward"
+      })
     );
     expect(onWorklogAllocationPreference).toHaveBeenCalledWith(
       expect.objectContaining({ worklogId: "bulk-20002", direction: "backward" })

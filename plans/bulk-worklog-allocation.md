@@ -16,6 +16,8 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - TimeBro continues to create one Jira worklog. Durations longer than a day are allowed and receive an exact deterministic local projection; creating multiple Jira worklogs remains out of scope until explicitly approved.
 - Keep synchronization read-only. Expand the existing author/date search around the selected week, reconcile the returned IDs into a global local worklog ledger, and build other weeks from that ledger. Jira's updated/deleted feeds remain a future optimization if the bounded scan becomes too expensive in production.
 - Scope ledger records by normalized Jira site plus account, and share one in-memory IndexedDB read across week loaders. Any reconciliation invalidates that read so already-cached weeks see newly synced worklogs without mixing Jira instances.
+- Scope TimeBro's explicit allocation preferences by normalized Jira site plus account as well as worklog ID.
+- Cap the visible daily allocation window at midnight even when a configured weekly target implies more than 15 hours after the 09:00 start.
 
 ## Completed work
 
@@ -29,7 +31,7 @@ Make Jira worklogs longer than a configured working day visible across the days 
 
 ## Verification
 
-- `npm run test`: 106 files, 657 tests passed after integrating the Week Timeline changes from current `origin/main`.
+- `npm run test`: 106 files, 662 tests passed after integrating the Week Timeline changes from current `origin/main` and the final review regressions.
 - `npm run e2e:renderer`: 7 renderer scenarios passed, including Timeline persistence and the mobile overflow check.
 - `npm run build`: passed (TypeScript, Vite renderer, Electron TypeScript).
 - `npm audit`: 0 vulnerabilities after adding the IndexedDB test runtime.
@@ -40,4 +42,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: PR #17 is ready for review; eight automated review threads are addressed locally, current `origin/main` is integrated, and final commit, CI/re-review, plus merge remain.
+- Status: PR #17 is ready for review; twelve automated review threads are addressed locally, current `origin/main` is integrated, and local verification is green. Final commit, CI/re-review, plus merge remain.

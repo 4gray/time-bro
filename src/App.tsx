@@ -402,7 +402,7 @@ export const App = () => {
     onSyncResult: setSyncResult,
     onWorklogAllocationPreference: (preference) =>
       setWorklogAllocationPreferences((current) => [
-        ...current.filter((candidate) => candidate.worklogId !== preference.worklogId),
+        ...current.filter((candidate) => candidate.preferenceKey !== preference.preferenceKey),
         preference
       ]),
     setEditingWorklog,

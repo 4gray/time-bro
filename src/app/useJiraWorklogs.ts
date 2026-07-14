@@ -20,6 +20,7 @@ import {
   saveWorklogAllocationPreference as saveWorklogAllocationPreferenceToStorage
 } from "../storage/db";
 import { formatDuration } from "../utils/date";
+import { normalizeJiraSiteInput } from "./appHelpers";
 
 export interface JiraWorklogsClient {
   addWorklog(request: AddWorklogRequest): Promise<AddWorklogResult>;
@@ -81,8 +82,17 @@ export const useJiraWorklogs = ({
       if (!direction) {
         return;
       }
+      const jiraSite = normalizeJiraSiteInput(settings.jiraBaseUrl);
+      const authorAccountId =
+        syncResult?.jiraSite === jiraSite ? syncResult.accountId : editingWorklog?.authorAccountId;
+      if (!jiraSite || !authorAccountId) {
+        return;
+      }
       const timestamp = new Date().toISOString();
       const preference: WorklogAllocationPreference = {
+        preferenceKey: JSON.stringify([jiraSite, authorAccountId, worklogId]),
+        jiraSite,
+        authorAccountId,
         worklogId,
         direction,
         createdAt: timestamp,
@@ -98,7 +108,14 @@ export const useJiraWorklogs = ({
         console.error("Unable to save the local bulk-worklog direction.", error);
       }
     },
-    [onWorklogAllocationPreference, saveWorklogAllocationPreference]
+    [
+      editingWorklog?.authorAccountId,
+      onWorklogAllocationPreference,
+      saveWorklogAllocationPreference,
+      settings.jiraBaseUrl,
+      syncResult?.accountId,
+      syncResult?.jiraSite
+    ]
   );
 
   const handleAddWorklog = useCallback(
