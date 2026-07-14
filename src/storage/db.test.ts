@@ -8,6 +8,7 @@ import {
   saveSyncResult,
   saveWorklogAllocationPreference
 } from "./db";
+import { mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
 
 const source = (id: string, jiraSite: string, started: string): JiraWorklog => ({
   id,
@@ -107,5 +108,38 @@ describe("Jira worklog ledger", () => {
 
     expect(stored).toHaveLength(2);
     expect(stored.map((entry) => entry.direction).sort()).toEqual(["backward", "forward"]);
+  });
+
+  it("populates raw day buckets when synthesizing a ledger-only week", async () => {
+    const site = "https://ledger-only.atlassian.net";
+    const ordinary = source("ledger-normal", site, "2026-08-18T09:00:00.000Z");
+    ordinary.timeSpentSeconds = 2 * 3600;
+
+    await saveSyncResult(
+      syncResult("2026-08-10", site, "2026-08-20T12:00:00.000Z", [ordinary])
+    );
+    const synthesized = await getSyncResult("2026-08-17");
+
+    expect(synthesized).toMatchObject({
+      trackedSeconds: 2 * 3600,
+      issueCount: 1,
+      worklogCount: 1
+    });
+    expect(synthesized?.daySummaries["2026-08-18"].worklogs).toEqual([ordinary]);
+    expect(synthesized?.daySummaries["2026-08-18"].issues[0]).toMatchObject({
+      key: ordinary.issueKey,
+      loggedSeconds: 2 * 3600
+    });
+
+    const moved = mergeUpdatedWorklogIntoSyncResult(synthesized, {
+      worklogId: ordinary.id,
+      startedISO: "2026-08-18T10:00:00.000Z",
+      timeSpentSeconds: 3 * 3600
+    });
+    expect(moved?.daySummaries["2026-08-18"].worklogs[0]).toMatchObject({
+      id: ordinary.id,
+      started: "2026-08-18T10:00:00.000Z",
+      timeSpentSeconds: 3 * 3600
+    });
   });
 });

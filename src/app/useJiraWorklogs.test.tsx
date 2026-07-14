@@ -297,6 +297,47 @@ describe("useJiraWorklogs", () => {
     );
   });
 
+  it("stores the chosen direction after the first sync supplies the current site account", async () => {
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-first-sync",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    runSync.mockResolvedValue(syncResult());
+    renderHarness({
+      currentEditingWorklog: null,
+      currentSyncResult: syncResult({
+        jiraSite: "https://old.atlassian.net",
+        accountId: "old-account"
+      })
+    });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "backward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledTimes(1);
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferenceKey: JSON.stringify([
+          "https://example.atlassian.net",
+          "account-1",
+          "bulk-first-sync"
+        ]),
+        jiraSite: "https://example.atlassian.net",
+        authorAccountId: "account-1",
+        direction: "backward"
+      })
+    );
+  });
+
   it("keeps a successful Jira write successful when the local direction cannot be saved", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     addWorklog.mockResolvedValue({

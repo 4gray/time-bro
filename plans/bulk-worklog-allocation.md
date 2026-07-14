@@ -18,6 +18,8 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Scope ledger records by normalized Jira site plus account, and share one in-memory IndexedDB read across week loaders. Any reconciliation invalidates that read so already-cached weeks see newly synced worklogs without mixing Jira instances.
 - Scope TimeBro's explicit allocation preferences by normalized Jira site plus account as well as worklog ID.
 - Cap the visible daily allocation window at midnight even when a configured weekly target implies more than 15 hours after the 09:00 start.
+- Retry a TimeBro allocation preference after the first successful sync supplies current site/account context.
+- Build authoritative day buckets and totals for weeks synthesized from the local ledger so normal worklogs remain optimistically editable.
 
 ## Completed work
 
@@ -31,7 +33,7 @@ Make Jira worklogs longer than a configured working day visible across the days 
 
 ## Verification
 
-- `npm run test`: 106 files, 662 tests passed after integrating the Week Timeline changes from current `origin/main` and the final review regressions.
+- `npm run test`: 106 files, 664 tests passed after integrating the Week Timeline changes from current `origin/main` and the final review regressions.
 - `npm run e2e:renderer`: 7 renderer scenarios passed, including Timeline persistence and the mobile overflow check.
 - `npm run build`: passed (TypeScript, Vite renderer, Electron TypeScript).
 - `npm audit`: 0 vulnerabilities after adding the IndexedDB test runtime.
@@ -42,4 +44,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: PR #17 is ready for review; twelve automated review threads are addressed locally, current `origin/main` is integrated, and local verification is green. Final commit, CI/re-review, plus merge remain.
+- Status: PR #17 is ready for review; fourteen automated review threads are addressed locally, current `origin/main` is integrated, and local verification is green. Final commit, CI/re-review, plus merge remain.

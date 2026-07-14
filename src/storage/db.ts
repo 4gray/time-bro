@@ -12,7 +12,7 @@ import type {
 } from "../../shared/types";
 import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
-import { addDays, fromLocalDateKey } from "../utils/date";
+import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
 const DB_VERSION = 12;
@@ -227,6 +227,67 @@ const jiraSiteForResult = (result?: SyncResult) =>
 
 const jiraWorklogCacheKey = (jiraSite: string, worklogId: string) => JSON.stringify([jiraSite, worklogId]);
 
+const summarizeWorklogsForWeek = (
+  sourceWorklogs: JiraWorklog[],
+  weekStart: Date,
+  weekEndExclusive: Date
+) => {
+  const daySummaries: SyncResult["daySummaries"] = {};
+  const visibleWorklogIds = new Set<string>();
+  const visibleIssueKeys = new Set<string>();
+
+  for (const worklog of sourceWorklogs) {
+    const started = new Date(worklog.started);
+    if (Number.isNaN(started.getTime()) || started < weekStart || started >= weekEndExclusive) {
+      continue;
+    }
+
+    const dateKey = toLocalDateKey(started);
+    const bucket = daySummaries[dateKey] ?? { trackedSeconds: 0, issues: [], worklogs: [] };
+    bucket.trackedSeconds += worklog.timeSpentSeconds;
+    bucket.worklogs.push(worklog);
+
+    const issue = bucket.issues.find((candidate) => candidate.key === worklog.issueKey);
+    if (issue) {
+      issue.loggedSeconds += worklog.timeSpentSeconds;
+      if (worklog.comment) {
+        issue.comments = Array.from(new Set([...(issue.comments ?? []), worklog.comment]));
+      }
+    } else {
+      bucket.issues.push({
+        id: worklog.issueId,
+        key: worklog.issueKey,
+        summary: worklog.issueSummary,
+        url: worklog.issueUrl,
+        issueType: worklog.issueType,
+        epic: worklog.epic,
+        loggedSeconds: worklog.timeSpentSeconds,
+        comments: worklog.comment ? [worklog.comment] : []
+      });
+    }
+
+    daySummaries[dateKey] = bucket;
+    visibleWorklogIds.add(worklog.id);
+    visibleIssueKeys.add(worklog.issueKey);
+  }
+
+  for (const bucket of Object.values(daySummaries)) {
+    bucket.worklogs.sort(
+      (left, right) => new Date(left.started).getTime() - new Date(right.started).getTime()
+    );
+  }
+
+  return {
+    daySummaries,
+    trackedSeconds: Object.values(daySummaries).reduce(
+      (total, bucket) => total + bucket.trackedSeconds,
+      0
+    ),
+    issueCount: visibleIssueKeys.size,
+    worklogCount: visibleWorklogIds.size
+  };
+};
+
 const reconcileJiraWorklogCache = async (result: SyncResult) => {
   const jiraSite = jiraSiteForResult(result);
   if (!result.sourceWorklogs || !jiraSite) {
@@ -315,16 +376,26 @@ export const getSyncResult = async (weekKey: string) => {
   const sourceWorklogs = cachedEntries
     .filter((entry) => entry.jiraSite === jiraSite && entry.authorAccountId === accountId)
     .map((entry) => entry.worklog);
-  if (sourceWorklogs.length === 0) {
-    return stored;
-  }
-
-  if (stored) {
-    return { ...stored, jiraSite, sourceWorklogs };
+  if (!stored && sourceWorklogs.length === 0) {
+    return undefined;
   }
 
   const weekStart = fromLocalDateKey(weekKey);
   const weekEndExclusive = addDays(weekStart, 7);
+  const summary = summarizeWorklogsForWeek(sourceWorklogs, weekStart, weekEndExclusive);
+
+  if (stored) {
+    return {
+      ...stored,
+      jiraSite,
+      trackedSeconds: summary.trackedSeconds,
+      issueCount: summary.issueCount,
+      worklogCount: summary.worklogCount,
+      daySummaries: summary.daySummaries,
+      sourceWorklogs
+    };
+  }
+
   const syncedAt = sourceWorklogs.reduce(
     (latest, worklog) => {
       const candidate = worklog.updated ?? worklog.created;
@@ -343,10 +414,10 @@ export const getSyncResult = async (weekKey: string) => {
     syncedAt,
     accountId,
     jiraSite,
-    trackedSeconds: 0,
-    issueCount: 0,
-    worklogCount: 0,
-    daySummaries: {},
+    trackedSeconds: summary.trackedSeconds,
+    issueCount: summary.issueCount,
+    worklogCount: summary.worklogCount,
+    daySummaries: summary.daySummaries,
     sourceWorklogs
   } satisfies SyncResult;
 };

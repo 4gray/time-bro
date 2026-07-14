@@ -78,15 +78,20 @@ export const useJiraWorklogs = ({
   const [logError, setLogError] = useState<string | undefined>();
 
   const rememberAllocationPreference = useCallback(
-    async (worklogId: string, direction?: WorklogAllocationDirection) => {
+    async (
+      worklogId: string,
+      direction: WorklogAllocationDirection | undefined,
+      context: SyncResult | undefined,
+      fallbackAuthorAccountId?: string
+    ) => {
       if (!direction) {
-        return;
+        return true;
       }
       const jiraSite = normalizeJiraSiteInput(settings.jiraBaseUrl);
       const authorAccountId =
-        syncResult?.jiraSite === jiraSite ? syncResult.accountId : editingWorklog?.authorAccountId;
+        context?.jiraSite === jiraSite ? context.accountId : fallbackAuthorAccountId;
       if (!jiraSite || !authorAccountId) {
-        return;
+        return false;
       }
       const timestamp = new Date().toISOString();
       const preference: WorklogAllocationPreference = {
@@ -101,20 +106,19 @@ export const useJiraWorklogs = ({
       try {
         await saveWorklogAllocationPreference(preference);
         onWorklogAllocationPreference?.(preference);
+        return true;
       } catch (error) {
         // Jira has already accepted the write at this point. Treat the local
         // direction as best-effort so an IndexedDB failure cannot make the user
         // retry and accidentally create a duplicate Jira worklog.
         console.error("Unable to save the local bulk-worklog direction.", error);
+        return true;
       }
     },
     [
-      editingWorklog?.authorAccountId,
       onWorklogAllocationPreference,
       saveWorklogAllocationPreference,
-      settings.jiraBaseUrl,
-      syncResult?.accountId,
-      syncResult?.jiraSite
+      settings.jiraBaseUrl
     ]
   );
 
@@ -131,9 +135,16 @@ export const useJiraWorklogs = ({
 
         const { ticket, allocationDirection, ...worklogPayload } = payload;
         const result = await client.addWorklog({ settings, ...worklogPayload });
-        await rememberAllocationPreference(result.worklogId, allocationDirection);
+        const preferenceHandled = await rememberAllocationPreference(
+          result.worklogId,
+          allocationDirection,
+          syncResult
+        );
         showSuccess(`Logged ${formatDuration(result.timeSpentSeconds / 3600)} to ${result.issueKey}.`);
         const syncedResult = await runSync(settings, { queueAfterCurrent: true });
+        if (!preferenceHandled) {
+          await rememberAllocationPreference(result.worklogId, allocationDirection, syncedResult);
+        }
         const mergedSyncResult = mergeCreatedWorklogIntoSyncResult(syncedResult ?? syncResult, {
           ticket,
           worklogId: result.worklogId,
@@ -184,7 +195,12 @@ export const useJiraWorklogs = ({
           startedISO: payload.startedISO,
           comment: payload.comment
         });
-        await rememberAllocationPreference(result.worklogId, payload.allocationDirection);
+        await rememberAllocationPreference(
+          result.worklogId,
+          payload.allocationDirection,
+          syncResult,
+          editingWorklog.authorAccountId
+        );
         showSuccess(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
         await runSync(settings, { queueAfterCurrent: true });
         await loadTickets();
@@ -198,7 +214,7 @@ export const useJiraWorklogs = ({
         setIsLogging(false);
       }
     },
-    [client, editingWorklog, isDemo, loadTickets, rememberAllocationPreference, runSync, settings, showError, showSuccess]
+    [client, editingWorklog, isDemo, loadTickets, rememberAllocationPreference, runSync, settings, showError, showSuccess, syncResult]
   );
 
   // Drag move/resize from the calendar: apply the geometry optimistically to the
