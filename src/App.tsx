@@ -405,6 +405,10 @@ export const App = () => {
         ...current.filter((candidate) => candidate.preferenceKey !== preference.preferenceKey),
         preference
       ]),
+    onWorklogAllocationPreferenceRemoved: (preferenceKey) =>
+      setWorklogAllocationPreferences((current) =>
+        current.filter((candidate) => candidate.preferenceKey !== preferenceKey)
+      ),
     setEditingWorklog,
     showSuccess,
     showError

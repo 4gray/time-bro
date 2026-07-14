@@ -16,6 +16,7 @@ import type {
 import { nativeApi } from "../api/native";
 import { mergeCreatedWorklogIntoSyncResult, mergeUpdatedWorklogIntoSyncResult } from "../domain/syncResult";
 import {
+  deleteWorklogAllocationPreference as deleteWorklogAllocationPreferenceFromStorage,
   saveSyncResult as saveSyncResultToStorage,
   saveWorklogAllocationPreference as saveWorklogAllocationPreferenceToStorage
 } from "../storage/db";
@@ -45,7 +46,9 @@ interface UseJiraWorklogsOptions {
   client?: JiraWorklogsClient;
   saveSyncResult?: (result: SyncResult) => Promise<void>;
   saveWorklogAllocationPreference?: (preference: WorklogAllocationPreference) => Promise<void>;
+  deleteWorklogAllocationPreference?: (preferenceKey: string) => Promise<void>;
   onWorklogAllocationPreference?: (preference: WorklogAllocationPreference) => void;
+  onWorklogAllocationPreferenceRemoved?: (preferenceKey: string) => void;
   runSync: (
     settingsForSync?: AppSettings,
     options?: { queueAfterCurrent?: boolean }
@@ -65,7 +68,9 @@ export const useJiraWorklogs = ({
   client = nativeApi,
   saveSyncResult = saveSyncResultToStorage,
   saveWorklogAllocationPreference = saveWorklogAllocationPreferenceToStorage,
+  deleteWorklogAllocationPreference = deleteWorklogAllocationPreferenceFromStorage,
   onWorklogAllocationPreference,
+  onWorklogAllocationPreferenceRemoved,
   runSync,
   loadTickets,
   onSyncResult,
@@ -118,6 +123,35 @@ export const useJiraWorklogs = ({
     [
       onWorklogAllocationPreference,
       saveWorklogAllocationPreference,
+      settings.jiraBaseUrl
+    ]
+  );
+
+  const forgetAllocationPreference = useCallback(
+    async (
+      worklogId: string,
+      context: SyncResult | undefined,
+      fallbackAuthorAccountId?: string
+    ) => {
+      const jiraSite = normalizeJiraSiteInput(settings.jiraBaseUrl);
+      const authorAccountId =
+        context?.jiraSite === jiraSite ? context.accountId : fallbackAuthorAccountId;
+      if (!jiraSite || !authorAccountId) {
+        return;
+      }
+      const preferenceKey = JSON.stringify([jiraSite, authorAccountId, worklogId]);
+      try {
+        await deleteWorklogAllocationPreference(preferenceKey);
+        onWorklogAllocationPreferenceRemoved?.(preferenceKey);
+      } catch (error) {
+        // Jira has already accepted the update/delete. Keep local cleanup
+        // best-effort so retrying cannot duplicate or overwrite a Jira write.
+        console.error("Unable to remove the local bulk-worklog direction.", error);
+      }
+    },
+    [
+      deleteWorklogAllocationPreference,
+      onWorklogAllocationPreferenceRemoved,
       settings.jiraBaseUrl
     ]
   );
@@ -195,12 +229,20 @@ export const useJiraWorklogs = ({
           startedISO: payload.startedISO,
           comment: payload.comment
         });
-        await rememberAllocationPreference(
-          result.worklogId,
-          payload.allocationDirection,
-          syncResult,
-          editingWorklog.authorAccountId
-        );
+        if (payload.allocationDirection) {
+          await rememberAllocationPreference(
+            result.worklogId,
+            payload.allocationDirection,
+            syncResult,
+            editingWorklog.authorAccountId
+          );
+        } else {
+          await forgetAllocationPreference(
+            result.worklogId,
+            syncResult,
+            editingWorklog.authorAccountId
+          );
+        }
         showSuccess(`Updated ${formatDuration(result.timeSpentSeconds / 3600)} on ${result.issueKey}.`);
         await runSync(settings, { queueAfterCurrent: true });
         await loadTickets();
@@ -214,7 +256,7 @@ export const useJiraWorklogs = ({
         setIsLogging(false);
       }
     },
-    [client, editingWorklog, isDemo, loadTickets, rememberAllocationPreference, runSync, settings, showError, showSuccess, syncResult]
+    [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, rememberAllocationPreference, runSync, settings, showError, showSuccess, syncResult]
   );
 
   // Drag move/resize from the calendar: apply the geometry optimistically to the
@@ -294,6 +336,11 @@ export const useJiraWorklogs = ({
         issueKey: editingWorklog.issueKey,
         worklogId: editingWorklog.id
       });
+      await forgetAllocationPreference(
+        editingWorklog.id,
+        syncResult,
+        editingWorklog.authorAccountId
+      );
       showSuccess(`Deleted worklog from ${result.issueKey}.`);
       await runSync(settings, { queueAfterCurrent: true });
       await loadTickets();
@@ -306,7 +353,7 @@ export const useJiraWorklogs = ({
     } finally {
       setIsDeletingWorklog(false);
     }
-  }, [client, editingWorklog, isDemo, loadTickets, runSync, setEditingWorklog, settings, showError, showSuccess]);
+  }, [client, editingWorklog, forgetAllocationPreference, isDemo, loadTickets, runSync, setEditingWorklog, settings, showError, showSuccess, syncResult]);
 
   return {
     isLogging,

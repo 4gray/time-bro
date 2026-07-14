@@ -166,6 +166,18 @@ const writeStore = async <T>(storeName: StoreName, value: T) => {
   });
 };
 
+const deleteStore = async (storeName: StoreName, key: IDBValidKey) => {
+  const db = await openDatabase();
+
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    const request = transaction.objectStore(storeName).delete(key);
+
+    request.onerror = () => reject(request.error);
+    transaction.oncomplete = () => resolve();
+  });
+};
+
 const readAllStore = async <T>(storeName: StoreName) => {
   const db = await openDatabase();
 
@@ -220,19 +232,30 @@ const rawCachedWorklog = (worklog: JiraWorklog): JiraWorklog => {
   return raw;
 };
 
-const jiraSiteFromWorklog = (worklog?: JiraWorklog) => {
-  if (!worklog?.issueUrl) {
+const jiraSiteFromUrl = (issueUrl?: string) => {
+  if (!issueUrl) {
     return undefined;
   }
   try {
-    return new URL(worklog.issueUrl).origin;
+    return new URL(issueUrl).origin;
   } catch {
     return undefined;
   }
 };
 
+const jiraSiteFromWorklog = (worklog?: JiraWorklog) => jiraSiteFromUrl(worklog?.issueUrl);
+
 const jiraSiteForResult = (result?: SyncResult) =>
-  result?.jiraSite ?? result?.sourceWorklogs?.map(jiraSiteFromWorklog).find((site): site is string => Boolean(site));
+  result?.jiraSite ??
+  result?.sourceWorklogs?.map(jiraSiteFromWorklog).find((site): site is string => Boolean(site)) ??
+  Object.values(result?.daySummaries ?? {})
+    .flatMap((bucket) => bucket.worklogs)
+    .map(jiraSiteFromWorklog)
+    .find((site): site is string => Boolean(site)) ??
+  Object.values(result?.daySummaries ?? {})
+    .flatMap((bucket) => bucket.issues)
+    .map((issue) => jiraSiteFromUrl(issue.url))
+    .find((site): site is string => Boolean(site));
 
 const jiraSiteFromSettings = (rawSite: string) => {
   const trimmed = rawSite.trim().replace(/\/+$/, "");
@@ -411,7 +434,10 @@ export const getSyncResult = async (weekKey: string) => {
       return undefined;
     }
     const storedSite = jiraSiteForResult(stored);
-    if (!stored || !configuredContext.jiraSite || storedSite !== configuredContext.jiraSite) {
+    if (
+      !stored ||
+      (storedSite && configuredContext.jiraSite && storedSite !== configuredContext.jiraSite)
+    ) {
       return undefined;
     }
     // A legacy stored week without site context remains usable as-is, but must
@@ -492,6 +518,9 @@ export const getWorklogAllocationPreferences = () =>
 
 export const saveWorklogAllocationPreference = (preference: WorklogAllocationPreference) =>
   writeStore("worklogAllocationPreferences", preference);
+
+export const deleteWorklogAllocationPreference = (preferenceKey: string) =>
+  deleteStore("worklogAllocationPreferences", preferenceKey);
 
 export const getJiraActivityResult = (weekKey: string) => {
   return readStore<JiraActivitySyncResult>("jiraActivityResults", weekKey);

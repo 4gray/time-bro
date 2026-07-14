@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import {
+  deleteWorklogAllocationPreference,
   getSyncResult,
   getWorklogAllocationPreferences,
   saveSyncResult,
@@ -46,7 +47,47 @@ const syncResult = (
   scanEndExclusiveISO: "2026-08-10T00:00:00.000Z"
 });
 
+const putRawSyncResult = async (result: SyncResult) => {
+  const db = await new Promise<IDBDatabase>((resolve, reject) => {
+    const request = indexedDB.open("jira-week-tracker");
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction("syncResults", "readwrite");
+    transaction.objectStore("syncResults").put(result);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => resolve();
+  });
+  db.close();
+};
+
 describe("Jira worklog ledger", () => {
+  it("keeps a legacy cached week usable before the first site-scoped sync", async () => {
+    const site = "https://legacy.atlassian.net";
+    const legacyWorklog = source("legacy", site, "2026-07-07T09:00:00.000Z");
+    legacyWorklog.issueUrl = undefined;
+    const legacy: SyncResult = {
+      ...syncResult("2026-07-06", site, "2026-07-07T12:00:00.000Z", []),
+      jiraSite: undefined,
+      sourceWorklogs: undefined,
+      trackedSeconds: legacyWorklog.timeSpentSeconds,
+      issueCount: 1,
+      worklogCount: 1,
+      daySummaries: {
+        "2026-07-07": {
+          trackedSeconds: legacyWorklog.timeSpentSeconds,
+          issues: [],
+          worklogs: [legacyWorklog]
+        }
+      }
+    };
+    await saveSettings({ ...DEFAULT_SETTINGS, jiraBaseUrl: site, jiraEmail: "person@example.com" });
+    await putRawSyncResult(legacy);
+
+    expect(await getSyncResult(legacy.weekKey)).toEqual(legacy);
+  });
+
   it("refreshes cached weeks while following the active Jira site context", async () => {
     const siteA = "https://alpha.atlassian.net";
     const siteB = "https://beta.atlassian.net";
@@ -110,6 +151,18 @@ describe("Jira worklog ledger", () => {
 
     expect(stored).toHaveLength(2);
     expect(stored.map((entry) => entry.direction).sort()).toEqual(["backward", "forward"]);
+
+    await deleteWorklogAllocationPreference(
+      JSON.stringify(["https://alpha.atlassian.net", "same-account", "shared-id"])
+    );
+    const remaining = (await getWorklogAllocationPreferences()).filter(
+      (entry) => entry.worklogId === "shared-id"
+    );
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]).toMatchObject({
+      jiraSite: "https://beta.atlassian.net",
+      direction: "forward"
+    });
   });
 
   it("populates raw day buckets when synthesizing a ledger-only week", async () => {
