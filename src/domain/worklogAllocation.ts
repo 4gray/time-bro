@@ -12,6 +12,7 @@ import { addDays, fromLocalDateKey, isoWeekday, toLocalDateKey } from "../utils/
 
 const MAX_ALLOCATION_DAYS = 730;
 const DEFAULT_ALLOCATION_START_HOUR = 9;
+const SECONDS_PER_DAY = 24 * 3600;
 
 export interface ProjectWorklogsOptions {
   settings: Pick<AppSettings, "weeklyTargetHours" | "workingDays">;
@@ -152,16 +153,22 @@ const appendResidual = (
   allocations: PendingAllocation[],
   fallbackDateKey: string,
   seconds: number,
-  blockedRanges: Map<string, TimeRange[]>
+  blockedRanges: Map<string, TimeRange[]>,
+  workdayStartSeconds: number,
+  workdayEndSeconds: number
 ) => {
   if (seconds <= 0) {
     return;
   }
   const dateKey = allocations[allocations.length - 1]?.dateKey ?? fallbackDateKey;
-  const startSeconds = (blockedRanges.get(dateKey) ?? []).reduce(
+  const requestedStartSeconds = (blockedRanges.get(dateKey) ?? []).reduce(
     (latest, range) => Math.max(latest, range.endSeconds),
-    DEFAULT_ALLOCATION_START_HOUR * 3600
+    workdayStartSeconds
   );
+  // Residual time is an explicit overload on the final eligible date. Keep its
+  // start within that date even when an ordinary worklog crosses midnight.
+  const latestSameDayStart = Math.min(workdayEndSeconds, SECONDS_PER_DAY - 1);
+  const startSeconds = Math.min(Math.max(requestedStartSeconds, workdayStartSeconds), latestSameDayStart);
   allocations.push({
     dateKey,
     started: allocationStartedISO(dateKey, startSeconds),
@@ -301,7 +308,14 @@ export const projectWorklogsForWeek = (
     // A forward range can run out at creation/today when normal worklogs already
     // consume its capacity. Keep the Jira total exact and expose the overload on
     // the last eligible day instead of silently dropping or moving pre-start time.
-    appendResidual(allocations, anchorKey, remaining, blockedRanges);
+    appendResidual(
+      allocations,
+      anchorKey,
+      remaining,
+      blockedRanges,
+      workdayStartSeconds,
+      workdayEndSeconds
+    );
 
     const partCount = allocations.length;
     allocations.forEach((allocation, index) => {

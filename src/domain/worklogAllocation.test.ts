@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
+import { toLocalDateKey } from "../utils/date";
 import { DEFAULT_SETTINGS } from "./week";
 import { projectWorklogsForWeek } from "./worklogAllocation";
 
@@ -132,5 +133,39 @@ describe("projectWorklogsForWeek", () => {
 
     expect(projectedHours(result)).toEqual({ "2026-07-14": 7 });
     expect(result.daySummaries["2026-07-14"].worklogs[0]).not.toHaveProperty("allocation");
+  });
+
+  it("keeps an overloaded residual start on its allocation date", () => {
+    const dateKey = "2026-07-14";
+    const lateStart = new Date(2026, 6, 14, 23, 0, 0, 0);
+    const bulkStart = new Date(2026, 6, 14, 9, 0, 0, 0);
+    const ordinary = worklog({
+      id: "normal-late",
+      started: lateStart.toISOString(),
+      created: lateStart.toISOString(),
+      timeSpentSeconds: 2 * 3600
+    });
+    const bulk = worklog({
+      started: bulkStart.toISOString(),
+      created: bulkStart.toISOString(),
+      timeSpentSeconds: 16 * 3600
+    });
+    const preference: WorklogAllocationPreference = {
+      worklogId: bulk.id,
+      direction: "forward",
+      createdAt: bulkStart.toISOString(),
+      updatedAt: bulkStart.toISOString()
+    };
+    const result = projectWorklogsForWeek(sync("2026-07-13", [ordinary, bulk]), {
+      settings: DEFAULT_SETTINGS,
+      preferences: [preference],
+      now: new Date(2026, 6, 14, 23, 30, 0, 0)
+    })!;
+
+    const residual = result.daySummaries[dateKey].worklogs
+      .filter((entry) => entry.allocation)
+      .find((entry) => entry.allocation!.timeSpentSeconds === 10 * 3600)!;
+    expect(toLocalDateKey(new Date(residual.allocation!.started))).toBe(dateKey);
+    expect(new Date(residual.allocation!.started).getHours()).toBe(17);
   });
 });
