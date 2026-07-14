@@ -15,6 +15,7 @@ import {
   rectForRange,
   startedISOForMinute,
   type CalendarItem,
+  type DayLayout,
   type Range
 } from "../domain/dayCalendar";
 import { isAllocatedWorklog } from "../domain/worklogAllocation";
@@ -26,6 +27,8 @@ import { useDayCalendarInteraction } from "./useDayCalendarInteraction";
 
 interface DayCalendarProps {
   date: Date;
+  /** App clock, injectable for deterministic demo/screenshots. */
+  now?: Date;
   worklogs: JiraWorklog[];
   notes: PersonalNote[];
   /** Confirmed recurring rituals (standups, planning…) for the day, as committed blocks. */
@@ -35,6 +38,14 @@ interface DayCalendarProps {
   /** Detected-but-unlogged activity (ghost layer). */
   ghosts: CalendarItem[];
   pxPerHour?: number;
+  /** Reuse a parent-computed window so several day columns share one time scale. */
+  layoutOverride?: DayLayout;
+  /** Drop the nested scroller/gutter when the calendar is hosted by a week timeline. */
+  embedded?: boolean;
+  /** Disable create/move/resize while keeping existing blocks inspectable. */
+  readOnly?: boolean;
+  /** Enables exact-time drops from Week's active-work dock. */
+  dropDateKey?: string;
   /** Open the Add-Time popup for a new entry (empty-slot drag/click, or a rail ticket). */
   onCreateAt: (prefill: AddTimePrefill) => void;
   /** Commit a drag move/resize of an existing worklog (optimistic). */
@@ -67,12 +78,17 @@ const GAP_MIN_MINUTES = 30;
  */
 export const DayCalendar = ({
   date,
+  now,
   worklogs,
   notes,
   recurring,
   pending,
   ghosts,
   pxPerHour,
+  layoutOverride,
+  embedded = false,
+  readOnly = false,
+  dropDateKey,
   onCreateAt,
   onMoveWorklog,
   onPromoteGhost,
@@ -87,10 +103,11 @@ export const DayCalendar = ({
   const positionedGhosts = useMemo(() => layoutColumns(ghosts), [ghosts]);
   // Window must account for ghosts and pending suggestions too, or activity outside the
   // logged span clamps to the grid edge and renders at the wrong time.
-  const layout = useMemo(
+  const computedLayout = useMemo(
     () => computeDayWindow([...items, ...ghosts, ...pendingItems], { pxPerHour }),
     [items, ghosts, pendingItems, pxPerHour]
   );
+  const layout = layoutOverride ?? computedLayout;
   const marks = useMemo(() => hourMarks(layout), [layout]);
   const height = layoutHeight(layout);
 
@@ -114,30 +131,32 @@ export const DayCalendar = ({
   // Interior holes between the first and last logged block — the "you forgot to log
   // this" moments worth surfacing (leading/trailing empty space is obvious and skipped).
   const gaps = useMemo(() => {
-    if (items.length === 0) {
+    if (readOnly || items.length === 0) {
       return [];
     }
     const firstStart = Math.min(...items.map((item) => item.startMin));
     const lastEnd = Math.max(...items.map((item) => item.endMin));
     return findGaps(items, firstStart, lastEnd, GAP_MIN_MINUTES);
-  }, [items]);
+  }, [items, readOnly]);
 
-  const isToday = toLocalDateKey(date) === toLocalDateKey(new Date());
-  const [nowMin, setNowMin] = useState(() => minutesFromMidnight(new Date()));
+  const [liveNow, setLiveNow] = useState(() => new Date());
+  const effectiveNow = now ?? liveNow;
+  const isToday = toLocalDateKey(date) === toLocalDateKey(effectiveNow);
+  const nowMin = minutesFromMidnight(effectiveNow);
   useEffect(() => {
-    if (!isToday) {
+    if (now || !isToday) {
       return;
     }
-    const tick = () => setNowMin(minutesFromMidnight(new Date()));
+    const tick = () => setLiveNow(new Date());
     tick();
     const timer = window.setInterval(tick, 60_000);
     return () => window.clearInterval(timer);
-  }, [isToday]);
+  }, [isToday, now]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!isToday || !scrollRef.current) {
+    if (embedded || !isToday || !scrollRef.current) {
       return;
     }
     const target = minuteToY(nowMin, layout) - scrollRef.current.clientHeight / 3;
@@ -204,22 +223,28 @@ export const DayCalendar = ({
   const draftRect = draft?.kind === "create" ? rectForRange(draft.range.startMin, draft.range.endMin, layout) : null;
 
   return (
-    <div className="cal">
+    <div className={`cal${embedded ? " cal--embedded" : ""}${readOnly ? " is-read-only" : ""}`}>
       <div className="cal-scroll" ref={scrollRef}>
         <div className="cal-body" style={{ height: `${height}px` }}>
-          <div className="cal-gutter">
-            {marks.map((mark) => (
-              <div className="cal-hour" key={mark.min} style={{ top: `${minuteToY(mark.min, layout)}px` }}>
-                {mark.label}
-              </div>
-            ))}
-          </div>
+          {!embedded && (
+            <div className="cal-gutter">
+              {marks.map((mark) => (
+                <div className="cal-hour" key={mark.min} style={{ top: `${minuteToY(mark.min, layout)}px` }}>
+                  {mark.label}
+                </div>
+              ))}
+            </div>
+          )}
           <div
             className="cal-track"
             ref={trackRef}
-            onPointerDown={startCreate}
+            onPointerDown={readOnly ? undefined : startCreate}
             role="presentation"
-            title="Drag an empty slot to log time"
+            title={readOnly ? "This day is read-only" : "Drag an empty slot to log time"}
+            data-drop-day={dropDateKey}
+            data-drop-timeline={dropDateKey ? "true" : undefined}
+            data-timeline-start={dropDateKey ? layout.startMin : undefined}
+            data-timeline-end={dropDateKey ? layout.endMin : undefined}
           >
             {marks.map((mark) => (
               <div className="cal-line" key={mark.min} style={{ top: `${minuteToY(mark.min, layout)}px` }} />
@@ -270,10 +295,13 @@ export const DayCalendar = ({
                   labelStartMin={range.startMin}
                   labelEndMin={range.endMin}
                   dragging={isDragging}
-                  draggable={item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)}
+                  draggable={
+                    !readOnly && item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)
+                  }
+                  minimal={embedded && columns > 1}
                   onSelect={selectItem}
                   onBlockDrag={
-                    item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)
+                    !readOnly && item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)
                       ? startBlockDrag
                       : undefined
                   }
@@ -284,7 +312,7 @@ export const DayCalendar = ({
                 scheduled-but-unconfirmed standup stays visible even when a worklog overlaps
                 its slot — matching how the Week view always lists it. Click confirms with
                 defaults; the corner ✗ skips it for the day. */}
-            {pendingItems.map((item) => {
+            {!readOnly && pendingItems.map((item) => {
               const occurrence = item.pending!;
               const rect = rectForRange(item.startMin, item.endMin, layout);
               const durationLabel = formatClock(Math.round((item.endMin - item.startMin) * 60));
@@ -354,7 +382,9 @@ export const DayCalendar = ({
                 </span>
               </div>
             )}
-            {items.length === 0 && !draft && <div className="cal-empty">No time logged yet — drag a slot to start.</div>}
+            {items.length === 0 && !draft && (
+              <div className="cal-empty">{readOnly ? "No time logged." : "No time logged yet — drag a slot to start."}</div>
+            )}
           </div>
         </div>
       </div>

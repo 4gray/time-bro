@@ -16,6 +16,8 @@ const baseProps = (): WeekHeaderProps => ({
   weeklyTargetHours: 40,
   isSyncing: false,
   isConfigured: true,
+  viewMode: "summary",
+  onViewModeChange: noop,
   onSync: noop,
   onAddTime: noop,
   onPreviousWeek: noop,
@@ -100,6 +102,21 @@ describe("WeekHeader", () => {
     expect(onPreviousWeek).toHaveBeenCalledTimes(1);
     expect(onCurrentWeek).toHaveBeenCalledTimes(1);
     expect(onNextWeek).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches between compact summaries and the shared timeline", () => {
+    const onViewModeChange = vi.fn();
+    renderHeader({ viewMode: "summary", onViewModeChange });
+
+    const switcher = container.querySelector("[aria-label='Week view layout']");
+    const summary = switcher?.querySelector<HTMLButtonElement>("button[aria-pressed='true']");
+    const timeline = Array.from(switcher?.querySelectorAll("button") ?? []).find(
+      (button) => button.textContent === "TIMELINE"
+    );
+
+    expect(summary?.textContent).toBe("SUMMARY");
+    act(() => timeline?.click());
+    expect(onViewModeChange).toHaveBeenCalledWith("timeline");
   });
 
   it("disables sync while syncing or before Jira is configured", () => {

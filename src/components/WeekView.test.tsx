@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { SyncResult, WeekState } from "../../shared/types";
-import { WeekView } from "./WeekView";
+import { isQuickLogIntervalAvailable, quickLogStartedAt, WeekView } from "./WeekView";
 
 const weekState: WeekState = {
   weekKey: "2026-06-15",
@@ -89,6 +89,74 @@ const syncResult: SyncResult = {
 };
 
 describe("WeekView", () => {
+  it("starts summary quick logs retrospectively so they end at the current clock time", () => {
+    const started = quickLogStartedAt({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 14, 37, 42, 123),
+      timeSpentSeconds: 2.5 * 3600
+    });
+
+    expect(started.getFullYear()).toBe(2026);
+    expect(started.getMonth()).toBe(5);
+    expect(started.getDate()).toBe(18);
+    expect(started.getHours()).toBe(12);
+    expect(started.getMinutes()).toBe(7);
+    expect(started.getSeconds()).toBe(0);
+    expect(started.getMilliseconds()).toBe(0);
+  });
+
+  it("keeps the explicit start selected by a Timeline drop", () => {
+    const started = quickLogStartedAt({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 14, 37),
+      timeSpentSeconds: 2 * 3600,
+      startedMinutes: 9 * 60 + 15
+    });
+
+    expect(started.getHours()).toBe(9);
+    expect(started.getMinutes()).toBe(15);
+  });
+
+  it("blocks a retrospective summary quick log that overlaps committed work", () => {
+    const available = isQuickLogIntervalAvailable({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 14, 0),
+      timeSpentSeconds: 60 * 60,
+      committedItems: [
+        {
+          id: "wl:existing",
+          kind: "worklog",
+          startMin: 13 * 60,
+          endMin: 14 * 60,
+          colorRole: "accent",
+          layer: "committed"
+        }
+      ]
+    });
+
+    expect(available).toBe(false);
+  });
+
+  it("allows a retrospective summary quick log in an empty interval", () => {
+    const available = isQuickLogIntervalAvailable({
+      dateKey: "2026-06-18",
+      currentDate: new Date(2026, 5, 18, 15, 0),
+      timeSpentSeconds: 60 * 60,
+      committedItems: [
+        {
+          id: "wl:existing",
+          kind: "worklog",
+          startMin: 13 * 60,
+          endMin: 14 * 60,
+          colorRole: "accent",
+          layer: "committed"
+        }
+      ]
+    });
+
+    expect(available).toBe(true);
+  });
+
   it("shows Jira link icons next to week ticket keys", () => {
     const markup = renderToStaticMarkup(
       <WeekView
@@ -101,6 +169,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -164,6 +233,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -220,6 +290,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}
@@ -250,6 +321,7 @@ describe("WeekView", () => {
         onCurrentWeek={() => undefined}
         onNextWeek={() => undefined}
         onAddTime={() => undefined}
+        onMoveWorklog={async () => true}
         onEditWorklog={() => undefined}
         onEditPersonalNote={() => undefined}
         onToggleSkipped={() => undefined}

@@ -427,6 +427,31 @@
   opacity: 0.65;
 }
 
+/* Exact start-time preview when a dock card is dragged over Week's timeline. */
+.timeline-drop-slot {
+  position: fixed;
+  z-index: 60;
+  min-height: 18px;
+  display: flex;
+  align-items: flex-end;
+  padding: 5px 7px;
+  pointer-events: none;
+  overflow: hidden;
+  border: 1.5px dashed var(--blue);
+  border-left-style: solid;
+  border-left-width: 3px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--blue) 17%, var(--bg-raised));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.34);
+  color: var(--blue-soft);
+}
+
+.timeline-drop-slot span {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
 /* --- blocked day --- */
 .drop-blocked {
   position: fixed;

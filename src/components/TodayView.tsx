@@ -203,6 +203,7 @@ export const TodayView = ({
       <div className="today-body">
         <DayCalendar
           date={todayDate}
+          now={todayDate}
           worklogs={todayWorklogs}
           notes={personalNotes}
           recurring={recurringEntries}

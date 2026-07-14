@@ -263,6 +263,7 @@ export const AppMainView = ({
         goToCurrentWeek={goToCurrentWeek}
         goToNextWeek={goToNextWeek}
         openAddTime={openAddTime}
+        handleMoveWorklog={handleMoveWorklog}
         openEditWorklog={openEditWorklog}
         openEditPersonalNote={openEditPersonalNote}
         handleToggleSkipped={handleToggleSkipped}

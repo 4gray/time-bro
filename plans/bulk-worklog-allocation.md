@@ -28,8 +28,8 @@ Make Jira worklogs longer than a configured working day visible across the days 
 
 ## Verification
 
-- `npm run test`: 101 files, 637 tests passed on the clean `origin/main` branch after review fixes.
-- `npm run e2e:renderer`: 6 renderer scenarios passed, including the mobile overflow check.
+- `npm run test`: 105 files, 656 tests passed after integrating the Week Timeline changes from current `origin/main`.
+- `npm run e2e:renderer`: 7 renderer scenarios passed, including Timeline persistence and the mobile overflow check.
 - `npm run build`: passed (TypeScript, Vite renderer, Electron TypeScript).
 - Playwright visual check: 2-week custom duration at 560px width, no console errors or inaccessible modal controls. The original shared checkout was also checked at 1200px and 760px before the clean port.
 
@@ -38,4 +38,4 @@ Make Jira worklogs longer than a configured working day visible across the days 
 - Build a clean `codex/bulk-worklog-allocation` branch from `origin/main`; do not include the unrelated uncommitted Today, Tickets, or Week Timeline work in the shared checkout.
 - Reapply and verify only the bulk-worklog sync, storage, projection, and UI changes.
 - Open a draft PR, wait for GitHub Actions and review feedback, address actionable failures/comments, then mark ready and merge after all required checks pass.
-- Status: PR #17 is ready for review; initial CI passed, all four automated review threads were addressed and locally verified, and follow-up CI/re-review plus merge remain.
+- Status: PR #17 is ready for review; six automated review threads are addressed, current `origin/main` is integrated, and final CI/re-review plus merge remain.

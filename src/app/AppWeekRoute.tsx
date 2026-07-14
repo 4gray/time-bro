@@ -18,6 +18,7 @@ export interface AppWeekRouteProps {
   goToCurrentWeek: WeekViewProps["onCurrentWeek"];
   goToNextWeek: WeekViewProps["onNextWeek"];
   openAddTime: WeekViewProps["onAddTime"];
+  handleMoveWorklog: WeekViewProps["onMoveWorklog"];
   openEditWorklog: WeekViewProps["onEditWorklog"];
   openEditPersonalNote: WeekViewProps["onEditPersonalNote"];
   handleToggleSkipped: WeekViewProps["onToggleSkipped"];
@@ -42,6 +43,7 @@ export const AppWeekRoute = ({
   goToCurrentWeek,
   goToNextWeek,
   openAddTime,
+  handleMoveWorklog,
   openEditWorklog,
   openEditPersonalNote,
   handleToggleSkipped,
@@ -64,6 +66,7 @@ export const AppWeekRoute = ({
     onCurrentWeek={goToCurrentWeek}
     onNextWeek={goToNextWeek}
     onAddTime={openAddTime}
+    onMoveWorklog={handleMoveWorklog}
     onEditWorklog={openEditWorklog}
     onEditPersonalNote={openEditPersonalNote}
     onToggleSkipped={handleToggleSkipped}
