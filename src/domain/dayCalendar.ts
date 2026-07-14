@@ -1,5 +1,6 @@
 import type { JiraWorklog, PendingRecurringOccurrence, PersonalNote, RecurringEntry } from "../../shared/types";
 import type { ReconstructSignal } from "./reconstruct";
+import { getWorklogDisplaySeconds, getWorklogDisplayStarted } from "./worklogAllocation";
 
 /**
  * Day-calendar geometry — the pure, DOM-free core of the Today calendar view.
@@ -309,12 +310,12 @@ export const hourMarks = (layout: DayLayout): HourMark[] => {
 };
 
 export const worklogToItem = (worklog: JiraWorklog): CalendarItem => {
-  const startMin = minutesFromMidnight(new Date(worklog.started));
+  const startMin = minutesFromMidnight(new Date(getWorklogDisplayStarted(worklog)));
   return {
     id: `wl:${worklog.id}`,
     kind: "worklog",
     startMin,
-    endMin: startMin + worklog.timeSpentSeconds / 60,
+    endMin: startMin + getWorklogDisplaySeconds(worklog) / 60,
     colorRole: "accent",
     layer: "committed",
     worklog

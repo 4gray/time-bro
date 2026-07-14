@@ -54,6 +54,32 @@ export interface JiraIssueSummary {
   comments?: string[];
 }
 
+export type WorklogAllocationDirection = "backward" | "forward";
+
+/**
+ * A local-only preference for projecting one large Jira worklog over working
+ * days. Jira still owns one authoritative worklog; this preference never
+ * creates or mutates additional Jira records.
+ */
+export interface WorklogAllocationPreference {
+  worklogId: string;
+  direction: WorklogAllocationDirection;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One visible day slice derived from a larger authoritative Jira worklog. */
+export interface JiraWorklogAllocation {
+  dateKey: string;
+  started: string;
+  timeSpentSeconds: number;
+  direction: WorklogAllocationDirection;
+  partIndex: number;
+  partCount: number;
+  /** False when TimeBro captured an explicit direction while creating the worklog. */
+  isApproximate: boolean;
+}
+
 export interface JiraWorklog {
   id: string;
   issueId: string;
@@ -66,6 +92,10 @@ export interface JiraWorklog {
   started: string;
   timeSpentSeconds: number;
   comment?: string;
+  created?: string;
+  updated?: string;
+  /** Present only on a derived display slice; top-level fields remain the raw Jira values. */
+  allocation?: JiraWorklogAllocation;
 }
 
 export interface SyncDayBucket {
@@ -85,6 +115,10 @@ export interface SyncResult {
   issueCount: number;
   worklogCount: number;
   daySummaries: Record<string, SyncDayBucket>;
+  /** Raw, de-duplicated worklogs fetched around the visible week for local projection. */
+  sourceWorklogs?: JiraWorklog[];
+  scanStartISO?: string;
+  scanEndExclusiveISO?: string;
 }
 
 export type JiraActivityKind = "issue-created" | "comment" | "status-change" | "field-change";

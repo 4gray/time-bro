@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { Calendar, Clock, Loader2, LockKeyhole, PenLine, Trash2, X } from "lucide-react";
-import type { JiraTicket, JiraWorklog, PersonalNote, PersonalNoteCategory, RecurringEvent } from "../../shared/types";
+import type {
+  JiraTicket,
+  JiraWorklog,
+  PersonalNote,
+  PersonalNoteCategory,
+  RecurringEvent,
+  WorklogAllocationDirection
+} from "../../shared/types";
 import { formatClock, fromLocalDateKey, jiraUnitDurationToSeconds, toLocalDateKey } from "../utils/date";
 import {
   AddTimeDurationPicker,
@@ -24,6 +31,7 @@ export interface LogPayload {
   timeSpentSeconds: number;
   startedISO: string;
   comment?: string;
+  allocationDirection?: WorklogAllocationDirection;
 }
 
 export interface AddTimePrefill {
@@ -40,6 +48,7 @@ export interface AddTimeModalProps {
   isConfigured: boolean;
   isLogging: boolean;
   isDeleting?: boolean;
+  dailyTargetHours?: number;
   logError?: string;
   prefill?: AddTimePrefill;
   editingWorklog?: JiraWorklog;
@@ -178,6 +187,7 @@ export const AddTimeModal = ({
   isConfigured,
   isLogging,
   isDeleting = false,
+  dailyTargetHours = 8,
   logError,
   prefill,
   editingWorklog,
@@ -220,6 +230,9 @@ export const AddTimeModal = ({
   );
   const [selectedTicketOverride, setSelectedTicketOverride] = useState<JiraTicket | undefined>(initialPrefillTicket);
   const [durationSeconds, setDurationSeconds] = useState(initialSeconds);
+  const [allocationDirection, setAllocationDirection] = useState<WorklogAllocationDirection>(
+    editingWorklog?.allocation?.direction ?? "backward"
+  );
   const [ticketDurationMode, setTicketDurationMode] = useState<DurationMode>(initialPreset ? "preset" : "custom");
   const [ticketCustomAmount, setTicketCustomAmount] = useState(customHoursAmount(initialSeconds));
   const [ticketCustomUnit, setTicketCustomUnit] = useState<DurationUnit>("h");
@@ -261,6 +274,7 @@ export const AddTimeModal = ({
   const isRecurringView = mode === "recurring" && !isEditing;
   const isTicketView = (mode === "ticket" && !isEditingPersonalNote) || isEditingWorklog;
   const isNoteMode = !isTicketView && !isRecurringView;
+  const isBulkDuration = isTicketView && durationSeconds > dailyTargetHours * 3600;
   const recurringCandidates = isRecurringView && getRecurringCandidates ? getRecurringCandidates(dateStr) : [];
   const recEvent = recurringCandidates.find((event) => event.id === recSelectedId) ?? recurringCandidates[0];
   const modalTitle = isEditingWorklog
@@ -335,7 +349,8 @@ export const AddTimeModal = ({
       ticket: activeTicket,
       timeSpentSeconds: durationSeconds,
       startedISO,
-      comment: note.trim() || undefined
+      comment: note.trim() || undefined,
+      allocationDirection: isBulkDuration ? allocationDirection : undefined
     });
     if (ok) {
       onClose();
@@ -382,6 +397,7 @@ export const AddTimeModal = ({
     const startDateKey = toLocalDateKey(start);
     setDateStr(editingPersonalNote || editingWorklog ? startDateKey : chooseWorkingDateKey(startDateKey, selectableDateOptions));
     setTimeStr(`${pad(start.getHours())}:${pad(start.getMinutes())}`);
+    setAllocationDirection(editingWorklog?.allocation?.direction ?? "backward");
     setNote(editingWorklog?.comment ?? nextPrefill?.comment ?? "");
     setPersonalNoteTitle(editingPersonalNote?.title ?? "");
     setPersonalNote(editingPersonalNote?.text ?? "");
@@ -505,7 +521,7 @@ export const AddTimeModal = ({
       aria-label={isEditingWorklog ? "Edit time entry" : isEditingPersonalNote ? "Edit personal note" : mode === "note" ? "Personal note" : "Log time"}
     >
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="modal-panel">
+      <div className="modal-panel add-time-modal-panel">
         <div className="modal-head">
           <div className="modal-title-row">
             <span className="modal-title">{modalTitle}</span>
@@ -596,6 +612,40 @@ export const AddTimeModal = ({
                   </div>
                 </div>
               </div>
+
+              {isBulkDuration && (
+                <div className="bulk-allocation-choice">
+                  <div className="bulk-allocation-copy">
+                    <span>BULK WORKLOG</span>
+                    <strong>One Jira entry, distributed locally</strong>
+                    <small>
+                      {allocationDirection === "backward"
+                        ? "The selected day ends the period. Future days stay untouched."
+                        : "The selected day starts the period. Distribution stops at today."}
+                    </small>
+                  </div>
+                  <div className="bulk-direction-toggle" role="radiogroup" aria-label="Bulk worklog distribution">
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={allocationDirection === "backward"}
+                      className={allocationDirection === "backward" ? "active" : ""}
+                      onClick={() => setAllocationDirection("backward")}
+                    >
+                      End on date
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={allocationDirection === "forward"}
+                      className={allocationDirection === "forward" ? "active" : ""}
+                      onClick={() => setAllocationDirection("forward")}
+                    >
+                      Start on date
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="modal-label" style={{ marginTop: 22 }}>
                 WORK DESCRIPTION

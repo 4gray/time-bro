@@ -2,17 +2,20 @@ import type {
   AppSettings,
   BitbucketReviewSyncResult,
   JiraActivitySyncResult,
+  JiraWorklog,
   PersonalNote,
   RecurringEvent,
   RecurringOccurrence,
   SyncResult,
-  WeekOverride
+  WeekOverride,
+  WorklogAllocationPreference
 } from "../../shared/types";
 import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
+import { addDays, fromLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 8;
+const DB_VERSION = 10;
 const SETTINGS_KEY = "default";
 const FAVORITES_KEY = "default";
 const RECURRING_EVENTS_KEY = "default";
@@ -28,7 +31,9 @@ type StoreName =
   | "recurringEvents"
   | "recurringOccurrences"
   | "reconstructDrafts"
-  | "reconstructAiDrafts";
+  | "reconstructAiDrafts"
+  | "worklogAllocationPreferences"
+  | "jiraWorklogs";
 
 let dbPromise: Promise<IDBDatabase> | undefined;
 
@@ -86,6 +91,14 @@ const openDatabase = () => {
       if (!db.objectStoreNames.contains("reconstructAiDrafts")) {
         db.createObjectStore("reconstructAiDrafts", { keyPath: "dateKey" });
       }
+
+      if (!db.objectStoreNames.contains("worklogAllocationPreferences")) {
+        db.createObjectStore("worklogAllocationPreferences", { keyPath: "worklogId" });
+      }
+
+      if (!db.objectStoreNames.contains("jiraWorklogs")) {
+        db.createObjectStore("jiraWorklogs", { keyPath: "id" });
+      }
     };
 
     request.onerror = () => reject(request.error);
@@ -119,6 +132,18 @@ const writeStore = async <T>(storeName: StoreName, value: T) => {
   });
 };
 
+const readAllStore = async <T>(storeName: StoreName) => {
+  const db = await openDatabase();
+
+  return new Promise<T[]>((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readonly");
+    const request = transaction.objectStore(storeName).getAll();
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result as T[]);
+  });
+};
+
 export const getSettings = async (): Promise<AppSettings> => {
   const stored = await readStore<AppSettings & { id: string }>("settings", SETTINGS_KEY);
   const { id: _id, ...settings } = stored ?? { id: SETTINGS_KEY, ...DEFAULT_SETTINGS };
@@ -141,17 +166,102 @@ export const getWeekOverride = async (weekKey: string): Promise<WeekOverride> =>
   return (await readStore<WeekOverride>("weekOverrides", weekKey)) ?? { weekKey, skippedDates: [] };
 };
 
+export const getWeekOverrides = () => readAllStore<WeekOverride>("weekOverrides");
+
 export const saveWeekOverride = (override: WeekOverride) => {
   return writeStore("weekOverrides", override);
 };
 
-export const getSyncResult = (weekKey: string) => {
-  return readStore<SyncResult>("syncResults", weekKey);
+const rawCachedWorklog = (worklog: JiraWorklog): JiraWorklog => {
+  const { allocation: _allocation, ...raw } = worklog;
+  return raw;
 };
 
-export const saveSyncResult = (result: SyncResult) => {
-  return writeStore("syncResults", result);
+const reconcileJiraWorklogCache = async (result: SyncResult) => {
+  if (!result.sourceWorklogs) {
+    return;
+  }
+
+  const db = await openDatabase();
+  const existing = await readAllStore<JiraWorklog>("jiraWorklogs");
+  const incoming = result.sourceWorklogs.map(rawCachedWorklog);
+  const incomingIds = new Set(incoming.map((worklog) => worklog.id));
+  const scanStart = result.scanStartISO ? new Date(result.scanStartISO) : undefined;
+  const scanEnd = result.scanEndExclusiveISO ? new Date(result.scanEndExclusiveISO) : undefined;
+
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction("jiraWorklogs", "readwrite");
+    const store = transaction.objectStore("jiraWorklogs");
+
+    if (scanStart && scanEnd && !Number.isNaN(scanStart.getTime()) && !Number.isNaN(scanEnd.getTime())) {
+      for (const worklog of existing) {
+        const started = new Date(worklog.started);
+        if (
+          worklog.authorAccountId === result.accountId &&
+          started >= scanStart &&
+          started < scanEnd &&
+          !incomingIds.has(worklog.id)
+        ) {
+          store.delete(worklog.id);
+        }
+      }
+    }
+
+    for (const worklog of incoming) {
+      store.put(worklog);
+    }
+
+    transaction.onerror = () => reject(transaction.error);
+    transaction.oncomplete = () => resolve();
+  });
 };
+
+export const getSyncResult = async (weekKey: string) => {
+  const [stored, cachedWorklogs] = await Promise.all([
+    readStore<SyncResult>("syncResults", weekKey),
+    readAllStore<JiraWorklog>("jiraWorklogs")
+  ]);
+
+  if (cachedWorklogs.length === 0) {
+    return stored;
+  }
+
+  const accountId = stored?.accountId ?? cachedWorklogs[0].authorAccountId;
+  const sourceWorklogs = cachedWorklogs.filter((worklog) => worklog.authorAccountId === accountId);
+  if (stored) {
+    return { ...stored, sourceWorklogs };
+  }
+
+  const weekStart = fromLocalDateKey(weekKey);
+  const weekEndExclusive = addDays(weekStart, 7);
+  const syncedAt = sourceWorklogs.reduce((latest, worklog) => {
+    const candidate = worklog.updated ?? worklog.created;
+    return candidate && candidate > latest ? candidate : latest;
+  }, new Date(0).toISOString());
+
+  return {
+    weekKey,
+    weekStartISO: weekStart.toISOString(),
+    weekEndExclusiveISO: weekEndExclusive.toISOString(),
+    syncedAt,
+    accountId,
+    trackedSeconds: 0,
+    issueCount: 0,
+    worklogCount: 0,
+    daySummaries: {},
+    sourceWorklogs
+  } satisfies SyncResult;
+};
+
+export const saveSyncResult = async (result: SyncResult) => {
+  await Promise.all([writeStore("syncResults", result), reconcileJiraWorklogCache(result)]);
+};
+
+export const getWorklogAllocationPreferences = () =>
+  readAllStore<WorklogAllocationPreference>("worklogAllocationPreferences");
+
+export const saveWorklogAllocationPreference = (preference: WorklogAllocationPreference) =>
+  writeStore("worklogAllocationPreferences", preference);
 
 export const getJiraActivityResult = (weekKey: string) => {
   return readStore<JiraActivitySyncResult>("jiraActivityResults", weekKey);

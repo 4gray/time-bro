@@ -75,6 +75,7 @@ const CalendarBlockImpl = ({
   const title = titleFor(item);
   const detail = detailFor(item);
   const canDrag = Boolean(draggable && onBlockDrag);
+  const allocation = item.worklog?.allocation;
 
   return (
     <div
@@ -82,7 +83,13 @@ const CalendarBlockImpl = ({
       tabIndex={0}
       className={`cal-block cal-block--${item.colorRole} cal-block--${item.kind}${compact ? " is-compact" : ""}${canDrag ? " is-draggable" : ""}${dragging ? " is-dragging" : ""}`}
       style={{ top: `${top}px`, height: `${Math.max(height, 1)}px`, left, width }}
-      title={detail ? `${title} · ${detail}` : title}
+      title={
+        allocation
+          ? `${title} · ${detail ?? "Jira worklog"} · ${allocation.isApproximate ? "estimated" : "chosen"} bulk allocation ${allocation.partIndex}/${allocation.partCount}`
+          : detail
+            ? `${title} · ${detail}`
+            : title
+      }
       // Draggable blocks start a move on pointerdown; static blocks (notes/ghosts) still
       // stop propagation so the pointerdown doesn't reach the track and start a create.
       onPointerDown={canDrag ? (event) => onBlockDrag!(event, item, "move") : (event) => event.stopPropagation()}
@@ -103,6 +110,11 @@ const CalendarBlockImpl = ({
       )}
       <span className="cal-block-head">
         <span className="cal-block-title">{title}</span>
+        {allocation && !compact && (
+          <span className={`cal-block-allocation${allocation.isApproximate ? " is-estimate" : ""}`}>
+            {allocation.isApproximate ? "EST." : "ALLOC."} {allocation.partIndex}/{allocation.partCount}
+          </span>
+        )}
         {detail && !compact && <span className="cal-block-detail">{detail}</span>}
       </span>
       <span className="cal-block-meta">

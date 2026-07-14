@@ -17,6 +17,7 @@ import {
   type CalendarItem,
   type Range
 } from "../domain/dayCalendar";
+import { isAllocatedWorklog } from "../domain/worklogAllocation";
 import type { ReconstructSignal } from "../domain/reconstruct";
 import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import type { AddTimePrefill } from "./AddTimeModal";
@@ -269,9 +270,13 @@ export const DayCalendar = ({
                   labelStartMin={range.startMin}
                   labelEndMin={range.endMin}
                   dragging={isDragging}
-                  draggable={item.kind === "worklog"}
+                  draggable={item.kind === "worklog" && Boolean(item.worklog) && !isAllocatedWorklog(item.worklog!)}
                   onSelect={selectItem}
-                  onBlockDrag={item.kind === "worklog" ? startBlockDrag : undefined}
+                  onBlockDrag={
+                    item.kind === "worklog" && item.worklog && !isAllocatedWorklog(item.worklog)
+                      ? startBlockDrag
+                      : undefined
+                  }
                 />
               );
             })}

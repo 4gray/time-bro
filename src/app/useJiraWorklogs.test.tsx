@@ -2,7 +2,7 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { AppSettings, JiraTicket, JiraWorklog, SyncResult } from "../../shared/types";
+import type { AppSettings, JiraTicket, JiraWorklog, SyncResult, WorklogAllocationPreference } from "../../shared/types";
 import { useJiraWorklogs, type JiraWorklogPayload, type JiraWorklogsClient } from "./useJiraWorklogs";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -82,6 +82,8 @@ let addWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["addWorklog"]>>;
 let updateWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["updateWorklog"]>>;
 let deleteWorklog: ReturnType<typeof vi.fn<JiraWorklogsClient["deleteWorklog"]>>;
 let saveSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => Promise<void>>>;
+let saveWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => Promise<void>>>;
+let onWorklogAllocationPreference: ReturnType<typeof vi.fn<(preference: WorklogAllocationPreference) => void>>;
 let runSync: ReturnType<typeof vi.fn<(settingsForSync?: AppSettings, options?: { queueAfterCurrent?: boolean }) => Promise<SyncResult | undefined>>>;
 let loadTickets: ReturnType<typeof vi.fn<(settingsForLoad?: AppSettings) => Promise<void>>>;
 let onSyncResult: ReturnType<typeof vi.fn<(result: SyncResult) => void>>;
@@ -110,6 +112,8 @@ function Harness({
     isDemo,
     client,
     saveSyncResult,
+    saveWorklogAllocationPreference,
+    onWorklogAllocationPreference,
     runSync,
     loadTickets,
     onSyncResult,
@@ -140,6 +144,8 @@ beforeEach(() => {
   updateWorklog = vi.fn();
   deleteWorklog = vi.fn();
   saveSyncResult = vi.fn(async () => undefined);
+  saveWorklogAllocationPreference = vi.fn(async () => undefined);
+  onWorklogAllocationPreference = vi.fn();
   runSync = vi.fn(async () => syncResult());
   loadTickets = vi.fn(async () => undefined);
   onSyncResult = vi.fn();
@@ -248,6 +254,71 @@ describe("useJiraWorklogs", () => {
     expect(saveSyncResult).not.toHaveBeenCalled();
     expect(onSyncResult).not.toHaveBeenCalled();
     expect(loadTickets).toHaveBeenCalledTimes(1);
+  });
+
+  it("stores an exact local distribution preference without sending it to Jira", async () => {
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-20002",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "backward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(addWorklog).toHaveBeenCalledWith({
+      settings,
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600,
+      startedISO: payload.startedISO,
+      comment: payload.comment
+    });
+    expect(saveWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({ worklogId: "bulk-20002", direction: "backward" })
+    );
+    expect(onWorklogAllocationPreference).toHaveBeenCalledWith(
+      expect.objectContaining({ worklogId: "bulk-20002", direction: "backward" })
+    );
+  });
+
+  it("keeps a successful Jira write successful when the local direction cannot be saved", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    addWorklog.mockResolvedValue({
+      ok: true,
+      worklogId: "bulk-20003",
+      issueKey: "TB-22",
+      timeSpentSeconds: 80 * 3600
+    });
+    saveWorklogAllocationPreference.mockRejectedValue(new Error("IndexedDB unavailable"));
+    renderHarness({ currentSyncResult: syncResult() });
+
+    await act(async () => {
+      await expect(
+        getApi().handleAddWorklog({
+          ...payload,
+          timeSpentSeconds: 80 * 3600,
+          allocationDirection: "forward"
+        })
+      ).resolves.toBe(true);
+    });
+
+    expect(addWorklog).toHaveBeenCalledTimes(1);
+    expect(showSuccess).toHaveBeenCalled();
+    expect(showError).not.toHaveBeenCalled();
+    expect(onWorklogAllocationPreference).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "Unable to save the local bulk-worklog direction.",
+      expect.any(Error)
+    );
   });
 
   it("reports Jira add failures", async () => {
