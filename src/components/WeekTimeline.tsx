@@ -1,12 +1,15 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { LockKeyhole, Palmtree, Plus, Undo2 } from "lucide-react";
 import type { DayTrackingSummary, JiraWorklog, PersonalNote, SyncResult, WeekState } from "../../shared/types";
 import {
   buildCommittedItems,
   buildPendingRecurringItems,
+  clockTimeToMinutes,
   computeDayWindow,
   hourMarks,
+  initialTimelineScrollTop,
   layoutHeight,
+  minutesFromMidnight,
   minuteToY
 } from "../domain/dayCalendar";
 import { formatHours, fromLocalDateKey } from "../utils/date";
@@ -19,6 +22,8 @@ interface WeekTimelineProps {
   syncResult?: SyncResult;
   currentDate: Date;
   todayKey: string;
+  timelineFocusTime?: string;
+  timelineCenterOnNow?: boolean;
   onAddTime: (date?: Date, prefill?: AddTimePrefill) => void;
   onMoveWorklog: (worklog: JiraWorklog, patch: { startedISO: string; timeSpentSeconds: number }) => Promise<boolean>;
   onEditWorklog: (worklog: JiraWorklog) => void;
@@ -99,6 +104,8 @@ export const WeekTimeline = ({
   syncResult,
   currentDate,
   todayKey,
+  timelineFocusTime,
+  timelineCenterOnNow = true,
   onAddTime,
   onMoveWorklog,
   onEditWorklog,
@@ -129,12 +136,38 @@ export const WeekTimeline = ({
   const marks = useMemo(() => hourMarks(layout), [layout]);
   const height = layoutHeight(layout);
   const gridTemplateColumns = `52px repeat(${Math.max(weekState.days.length, 1)}, minmax(172px, 1fr))`;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  const containsToday = weekState.days.some((day) => day.dateKey === todayKey);
+
+  useEffect(() => {
+    if (!scrollRef.current) {
+      return;
+    }
+    const focusOnNow = containsToday && timelineCenterOnNow;
+    const bodyOffset = headRef.current?.offsetHeight ?? 90;
+    scrollRef.current.scrollTop =
+      bodyOffset +
+      initialTimelineScrollTop(
+        focusOnNow ? minutesFromMidnight(currentDate) : clockTimeToMinutes(timelineFocusTime),
+        layout,
+        scrollRef.current.clientHeight,
+        focusOnNow ? "now" : "focus"
+      );
+  }, [
+    containsToday,
+    currentDate,
+    layout,
+    timelineCenterOnNow,
+    timelineFocusTime,
+    weekState.weekKey
+  ]);
 
   return (
     <div className="week-timeline" aria-label="Week timeline">
-      <div className="week-timeline-scroll">
+      <div className="week-timeline-scroll" ref={scrollRef}>
         <div className="week-timeline-canvas">
-          <div className="week-timeline-head" style={{ gridTemplateColumns }}>
+          <div className="week-timeline-head" ref={headRef} style={{ gridTemplateColumns }}>
             <div className="week-tl-gutter-head">TIME</div>
             {weekState.days.map((day) => (
               <TimelineDayHeader

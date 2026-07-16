@@ -7,6 +7,8 @@ export interface AppWeekRouteProps {
   weekState: WeekViewProps["weekState"];
   syncResult: WeekViewProps["syncResult"];
   currentDate: WeekViewProps["currentDate"];
+  timelineFocusTime?: WeekViewProps["timelineFocusTime"];
+  timelineCenterOnNow?: WeekViewProps["timelineCenterOnNow"];
   isSyncing: WeekViewProps["isSyncing"];
   isSyncingReviews: WeekViewProps["isSyncing"];
   isConfigured: WeekViewProps["isConfigured"];
@@ -32,6 +34,8 @@ export const AppWeekRoute = ({
   weekState,
   syncResult,
   currentDate,
+  timelineFocusTime,
+  timelineCenterOnNow,
   isSyncing,
   isSyncingReviews,
   isConfigured,
@@ -56,6 +60,8 @@ export const AppWeekRoute = ({
     weekState={weekState}
     syncResult={syncResult}
     currentDate={currentDate}
+    timelineFocusTime={timelineFocusTime}
+    timelineCenterOnNow={timelineCenterOnNow}
     isSyncing={isSyncing || isSyncingReviews}
     isConfigured={isConfigured}
     dockTickets={dockTickets}

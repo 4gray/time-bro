@@ -15,6 +15,8 @@ const settings: AppSettings = {
   bitbucketReviewBucketIssueKey: "TEAM-77",
   weeklyTargetHours: 40,
   workingDays: [1, 2, 3, 4, 5],
+  timelineFocusTime: "08:00",
+  timelineCenterOnNow: true,
   reminderTime: "17:00",
   remindersEnabled: true,
   aiEnabled: false,
@@ -68,6 +70,17 @@ const renderSettings = (overrides: Partial<ComponentProps<typeof SettingsView>> 
   );
 
 describe("SettingsView", () => {
+  it("offers full-day timeline framing preferences under Tracking", () => {
+    const markup = renderSettings({ initialSection: "tracking" });
+
+    expect(markup).toContain("Day timeline");
+    expect(markup).toContain("Every hour stays available");
+    expect(markup).toContain("Default focus time");
+    expect(markup).toContain('value="08:00"');
+    expect(markup).toContain("Center on the current time");
+    expect(markup).toContain('aria-pressed="true"');
+  });
+
   it("keeps the Jira token hidden by default and exposes a visibility toggle", () => {
     const markup = renderSettings();
 

@@ -7,6 +7,7 @@ import {
   buildPendingRecurringItems,
   ceilingForStart,
   clampMinute,
+  clockTimeToMinutes,
   computeDayWindow,
   findGaps,
   DEFAULT_PX_PER_HOUR,
@@ -17,12 +18,14 @@ import {
   fitResizeStart,
   floorForEnd,
   hourMarks,
+  initialTimelineScrollTop,
   layoutColumns,
   layoutHeight,
   MINUTES_PER_DAY,
   minuteToLabel,
   minuteToY,
   minutesFromMidnight,
+  minutesToClockTime,
   noteToItem,
   overlapsCommitted,
   pendingRecurringToItem,
@@ -153,7 +156,7 @@ describe("gap fitting", () => {
 });
 
 describe("computeDayWindow", () => {
-  it("uses the default working window when empty", () => {
+  it("uses the full day when empty", () => {
     expect(computeDayWindow([])).toEqual({
       startMin: DEFAULT_WINDOW_START_MIN,
       endMin: DEFAULT_WINDOW_END_MIN,
@@ -161,10 +164,24 @@ describe("computeDayWindow", () => {
     });
   });
 
-  it("expands outward, hour-aligned, to include early/late items", () => {
+  it("keeps the full day available regardless of item times", () => {
     const window = computeDayWindow([committed("a", 6 * 60 + 20, 6 * 60 + 50), committed("b", 21 * 60, 21 * 60 + 40)]);
-    expect(window.startMin).toBe(6 * 60);
-    expect(window.endMin).toBe(22 * 60);
+    expect(window.startMin).toBe(0);
+    expect(window.endMin).toBe(MINUTES_PER_DAY);
+  });
+});
+
+describe("timeline framing", () => {
+  it("parses and formats focus times with a safe fallback", () => {
+    expect(clockTimeToMinutes("21:30")).toBe(21 * 60 + 30);
+    expect(clockTimeToMinutes("not-a-time")).toBe(8 * 60);
+    expect(minutesToClockTime(8 * 60)).toBe("08:00");
+  });
+
+  it("leaves context before a saved focus and future space below now", () => {
+    const fullDay = computeDayWindow([], { pxPerHour: 60 });
+    expect(initialTimelineScrollTop(8 * 60, fullDay, 600, "focus")).toBe(7 * 60);
+    expect(initialTimelineScrollTop(12 * 60, fullDay, 600, "now")).toBe(8 * 60 + 40);
   });
 });
 

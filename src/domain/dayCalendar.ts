@@ -63,8 +63,10 @@ export interface HourMark {
 
 export const DEFAULT_PX_PER_HOUR = 60;
 export const DEFAULT_SNAP_MINUTES = 15;
-export const DEFAULT_WINDOW_START_MIN = 7 * 60; // 07:00
-export const DEFAULT_WINDOW_END_MIN = 20 * 60; // 20:00
+/** Timelines always expose the complete day; preferences only change initial framing. */
+export const DEFAULT_WINDOW_START_MIN = 0;
+export const DEFAULT_WINDOW_END_MIN = MINUTES_PER_DAY;
+export const DEFAULT_TIMELINE_FOCUS_MIN = 8 * 60;
 /** A brand-new draft's default length, and the smallest a block may be resized to. */
 export const DEFAULT_DRAFT_MINUTES = 30;
 export const MIN_ITEM_MINUTES = 5;
@@ -79,12 +81,39 @@ export const clampMinute = (min: number, lo = 0, hi = MINUTES_PER_DAY) => Math.m
 
 export const snapMinute = (min: number, step = DEFAULT_SNAP_MINUTES) => Math.round(min / step) * step;
 
+/** Parse a browser time input (`HH:mm`) into local minutes, with a safe default. */
+export const clockTimeToMinutes = (value?: string, fallback = DEFAULT_TIMELINE_FOCUS_MIN) => {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value?.trim() ?? "");
+  return match ? Number(match[1]) * 60 + Number(match[2]) : fallback;
+};
+
+/** Format local minutes for an `<input type="time">`. */
+export const minutesToClockTime = (min: number) => {
+  const normalized = ((Math.floor(min) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+};
+
 export const minuteToY = (min: number, layout: DayLayout) => (min - layout.startMin) * pxPerMinute(layout);
 
 export const yToMinute = (y: number, layout: DayLayout) => layout.startMin + y / pxPerMinute(layout);
 
 /** Total pixel height of the grid for a layout window. */
 export const layoutHeight = (layout: DayLayout) => (layout.endMin - layout.startMin) * pxPerMinute(layout);
+
+/**
+ * Initial vertical framing for a scrollable full-day canvas.
+ * Saved focus times keep an hour of context above them; the live time sits one-third
+ * down the viewport so upcoming work remains visible.
+ */
+export const initialTimelineScrollTop = (
+  focusMin: number,
+  layout: DayLayout,
+  viewportHeight: number,
+  alignment: "focus" | "now" = "focus"
+) => {
+  const offset = alignment === "now" ? viewportHeight / 3 : layout.pxPerHour;
+  return Math.max(0, minuteToY(clampMinute(focusMin, layout.startMin, layout.endMin), layout) - offset);
+};
 
 /**
  * Pixel rect for a [startMin, endMin) range, clamped to the visible window so blocks
@@ -221,33 +250,15 @@ export const fitResizeStart = (
   return { startMin, endMin };
 };
 
-/**
- * The visible day window: defaults to 07:00–20:00, expanded outward (hour-aligned)
- * to include every item's span, clamped to the full day.
- */
+/** The visible day window is always 00:00–24:00 so early and overnight work is reachable. */
 export const computeDayWindow = (
-  items: CalendarItem[],
+  _items: CalendarItem[],
   opts?: { pxPerHour?: number }
-): DayLayout => {
-  let startMin = DEFAULT_WINDOW_START_MIN;
-  let endMin = DEFAULT_WINDOW_END_MIN;
-
-  for (const item of items) {
-    if (item.endMin <= item.startMin) {
-      continue;
-    }
-    startMin = Math.min(startMin, Math.floor(item.startMin / 60) * 60);
-    endMin = Math.max(endMin, Math.ceil(item.endMin / 60) * 60);
-  }
-
-  startMin = clampMinute(startMin);
-  endMin = clampMinute(endMin);
-  if (endMin - startMin < 60) {
-    endMin = Math.min(MINUTES_PER_DAY, startMin + 60);
-  }
-
-  return { startMin, endMin, pxPerHour: opts?.pxPerHour ?? DEFAULT_PX_PER_HOUR };
-};
+): DayLayout => ({
+  startMin: DEFAULT_WINDOW_START_MIN,
+  endMin: DEFAULT_WINDOW_END_MIN,
+  pxPerHour: opts?.pxPerHour ?? DEFAULT_PX_PER_HOUR
+});
 
 export interface Gap {
   startMin: number;

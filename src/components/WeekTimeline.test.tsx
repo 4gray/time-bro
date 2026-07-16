@@ -111,6 +111,7 @@ describe("WeekTimeline", () => {
     );
 
     expect(markup).toContain('aria-label="Week timeline"');
+    expect(markup).toContain('height:1296px');
     expect(markup.match(/cal--embedded/g)).toHaveLength(2);
     expect(markup.match(/data-timeline-start=/g)).toHaveLength(2);
     expect(markup.match(/data-drop-day=/g)).toHaveLength(3);

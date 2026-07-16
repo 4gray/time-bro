@@ -17,7 +17,13 @@ const ghostSignal: ReconstructSignal = {
   naiveDescription: "Worked on FTDM-500"
 };
 
-const settings = { aiEnabled: false, ollamaEndpoint: "http://localhost:11434", ollamaModel: "llama3.1:8b" } as AppSettings;
+const settings = {
+  aiEnabled: false,
+  ollamaEndpoint: "http://localhost:11434",
+  ollamaModel: "llama3.1:8b",
+  timelineFocusTime: "06:30",
+  timelineCenterOnNow: false
+} as AppSettings;
 
 const ticket: JiraTicket = {
   id: "133470",
@@ -122,6 +128,7 @@ describe("TodayView calendar", () => {
     const markup = renderToday();
 
     expect(markup).toContain("cal-track");
+    expect(markup).toContain("height:1440px");
     // Worklog block — key title + summary detail.
     expect(markup).toContain("FTDM-397");
     expect(markup).toContain("Restructure the access domain in nx monorepo");

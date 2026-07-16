@@ -5,8 +5,10 @@ import {
   buildCommittedItems,
   buildPendingRecurringItems,
   computeDayWindow,
+  DEFAULT_TIMELINE_FOCUS_MIN,
   findGaps,
   hourMarks,
+  initialTimelineScrollTop,
   layoutColumns,
   layoutHeight,
   minutesFromMidnight,
@@ -38,6 +40,10 @@ interface DayCalendarProps {
   /** Detected-but-unlogged activity (ghost layer). */
   ghosts: CalendarItem[];
   pxPerHour?: number;
+  /** Saved time around which non-current days initially open. */
+  initialFocusMin?: number;
+  /** Current-day timelines frame the live time when enabled. */
+  centerOnNow?: boolean;
   /** Reuse a parent-computed window so several day columns share one time scale. */
   layoutOverride?: DayLayout;
   /** Drop the nested scroller/gutter when the calendar is hosted by a week timeline. */
@@ -85,6 +91,8 @@ export const DayCalendar = ({
   pending,
   ghosts,
   pxPerHour,
+  initialFocusMin = DEFAULT_TIMELINE_FOCUS_MIN,
+  centerOnNow = true,
   layoutOverride,
   embedded = false,
   readOnly = false,
@@ -155,15 +163,22 @@ export const DayCalendar = ({
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
+  const dateKey = toLocalDateKey(date);
   useEffect(() => {
-    if (embedded || !isToday || !scrollRef.current) {
+    if (embedded || !scrollRef.current) {
       return;
     }
-    const target = minuteToY(nowMin, layout) - scrollRef.current.clientHeight / 3;
-    scrollRef.current.scrollTop = Math.max(0, target);
-    // Run once on mount for the initial framing; live ticks shouldn't yank the scroll.
+    const focusOnNow = isToday && centerOnNow;
+    scrollRef.current.scrollTop = initialTimelineScrollTop(
+      focusOnNow ? nowMin : initialFocusMin,
+      layout,
+      scrollRef.current.clientHeight,
+      focusOnNow ? "now" : "focus"
+    );
+    // Reframe when the selected day or preference changes. Live minute ticks intentionally
+    // stay out of the dependency list so they never yank a user's manual scroll.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [centerOnNow, dateKey, embedded, initialFocusMin, isToday, layout.endMin, layout.pxPerHour, layout.startMin]);
 
   const selectItem = useCallback(
     (item: CalendarItem) => {

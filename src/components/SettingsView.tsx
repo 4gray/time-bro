@@ -4,6 +4,7 @@ import {
   Bot,
   CalendarDays,
   Check,
+  Clock3,
   Database,
   Download,
   ExternalLink,
@@ -868,6 +869,46 @@ export const SettingsView = ({
             })}
           </div>
         </div>
+      </div>
+
+      <div className="settings-panel timeline-settings-panel">
+        <div className="section-title">
+          <Clock3 size={16} />
+          <span>Day timeline</span>
+        </div>
+
+        <div className="timeline-hours-note">
+          <span>24H</span>
+          <div>
+            <strong>Every hour stays available</strong>
+            <small>Today and Week scroll to a useful starting point instead of hiding early or overnight work.</small>
+          </div>
+        </div>
+
+        <label>
+          <span>Default focus time</span>
+          <input
+            type="time"
+            value={draft.timelineFocusTime ?? "08:00"}
+            onChange={(event) => updateField("timelineFocusTime", event.target.value)}
+          />
+          <small className="field-hint-text">Past days and other weeks open with one hour of context before this time.</small>
+        </label>
+
+        <label className="switch-row">
+          <span>
+            <strong>Center on the current time</strong>
+            <small>Today and the current week open near “now.” Turn this off to always use your focus time.</small>
+          </span>
+          <button
+            className={`switch ${(draft.timelineCenterOnNow ?? true) ? "on" : ""}`}
+            type="button"
+            aria-pressed={draft.timelineCenterOnNow ?? true}
+            onClick={() => updateField("timelineCenterOnNow", !(draft.timelineCenterOnNow ?? true))}
+          >
+            <span />
+          </button>
+        </label>
       </div>
 
       <div className="settings-panel">

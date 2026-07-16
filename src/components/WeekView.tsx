@@ -54,6 +54,8 @@ interface WeekViewProps {
   weekState: WeekState;
   syncResult?: SyncResult;
   currentDate?: Date;
+  timelineFocusTime?: string;
+  timelineCenterOnNow?: boolean;
   isSyncing: boolean;
   isConfigured: boolean;
   dockTickets?: JiraTicket[];
@@ -557,6 +559,8 @@ export const WeekView = ({
   weekState,
   syncResult,
   currentDate,
+  timelineFocusTime,
+  timelineCenterOnNow,
   isSyncing,
   isConfigured,
   dockTickets = [],
@@ -772,6 +776,8 @@ export const WeekView = ({
           syncResult={syncResult}
           currentDate={now}
           todayKey={todayKey}
+          timelineFocusTime={timelineFocusTime}
+          timelineCenterOnNow={timelineCenterOnNow}
           onAddTime={onAddTime}
           onMoveWorklog={onMoveWorklog}
           onEditWorklog={onEditWorklog}

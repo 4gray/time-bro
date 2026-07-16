@@ -8,6 +8,7 @@ import type {
 import { normalizeWorkingDays } from "../../shared/weekdays";
 import { nativeApi } from "../api/native";
 import { getBitbucketRepositorySlugs } from "../domain/bitbucketReview";
+import { clockTimeToMinutes, minutesToClockTime } from "../domain/dayCalendar";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import { saveSettings as saveSettingsToStorage } from "../storage/db";
 import { normalizeJiraSiteInput } from "./appHelpers";
@@ -45,7 +46,9 @@ const cleanSettingsDraft = (settingsDraft: AppSettings): AppSettings => ({
   bitbucketRepositories: getBitbucketRepositorySlugs(settingsDraft).join(", "),
   bitbucketReviewBucketIssueKey: settingsDraft.bitbucketReviewBucketIssueKey.trim().toUpperCase(),
   weeklyTargetHours: Math.max(Number(settingsDraft.weeklyTargetHours) || 40, 1),
-  workingDays: normalizeWorkingDays(settingsDraft.workingDays)
+  workingDays: normalizeWorkingDays(settingsDraft.workingDays),
+  timelineFocusTime: minutesToClockTime(clockTimeToMinutes(settingsDraft.timelineFocusTime)),
+  timelineCenterOnNow: settingsDraft.timelineCenterOnNow ?? true
 });
 
 const cleanWelcomeSettings = (settingsDraft: AppSettings, payload: WelcomeConnectPayload): AppSettings => ({

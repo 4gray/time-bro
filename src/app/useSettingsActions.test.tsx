@@ -26,6 +26,8 @@ const settings: AppSettings = {
   bitbucketReviewBucketIssueKey: "REV-1",
   weeklyTargetHours: 40,
   workingDays: [1, 2, 3, 4, 5],
+  timelineFocusTime: "08:00",
+  timelineCenterOnNow: true,
   reminderTime: "16:30",
   remindersEnabled: true,
   aiEnabled: false,

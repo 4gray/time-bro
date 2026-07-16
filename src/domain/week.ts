@@ -31,6 +31,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   bitbucketReviewBucketIssueKey: "",
   weeklyTargetHours: 40,
   workingDays: [...DEFAULT_WORKING_DAYS],
+  timelineFocusTime: "08:00",
+  timelineCenterOnNow: true,
   reminderTime: "16:30",
   remindersEnabled: true,
   aiEnabled: false,

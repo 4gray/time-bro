@@ -12,7 +12,7 @@ import type { RecurringConfirmPayload } from "../app/useRecurringActions";
 import { formatClock, formatDuration, formatHours } from "../utils/date";
 import { activitySegments } from "../domain/activity";
 import { getWorklogDisplaySeconds } from "../domain/worklogAllocation";
-import { buildGhostItems } from "../domain/dayCalendar";
+import { buildGhostItems, clockTimeToMinutes } from "../domain/dayCalendar";
 import type { ReconstructSignal } from "../domain/reconstruct";
 import { DayRing } from "./DayRing";
 import { RecapCard } from "./RecapCard";
@@ -209,6 +209,8 @@ export const TodayView = ({
           recurring={recurringEntries}
           pending={pendingRecurring}
           ghosts={ghosts}
+          initialFocusMin={clockTimeToMinutes(settings.timelineFocusTime)}
+          centerOnNow={settings.timelineCenterOnNow ?? true}
           onCreateAt={onCreateAt}
           onMoveWorklog={onMoveWorklog}
           onPromoteGhost={promoteGhost}
