@@ -64,9 +64,9 @@ export const useRecurringActions = ({
   showSuccess,
   showError
 }: UseRecurringActionsOptions) => {
-  const visibleOccurrencesRef = useRef(recurringOccurrences);
+  const visibleWeekStateRef = useRef({ weekKey: visibleWeekKey, occurrences: recurringOccurrences });
   const occurrenceWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
-  visibleOccurrencesRef.current = recurringOccurrences;
+  visibleWeekStateRef.current = { weekKey: visibleWeekKey, occurrences: recurringOccurrences };
 
   const persistRecurringEvents = useCallback(
     async (next: RecurringEvent[]) => {
@@ -162,7 +162,9 @@ export const useRecurringActions = ({
       if (isDemo) {
         setRecurringOccurrences((current) => {
           const next = mutate(current);
-          visibleOccurrencesRef.current = next;
+          if (weekKey === visibleWeekStateRef.current.weekKey) {
+            visibleWeekStateRef.current = { weekKey, occurrences: next };
+          }
           return next;
         });
         return Promise.resolve(true);
@@ -170,12 +172,15 @@ export const useRecurringActions = ({
 
       const persist = async () => {
         try {
+          const visibleAtStart = visibleWeekStateRef.current;
           const current =
-            weekKey === visibleWeekKey ? visibleOccurrencesRef.current : await getRecurringOccurrences(weekKey);
+            weekKey === visibleAtStart.weekKey
+              ? visibleAtStart.occurrences
+              : await getRecurringOccurrences(weekKey);
           const next = mutate(current);
           await saveRecurringOccurrences(weekKey, next);
-          if (weekKey === visibleWeekKey) {
-            visibleOccurrencesRef.current = next;
+          if (weekKey === visibleWeekStateRef.current.weekKey) {
+            visibleWeekStateRef.current = { weekKey, occurrences: next };
             setRecurringOccurrences(next);
           }
           return true;
@@ -197,8 +202,7 @@ export const useRecurringActions = ({
       isDemo,
       saveRecurringOccurrences,
       setRecurringOccurrences,
-      showError,
-      visibleWeekKey
+      showError
     ]
   );
 
