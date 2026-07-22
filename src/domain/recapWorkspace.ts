@@ -511,9 +511,9 @@ const lineForSource = (source: RecapSourceItem): RecapCopyLine => {
 
 const inferChangeTag = (source: RecapSourceItem): RecapCopyLine["tag"] => {
   const text = `${source.title} ${(source.details ?? []).join(" ")}`.toLowerCase();
-  if (/\b(fix|fixed|bug|incident|repair|resolve|resolved)\b/.test(text)) return "Fixed";
-  if (/\b(add|added|create|created|introduce|introduced|implement|implemented)\b/.test(text)) return "Added";
-  if (/\b(change|changed|update|updated|refactor|refactored|adjust|adjusted|replace|replaced|move|moved)\b/.test(text)) return "Changed";
+  if (/\b(fixed|repaired|resolved|corrected)\b/.test(text)) return "Fixed";
+  if (/\b(added|created|introduced|implemented)\b/.test(text)) return "Added";
+  if (/\b(changed|updated|refactored|adjusted|replaced|moved)\b/.test(text)) return "Changed";
   return undefined;
 };
 
@@ -667,7 +667,7 @@ export const recapFormatMeta: Record<RecapFormat, { label: string; eyebrow: stri
 
 export const recapTitle = (format: RecapFormat, interval: RecapInterval, themes: RecapTheme[] = [], coverage?: RecapCoverage) => {
   const noun = interval.period;
-  const isPartial = noun !== "week" && coverage?.status && coverage.status !== "complete";
+  const isPartial = coverage?.status && coverage.status !== "complete";
   if (isPartial && format === "cv") return "Accomplishment candidates from available history";
   if (isPartial && format === "manager") return "What the available history shows";
   if (isPartial && format === "standup") return "Available work highlights";
@@ -703,7 +703,7 @@ export const recapLineText = (line: RecapCopyLine, detail: RecapDetail, format: 
 
 export const recapCoverageNote = (draft: RecapDraftVersion) => {
   const elapsed = draft.coverage.elapsedWeeks ?? draft.coverage.requestedWeeks;
-  if (draft.interval.period === "week" || draft.coverage.status === "complete" || draft.coverage.jiraWeeks >= elapsed) return undefined;
+  if (draft.coverage.status === "complete" || draft.coverage.jiraWeeks >= elapsed) return undefined;
   return `Partial recap: Jira history is cached for ${draft.coverage.jiraWeeks} of ${elapsed} elapsed ${elapsed === 1 ? "week" : "weeks"}. The document covers available evidence only.`;
 };
 

@@ -149,6 +149,33 @@ describe("Recap evidence", () => {
     expect(recapCoverageNote(draft)).toContain("Partial recap");
   });
 
+  it("discloses sparse Jira coverage for a weekly recap", () => {
+    const input = evidence("week");
+    input.personalNotes = [note("local-only", "2026-06-17", 1)];
+    const draft = buildDeterministicRecap(input, 1, new Date("2026-06-18T12:00:00Z"));
+
+    expect(draft.coverage).toMatchObject({ status: "sparse", jiraWeeks: 0, elapsedWeeks: 1 });
+    expect(recapCoverageNote(draft)).toContain("0 of 1 elapsed week");
+  });
+
+  it("only assigns changelog tags when evidence explicitly records a completed change", () => {
+    const sources: RecapSourceItem[] = [
+      { id: "investigate", kind: "local", dateKey: "2026-06-17", title: "Investigate payment bug", timeSpentSeconds: 3600, clusterKey: "work" },
+      { id: "incident", kind: "local", dateKey: "2026-06-17", title: "Incident review", timeSpentSeconds: 3600, clusterKey: "work" },
+      { id: "resolved", kind: "local", dateKey: "2026-06-17", title: "Resolved retry race", timeSpentSeconds: 3600, clusterKey: "work" },
+      { id: "planned", kind: "local", dateKey: "2026-06-17", title: "Add auth middleware", timeSpentSeconds: 3600, clusterKey: "work" },
+      { id: "implemented", kind: "local", dateKey: "2026-06-17", title: "Implemented auth middleware", timeSpentSeconds: 3600, clusterKey: "work" }
+    ];
+    const lines = buildRecapThemes(sources, "week")[0].copy.changelog.lines;
+    const tags = Object.fromEntries(lines.map((line) => [line.id, line.tag]));
+
+    expect(tags["line:changelog:investigate:0"]).toBeUndefined();
+    expect(tags["line:changelog:incident:1"]).toBeUndefined();
+    expect(tags["line:changelog:resolved:2"]).toBe("Fixed");
+    expect(tags["line:changelog:planned:3"]).toBeUndefined();
+    expect(tags["line:changelog:implemented:4"]).toBe("Added");
+  });
+
   it("serializes every format/detail combination and has a deterministic empty state", () => {
     const input = evidence("month");
     input.personalNotes = [note("collab", "2026-06-17", 1.5, "meeting"), note("ops", "2026-06-18", 2)];
