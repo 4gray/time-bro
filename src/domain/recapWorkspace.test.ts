@@ -197,4 +197,37 @@ describe("Recap evidence", () => {
     expect(nextB.copy.cv.lines[0]).toMatchObject({ refs: ["repo-b#42"], needsImpact: true });
     expect(nextB.copy.cv.lines[0].userImpact).toBeUndefined();
   });
+
+  it("carries one CV outcome to only one theme when a combined workstream splits", () => {
+    const combinedSources: RecapSourceItem[] = ["repo-a", "repo-b"].map((repository) => ({
+      id: `pr:workspace:${repository}:42`,
+      kind: "pull-request",
+      dateKey: "2026-06-17",
+      title: `Review ${repository}`,
+      timeSpentSeconds: 3600,
+      repository,
+      pullRequestId: 42,
+      role: "reviewed",
+      clusterKey: "repo:combined"
+    }));
+    const makeDraft = (version: number, sources: RecapSourceItem[]): RecapDraftVersion => ({
+      version,
+      generatedAt: `2026-06-1${version}T12:00:00.000Z`,
+      generator: "deterministic",
+      interval: evidence().interval,
+      sources: structuredClone(sources),
+      themes: buildRecapThemes(structuredClone(sources), "week"),
+      coverage: { requestedWeeks: 1, elapsedWeeks: 1, jiraWeeks: 0, bitbucketWeeks: 1, ticketCount: 0, pullRequestCount: 2, commitCount: 0 }
+    });
+    const current = makeDraft(1, combinedSources);
+    current.themes[0].copy.cv.lines[0].userImpact = "Unblocked the shared release review";
+    current.themes[0].copy.cv.lines[0].needsImpact = false;
+    const splitSources = combinedSources.map((source) => ({ ...source, clusterKey: `repo:${source.repository}` }));
+
+    const carried = carryRecapUserImpacts(current, makeDraft(2, splitSources));
+    const lines = carried.themes.flatMap((theme) => theme.copy.cv.lines);
+
+    expect(lines.filter((line) => line.userImpact)).toHaveLength(1);
+    expect(lines.filter((line) => line.needsImpact)).toHaveLength(1);
+  });
 });

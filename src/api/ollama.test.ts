@@ -124,6 +124,39 @@ describe("enhanceRecapWorkspace", () => {
     expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["note:fact"]);
   });
 
+  it("restores repository-qualified refs after cloud redaction", async () => {
+    const draft = workspaceDraft();
+    const source = draft.sources[0];
+    const oldSourceId = source.id;
+    source.id = "pr:workspace:repo-a:42";
+    source.kind = "pull-request";
+    source.repository = "repo-a";
+    source.pullRequestId = 42;
+    draft.themes[0].id = draft.themes[0].id.replace(oldSourceId, source.id);
+    draft.themes[0].sourceIds = [source.id];
+    for (const copy of Object.values(draft.themes[0].copy)) {
+      for (const paragraph of copy.paragraphs ?? []) paragraph.refs = ["repo-a#42"];
+      for (const line of copy.lines) line.refs = ["repo-a#42"];
+    }
+    let sentPrompt = "";
+    vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
+      sentPrompt = request.prompt;
+      return {
+        ok: true,
+        response: workspaceResponse(draft, "ID-2", draft.themes[0].id.replace(source.id, "ID-1"))
+      };
+    });
+
+    const result = await enhanceRecapWorkspace(draft, {
+      provider: "codex-cli", endpoint: "", model: "", cliPath: "codex", redactLiterals: ["repo-a"]
+    }, "perf", "detailed");
+
+    expect(sentPrompt).not.toContain("repo-a");
+    expect(sentPrompt).toContain('"ref":"ID-2"');
+    expect(result.generator).toBe("ai");
+    expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["repo-a#42"]);
+  });
+
   it("keeps the deterministic draft when the provider fails or returns invalid copy", async () => {
     const draft = workspaceDraft();
     mockGenerate(async () => ({ ok: false, message: "offline" }));

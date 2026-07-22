@@ -420,21 +420,41 @@ export const carryRecapUserImpacts = (current: RecapDraftVersion | undefined, ne
     .filter((line) => line.userImpact?.trim())
     .map((line) => ({ line, sourceIds: sourceIdsForLine(current, theme, line) })));
   if (!impacts.length) return next;
+  const targets = next.themes.flatMap((theme, themeIndex) => theme.copy.cv.lines.map((line, lineIndex) => ({
+    themeIndex,
+    lineIndex,
+    line,
+    sourceIds: sourceIdsForLine(next, theme, line)
+  })));
+  const matches = impacts.flatMap((impact, impactIndex) => targets.flatMap((target, targetIndex) => {
+    const overlap = impact.sourceIds.filter((id) => target.sourceIds.includes(id)).length;
+    if (!overlap) return [];
+    const exactSources = impact.sourceIds.length === target.sourceIds.length
+      && impact.sourceIds.every((id) => target.sourceIds.includes(id));
+    const score = (impact.line.id === target.line.id ? 1_000_000 : 0) + (exactSources ? 10_000 : 0) + overlap;
+    return [{ impactIndex, targetIndex, score }];
+  })).sort((a, b) => b.score - a.score || a.targetIndex - b.targetIndex || a.impactIndex - b.impactIndex);
+  const assignedImpacts = new Set<number>();
+  const assignedTargets = new Set<number>();
+  const impactByTarget = new Map<string, string>();
+  for (const match of matches) {
+    if (assignedImpacts.has(match.impactIndex) || assignedTargets.has(match.targetIndex)) continue;
+    assignedImpacts.add(match.impactIndex);
+    assignedTargets.add(match.targetIndex);
+    const target = targets[match.targetIndex];
+    impactByTarget.set(`${target.themeIndex}:${target.lineIndex}`, impacts[match.impactIndex].line.userImpact!);
+  }
   return {
     ...next,
-    themes: next.themes.map((theme) => ({
+    themes: next.themes.map((theme, themeIndex) => ({
       ...theme,
       copy: {
         ...theme.copy,
         cv: {
           ...theme.copy.cv,
-          lines: theme.copy.cv.lines.map((line) => {
-            const sourceIds = sourceIdsForLine(next, theme, line);
-            const match = impacts
-              .map((candidate) => ({ candidate, overlap: candidate.sourceIds.filter((id) => sourceIds.includes(id)).length }))
-              .filter(({ overlap }) => overlap > 0)
-              .sort((a, b) => b.overlap - a.overlap)[0]?.candidate.line;
-            return match ? { ...line, needsImpact: false, userImpact: match.userImpact } : line;
+          lines: theme.copy.cv.lines.map((line, lineIndex) => {
+            const userImpact = impactByTarget.get(`${themeIndex}:${lineIndex}`);
+            return userImpact ? { ...line, needsImpact: false, userImpact } : line;
           })
         }
       }

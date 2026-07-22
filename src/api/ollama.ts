@@ -8,6 +8,7 @@ import {
 } from "../domain/enhancePrompt";
 import { RECAP_POLISH_SYSTEM_PROMPT, buildRecapPolishPrompt } from "../domain/recapPolishPrompt";
 import { redactForCloud } from "../domain/redaction";
+import { recapSourceRef } from "../domain/recapWorkspace";
 import {
   buildRecapWorkspacePrompt,
   parseRecapWorkspaceDraft,
@@ -249,7 +250,7 @@ export const enhanceRecapWorkspace = async (
   const provider = connection.provider ?? "ollama";
   const prompt = buildRecapWorkspacePrompt(draft, format, detail);
   const redaction = isCloudProvider(provider)
-    ? redactForCloud(prompt, connection.redactLiterals, draft.sources.map((source) => source.id))
+    ? redactForCloud(prompt, connection.redactLiterals, draft.sources.flatMap((source) => [source.id, recapSourceRef(source)]))
     : undefined;
   try {
     const result = await nativeApi.generateWithAi({
