@@ -84,11 +84,11 @@ afterEach(() => {
 });
 
 describe("useRecapWorkspace generation", () => {
-  it("exposes deterministic version one immediately, then completes it with AI", async () => {
+  it("opens with a local draft and creates a separate AI version only on request", async () => {
     const pending = deferred<RecapDraftVersion>();
-    let deterministic: RecapDraftVersion | undefined;
+    let candidate: RecapDraftVersion | undefined;
     vi.spyOn(aiApi, "enhanceRecapWorkspace").mockImplementation(async (draft) => {
-      deterministic = draft;
+      candidate = draft;
       return pending.promise;
     });
 
@@ -96,36 +96,49 @@ describe("useRecapWorkspace generation", () => {
     await flush();
 
     expect(getWorkspace().isLoading).toBe(false);
-    expect(getWorkspace().isGenerating).toBe(true);
+    expect(getWorkspace().isGenerating).toBe(false);
     expect(getWorkspace().activeDraft).toMatchObject({ version: 1, generator: "deterministic" });
+    expect(aiApi.enhanceRecapWorkspace).not.toHaveBeenCalled();
+
+    const firstTheme = getWorkspace().activeDraft!.themes[0];
+    act(() => getWorkspace().updateTheme(firstTheme.id, (theme) => ({ ...theme, name: "Hand-edited focus" })));
+
+    let rewrite!: Promise<void>;
+    act(() => { rewrite = getWorkspace().rewriteWithAi(); });
+    expect(getWorkspace().isRewriting).toBe(true);
+    expect(getWorkspace().activeDraft).toMatchObject({ version: 1, generator: "deterministic" });
+    expect(getWorkspace().record?.versions).toHaveLength(1);
 
     await act(async () => {
-      pending.resolve({ ...deterministic!, generator: "ai" });
-      await pending.promise;
+      pending.resolve({ ...candidate!, generator: "ai", aiFormats: ["perf"] });
+      await rewrite;
     });
 
     expect(getWorkspace().isGenerating).toBe(false);
-    expect(getWorkspace().activeDraft).toMatchObject({ version: 1, generator: "ai" });
-    expect(getWorkspace().record?.versions).toHaveLength(1);
+    expect(getWorkspace().activeDraft).toMatchObject({ version: 2, generator: "ai" });
+    expect(getWorkspace().record?.versions.map((version) => [version.version, version.generator])).toEqual([
+      [1, "deterministic"], [2, "ai"]
+    ]);
+    expect(getWorkspace().record?.versions[0].themes[0].name).toBe("Hand-edited focus");
+    expect(getWorkspace().record?.versions[0].editedAt).toBeTruthy();
   });
 
-  it("creates the next version synchronously and ignores a stale enhancement after an interval change", async () => {
-    const enhance = vi.spyOn(aiApi, "enhanceRecapWorkspace").mockImplementation(async (draft) => ({ ...draft, generator: "ai" }));
+  it("keeps the current interval when a stale AI response returns", async () => {
     act(() => root.render(<Harness />));
     await flush();
-    expect(getWorkspace().activeDraft?.generator).toBe("ai");
+    expect(getWorkspace().activeDraft?.generator).toBe("deterministic");
 
     const pending = deferred<RecapDraftVersion>();
     let versionTwo: RecapDraftVersion | undefined;
-    enhance.mockImplementation(async (draft) => {
+    vi.spyOn(aiApi, "enhanceRecapWorkspace").mockImplementation(async (draft) => {
       versionTwo = draft;
       return pending.promise;
     });
-    let regenerate!: Promise<void>;
-    act(() => { regenerate = getWorkspace().regenerate(); });
+    let rewrite!: Promise<void>;
+    act(() => { rewrite = getWorkspace().rewriteWithAi(); });
 
-    expect(getWorkspace().activeDraft).toMatchObject({ version: 2, generator: "deterministic" });
-    expect(getWorkspace().record?.versions.map((version) => version.version)).toEqual([1, 2]);
+    expect(getWorkspace().activeDraft).toMatchObject({ version: 1, generator: "deterministic" });
+    expect(getWorkspace().isRewriting).toBe(true);
 
     act(() => getWorkspace().stepInterval(-1));
     await flush();
@@ -133,11 +146,34 @@ describe("useRecapWorkspace generation", () => {
     expect(getWorkspace().activeDraft?.version).toBe(1);
 
     await act(async () => {
-      pending.resolve({ ...versionTwo!, generator: "ai" });
-      await regenerate;
+      pending.resolve({ ...versionTwo!, generator: "ai", aiFormats: ["perf"] });
+      await rewrite;
     });
 
     expect(getWorkspace().record?.intervalKey).toBe("quarter:2026-Q1");
     expect(getWorkspace().activeDraft?.version).toBe(1);
+  });
+
+  it("refreshes into a new local version and carries user-provided CV impact", async () => {
+    act(() => root.render(<Harness />));
+    await flush();
+    const theme = getWorkspace().activeDraft!.themes[0];
+    const line = theme.copy.cv.lines[0];
+
+    act(() => getWorkspace().updateTheme(theme.id, (current) => ({
+      ...current,
+      copy: { ...current.copy, cv: { ...current.copy.cv, lines: current.copy.cv.lines.map((candidate) => candidate.id === line.id
+        ? { ...candidate, needsImpact: false, userImpact: "Unblocked the release review" }
+        : candidate) } }
+    })));
+
+    await act(async () => { await getWorkspace().refreshActivity(); });
+
+    expect(getWorkspace().activeDraft?.version).toBe(2);
+    expect(getWorkspace().activeDraft?.generator).toBe("deterministic");
+    expect(getWorkspace().activeDraft?.themes[0].copy.cv.lines[0]).toMatchObject({
+      needsImpact: false,
+      userImpact: "Unblocked the release review"
+    });
   });
 });

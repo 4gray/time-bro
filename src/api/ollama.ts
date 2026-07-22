@@ -1,4 +1,4 @@
-import type { AiProvider, AppSettings, RecapDraftVersion } from "../../shared/types";
+import type { AiProvider, AppSettings, RecapDetail, RecapDraftVersion, RecapFormat } from "../../shared/types";
 import {
   buildEnhancePrompt,
   ENHANCE_SYSTEM_PROMPT,
@@ -242,10 +242,12 @@ export const polishRecap = async (recapText: string, connection: AiConnection): 
 
 export const enhanceRecapWorkspace = async (
   draft: RecapDraftVersion,
-  connection: AiConnection
+  connection: AiConnection,
+  format: RecapFormat,
+  detail: RecapDetail
 ): Promise<RecapDraftVersion> => {
   const provider = connection.provider ?? "ollama";
-  const prompt = buildRecapWorkspacePrompt(draft);
+  const prompt = buildRecapWorkspacePrompt(draft, format, detail);
   const redaction = isCloudProvider(provider)
     ? redactForCloud(prompt, connection.redactLiterals, draft.sources.map((source) => source.id))
     : undefined;
@@ -261,7 +263,7 @@ export const enhanceRecapWorkspace = async (
     });
     if (!result.ok || !result.response) return draft;
     const response = redaction ? redaction.restore(result.response) : result.response;
-    return parseRecapWorkspaceDraft(response, draft) ?? draft;
+    return parseRecapWorkspaceDraft(response, draft, format, detail) ?? draft;
   } catch {
     return draft;
   }

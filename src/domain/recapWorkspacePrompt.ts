@@ -1,57 +1,136 @@
-import type { RecapDraftVersion, RecapFormat, RecapTheme } from "../../shared/types";
+import type {
+  RecapCopyLine,
+  RecapCopyParagraph,
+  RecapDetail,
+  RecapDraftVersion,
+  RecapFormat,
+  RecapTheme
+} from "../../shared/types";
 
-export const RECAP_WORKSPACE_SYSTEM_PROMPT =
-  "You turn a developer's real work evidence into concise review-ready writing. Never invent impact, numbers, scope, or sources. Preserve every supplied theme id and source reference. Return JSON only.";
+export const RECAP_WORKSPACE_SYSTEM_PROMPT = [
+  "You are an evidence editor for a developer's private work journal.",
+  "Turn real activity into clear review-ready writing without inventing impact, completion, ownership, numbers, scope, or sources.",
+  "Do not say shipped, delivered, fixed, improved, led, or owned unless the supplied evidence explicitly supports that claim.",
+  "Separate recorded work from business outcomes. If an outcome is missing, say so through needsImpact instead of making one up.",
+  "Treat USER CLAIMS as trusted personal evidence. Preserve them exactly as separate userImpact data and never invent or weaken them.",
+  "Preserve every supplied theme id and cite only allowed refs. Return JSON only."
+].join(" ");
 
-export const buildRecapWorkspacePrompt = (draft: RecapDraftVersion) =>
-  [
-    "Rewrite the copy for all five formats: perf, manager, cv, standup, changelog.",
-    "Each line must cite one or more refs from its theme. Changelog tags are Added, Changed, or Fixed.",
-    "Do not change metrics, theme ids, or source assignments.",
-    "Return {themes:[{id,name,copy:{perf:{lead,lines},manager:{lead,lines},cv:{lines},standup:{lead,lines},changelog:{version,lines}}}]}",
-    "Every line is {id,short,long,refs,tag?,emphasis?}.",
-    "FACTS:",
-    JSON.stringify({
-      interval: draft.interval,
-      themes: draft.themes.map((theme) => ({
-        id: theme.id,
-        name: theme.name,
-        metrics: { hours: theme.hours, prs: theme.pullRequestCount, tickets: theme.ticketCount },
-        allowedRefs: draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map((source) => ({
-          ref: source.issueKey || (source.pullRequestId ? `#${source.pullRequestId}` : source.id),
-          title: source.title,
-          detail: source.detail,
-          minutes: Math.round(source.timeSpentSeconds / 60)
-        }))
+const FORMAT_INSTRUCTIONS: Record<RecapFormat, string[]> = {
+  perf: [
+    "Write a performance-review narrative for the person doing the work.",
+    "Use a concrete workstream name, a factual lead, and connected paragraphs rather than a ticket-by-ticket list.",
+    "Explain scope, contribution, collaboration, and recorded outcomes only when evidence supports them.",
+    "Lines are optional evidence highlights, not the main document."
+  ],
+  manager: [
+    "Write a plain first-person manager update.",
+    "Use connected paragraphs that explain where time and attention went.",
+    "Do not turn every source into a bullet. Lines are optional supporting highlights."
+  ],
+  cv: [
+    "Write accomplishment candidates for a CV or professional profile.",
+    "Combine related sources into one or two action-oriented bullets per workstream and omit internal Jira keys from the prose.",
+    "Set needsImpact to true whenever the evidence does not contain a measurable or explicit outcome. Never fabricate one.",
+    "Return no paragraphs."
+  ],
+  standup: [
+    "Write a terse standup digest.",
+    "Use one short factual bullet per meaningful thread and avoid review-style prose.",
+    "Return no paragraphs."
+  ],
+  changelog: [
+    "Write release-style change entries grouped by product or module.",
+    "Use Added, Changed, or Fixed only when the evidence supports the classification. Omit tag when uncertain.",
+    "Do not mention time spent. Return no paragraphs."
+  ]
+};
+
+const DETAIL_INSTRUCTIONS: Record<RecapDetail, string> = {
+  headline: "Headline mode: write only a useful lead and the minimum copy required by the format.",
+  balanced: "Standard mode: for narrative formats write one paragraph of 2 to 4 sentences; for list formats keep only the strongest items.",
+  detailed: "Detailed mode: for narrative formats write 2 or 3 paragraphs of 2 to 4 complete sentences each, then up to 4 evidence highlights; for list formats add useful context without repeating source metadata."
+};
+
+export const buildRecapWorkspacePrompt = (
+  draft: RecapDraftVersion,
+  format: RecapFormat,
+  detail: RecapDetail
+) => [
+  `Write only the ${format} format at ${detail} detail.`,
+  ...FORMAT_INSTRUCTIONS[format],
+  DETAIL_INSTRUCTIONS[detail],
+  "You may rename a theme to a clearer product, module, or workstream name using supplied context, but do not change theme ids or move refs between themes.",
+  "When coverage is partial or sparse, qualify period-wide statements and describe only the available history.",
+  "Return {format,themes:[{id,name,copy:{lead?,version?,paragraphs?,lines}}]}.",
+  "Every paragraph is {id,text,refs}. Every line is {id,short,long,refs,tag?,emphasis?,needsImpact?}.",
+  "USER CLAIMS are stored separately by the app. Use them to understand the evidence, but do not repeat their text in short or long.",
+  "Every paragraph and line must cite one or more allowed refs from its theme. Return paragraphs as [] for cv, standup, and changelog.",
+  "FACTS:",
+  JSON.stringify({
+    interval: draft.interval,
+    coverage: draft.coverage,
+    themes: draft.themes.map((theme) => ({
+      id: theme.id,
+      suggestedName: theme.name,
+      metrics: { hours: theme.hours, prs: theme.pullRequestCount, tickets: theme.ticketCount },
+      userClaims: theme.copy.cv.lines
+        .filter((line) => line.userImpact?.trim())
+        .map((line) => ({ lineId: line.id, refs: line.refs, userImpact: line.userImpact })),
+      evidence: draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map((source) => ({
+        sourceId: source.id,
+        ref: source.issueKey || (source.pullRequestId ? `#${source.pullRequestId}` : source.id),
+        kind: source.kind,
+        dates: source.dateKeys ?? [source.dateKey],
+        title: source.title,
+        notes: source.details ?? (source.detail ? [source.detail] : []),
+        minutes: Math.round(source.timeSpentSeconds / 60),
+        issueKey: source.issueKey,
+        epic: source.epicSummary ?? source.epicKey,
+        project: source.projectName ?? source.projectKey,
+        components: source.components,
+        repository: source.repository,
+        pullRequestId: source.pullRequestId,
+        role: source.role,
+        status: source.status
       }))
-    })
-  ].join("\n");
+    }))
+  })
+].join("\n");
 
-const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "standup", "changelog"];
 const TAGS = new Set(["Added", "Changed", "Fixed"]);
 const numericTokens = (value: string) => value.match(/\b\d+(?:\.\d+)?\b/g) ?? [];
 
 const allowedNumbersForTheme = (theme: RecapTheme, fallback: RecapDraftVersion) => {
+  const totalMinutes = Math.round(theme.hours * 60);
   const values = [
     String(theme.hours),
     String(Math.round(theme.hours * 10) / 10),
+    String(Math.round(theme.hours)),
+    String(totalMinutes),
     String(theme.pullRequestCount),
     String(theme.ticketCount),
     theme.name,
     fallback.interval.label,
     fallback.interval.startDateKey,
-    fallback.interval.endDateKeyExclusive
+    fallback.interval.endDateKeyExclusive,
+    String(fallback.coverage.requestedWeeks),
+    String(fallback.coverage.elapsedWeeks ?? fallback.coverage.requestedWeeks),
+    String(fallback.coverage.jiraWeeks),
+    String(fallback.coverage.bitbucketWeeks)
   ];
   for (const source of fallback.sources.filter((item) => theme.sourceIds.includes(item.id))) {
     values.push(
       source.issueKey ?? "",
       source.pullRequestId ? `#${source.pullRequestId}` : "",
       source.title,
-      source.detail ?? "",
+      ...(source.details ?? (source.detail ? [source.detail] : [])),
       String(Math.round(source.timeSpentSeconds / 60)),
+      String(Math.round(source.timeSpentSeconds / 3600)),
       String(Math.round((source.timeSpentSeconds / 3600) * 10) / 10)
     );
   }
+  for (const line of theme.copy.cv.lines) values.push(line.userImpact ?? "");
   return new Set(values.flatMap(numericTokens));
 };
 
@@ -60,10 +139,82 @@ const validateNumbers = (values: Array<string | undefined>, allowed: Set<string>
   if (claims.some((claim) => !allowed.has(claim))) throw new Error("unsupported numeric claim");
 };
 
-export const parseRecapWorkspaceDraft = (raw: string, fallback: RecapDraftVersion): RecapDraftVersion | undefined => {
+const validatedRefs = (value: unknown, allowed: Set<string>) => {
+  const refs = Array.isArray(value) ? value.map(String) : [];
+  if (!refs.length || refs.some((ref) => !allowed.has(ref))) throw new Error("invalid refs");
+  return refs;
+};
+
+const parseParagraphs = (
+  value: unknown,
+  allowed: Set<string>,
+  allowedNumbers: Set<string>,
+  themeId: string,
+  format: RecapFormat
+): RecapCopyParagraph[] => {
+  if (!Array.isArray(value)) return [];
+  return value.map((paragraphValue, index) => {
+    const paragraph = paragraphValue as Record<string, unknown>;
+    const text = String(paragraph.text ?? "").trim();
+    if (!text) throw new Error("empty paragraph");
+    validateNumbers([text], allowedNumbers);
+    return {
+      id: String(paragraph.id ?? `${themeId}:${format}:paragraph:${index}`),
+      text,
+      refs: validatedRefs(paragraph.refs, allowed)
+    };
+  });
+};
+
+const parseLines = (
+  value: unknown,
+  allowed: Set<string>,
+  allowedNumbers: Set<string>,
+  themeId: string,
+  format: RecapFormat,
+  existingLines: RecapCopyLine[]
+): RecapCopyLine[] => {
+  if (!Array.isArray(value)) throw new Error("missing lines");
+  return value.map((lineValue, index) => {
+    const line = lineValue as Record<string, unknown>;
+    const tag = line.tag ? String(line.tag) : undefined;
+    if (tag && !TAGS.has(tag)) throw new Error("invalid tag");
+    if (format !== "changelog" && tag) throw new Error("unexpected tag");
+    const short = String(line.short ?? "").trim();
+    const long = String(line.long ?? "").trim();
+    if (!short || !long) throw new Error("empty copy");
+    const emphasis = line.emphasis ? String(line.emphasis) : undefined;
+    validateNumbers([short, long, emphasis], allowedNumbers);
+    const refs = validatedRefs(line.refs, allowed);
+    const existingImpact = format === "cv"
+      ? existingLines
+        .filter((candidate) => candidate.userImpact?.trim())
+        .map((candidate) => ({ candidate, overlap: candidate.refs.filter((ref) => refs.includes(ref)).length }))
+        .filter(({ overlap }) => overlap > 0)
+        .sort((a, b) => b.overlap - a.overlap)[0]?.candidate.userImpact
+      : undefined;
+    return {
+      id: String(line.id ?? `${themeId}:${format}:line:${index}`),
+      short,
+      long,
+      refs,
+      tag: tag as RecapCopyLine["tag"],
+      emphasis,
+      needsImpact: format === "cv" ? !existingImpact && line.needsImpact !== false : undefined,
+      userImpact: existingImpact
+    };
+  });
+};
+
+export const parseRecapWorkspaceDraft = (
+  raw: string,
+  fallback: RecapDraftVersion,
+  format: RecapFormat,
+  detail: RecapDetail
+): RecapDraftVersion | undefined => {
   try {
-    const parsed = JSON.parse(raw) as { themes?: Array<Record<string, unknown>> };
-    if (!Array.isArray(parsed.themes)) return undefined;
+    const parsed = JSON.parse(raw) as { format?: string; themes?: Array<Record<string, unknown>> };
+    if (parsed.format !== format || !Array.isArray(parsed.themes)) return undefined;
     const byId = new Map(parsed.themes.map((theme) => [String(theme.id ?? ""), theme]));
     const themes: RecapTheme[] = fallback.themes.map((base) => {
       const incoming = byId.get(base.id);
@@ -76,41 +227,31 @@ export const parseRecapWorkspaceDraft = (raw: string, fallback: RecapDraftVersio
       const allowedNumbers = allowedNumbersForTheme(base, fallback);
       const name = typeof incoming.name === "string" && incoming.name.trim() ? incoming.name.trim() : base.name;
       validateNumbers([name], allowedNumbers);
-      const copy = { ...base.copy };
-      for (const format of FORMATS) {
-        const block = (incoming.copy as Record<string, unknown>)[format] as Record<string, unknown> | undefined;
-        if (!block || !Array.isArray(block.lines)) throw new Error("missing format");
-        const lines = block.lines.map((lineValue, index) => {
-          const line = lineValue as Record<string, unknown>;
-          const refs = Array.isArray(line.refs) ? line.refs.map(String) : [];
-          if (!refs.length || refs.some((ref) => !allowed.has(ref))) throw new Error("invalid refs");
-          const tag = line.tag ? String(line.tag) : undefined;
-          if ((format === "changelog" && (!tag || !TAGS.has(tag))) || (tag && !TAGS.has(tag))) throw new Error("invalid tag");
-          const short = String(line.short ?? "").trim();
-          const long = String(line.long ?? "").trim();
-          if (!short || !long) throw new Error("empty copy");
-          validateNumbers([short, long, line.emphasis ? String(line.emphasis) : undefined], allowedNumbers);
-          return {
-            id: String(line.id ?? `${base.id}:${format}:${index}`),
-            short,
-            long,
-            refs,
-            tag: tag as "Added" | "Changed" | "Fixed" | undefined,
-            emphasis: line.emphasis ? String(line.emphasis) : undefined
-          };
-        });
-        const lead = block.lead ? String(block.lead) : undefined;
-        const version = block.version ? String(block.version) : undefined;
-        validateNumbers([lead, version], allowedNumbers);
-        copy[format] = {
+      const block = incoming.copy as Record<string, unknown>;
+      const lead = block.lead ? String(block.lead).trim() : undefined;
+      const version = block.version ? String(block.version).trim() : undefined;
+      validateNumbers([lead, version], allowedNumbers);
+      const paragraphs = parseParagraphs(block.paragraphs, allowed, allowedNumbers, base.id, format);
+      if ((format === "perf" || format === "manager") && detail !== "headline" && !paragraphs.length) throw new Error("missing narrative");
+      if (format !== "perf" && format !== "manager" && paragraphs.length) throw new Error("unexpected narrative");
+      const copy = {
+        ...base.copy,
+        [format]: {
           lead,
           version,
-          lines
-        };
-      }
+          paragraphs,
+          lines: parseLines(block.lines, allowed, allowedNumbers, base.id, format, base.copy[format].lines)
+        }
+      };
       return { ...base, name, copy };
     });
-    return { ...fallback, generator: "ai", themes };
+    if (byId.size !== fallback.themes.length) return undefined;
+    return {
+      ...fallback,
+      generator: "ai",
+      aiFormats: Array.from(new Set([...(fallback.aiFormats ?? []), format])),
+      themes
+    };
   } catch {
     return undefined;
   }

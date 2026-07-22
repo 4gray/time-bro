@@ -92,14 +92,15 @@ const workspaceDraft = () => {
 };
 
 const workspaceResponse = (draft: ReturnType<typeof workspaceDraft>, sourceRef: string, themeId = draft.themes[0].id) => JSON.stringify({
+  format: "perf",
   themes: [{
     id: themeId,
     name: "Design review",
-    copy: Object.fromEntries((["perf", "manager", "cv", "standup", "changelog"] as const).map((format) => [format, {
+    copy: {
       lead: "Grounded update.",
-      version: format === "changelog" ? "Grounded release." : undefined,
-      lines: [{ id: `${format}-line`, short: "Completed grounded work.", long: "Completed grounded work from the cited evidence.", refs: [sourceRef], tag: format === "changelog" ? "Added" : undefined }]
-    }]))
+      paragraphs: [{ id: "perf-paragraph", text: "The available history records grounded work from the cited evidence.", refs: [sourceRef] }],
+      lines: [{ id: "perf-line", short: "Completed grounded work.", long: "Completed grounded work from the cited evidence.", refs: [sourceRef] }]
+    }
   }]
 });
 
@@ -114,20 +115,21 @@ describe("enhanceRecapWorkspace", () => {
 
     const result = await enhanceRecapWorkspace(draft, {
       provider: "claude-cli", endpoint: "", model: "sonnet", cliPath: "claude", redactLiterals: []
-    });
+    }, "perf", "detailed");
 
     expect(sentPrompt).not.toContain("note:fact");
     expect(sentPrompt).toContain("ID-1");
     expect(result.generator).toBe("ai");
+    expect(result.aiFormats).toContain("perf");
     expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["note:fact"]);
   });
 
   it("keeps the deterministic draft when the provider fails or returns invalid copy", async () => {
     const draft = workspaceDraft();
     mockGenerate(async () => ({ ok: false, message: "offline" }));
-    expect(await enhanceRecapWorkspace(draft, connection)).toBe(draft);
+    expect(await enhanceRecapWorkspace(draft, connection, "perf", "detailed")).toBe(draft);
     vi.restoreAllMocks();
     mockGenerate(async () => ({ ok: true, response: "{}" }));
-    expect(await enhanceRecapWorkspace(draft, connection)).toBe(draft);
+    expect(await enhanceRecapWorkspace(draft, connection, "perf", "detailed")).toBe(draft);
   });
 });

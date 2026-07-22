@@ -7,6 +7,7 @@ import type {
   RecapFormat,
   RecapInterval,
   RecapPeriod,
+  RecapSourceItem,
   RecapTheme,
   RecurringEntry,
   RecurringEvent,
@@ -15,6 +16,7 @@ import type {
 import { enhanceRecapWorkspace } from "../api/ollama";
 import {
   buildDeterministicRecap,
+  RECAP_SCHEMA_VERSION,
   recapIntervalForDate,
   recapIntervalFromKey,
   recapIntervalParam,
@@ -41,6 +43,61 @@ const PREF_KEY = "timebro-recap-preferences";
 const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "standup", "changelog"];
 const DETAILS: RecapDetail[] = ["headline", "balanced", "detailed"];
 const PERIODS: RecapPeriod[] = ["week", "month", "quarter"];
+type RecapOperation = "refreshing" | "rewriting";
+
+const sourceFingerprint = (source: RecapSourceItem) => JSON.stringify({
+  kind: source.kind,
+  dateKey: source.dateKey,
+  title: source.title,
+  seconds: source.timeSpentSeconds,
+  issueKey: source.issueKey,
+  epicKey: source.epicKey,
+  epicSummary: source.epicSummary,
+  projectKey: source.projectKey,
+  projectName: source.projectName,
+  components: [...(source.components ?? [])].sort(),
+  repository: source.repository,
+  pullRequestId: source.pullRequestId,
+  role: source.role,
+  status: source.status,
+  details: [...(source.details ?? [])].sort(),
+  dateKeys: [...(source.dateKeys ?? [])].sort()
+});
+
+const evidenceChangeCount = (current: RecapDraftVersion, latest: RecapDraftVersion) => {
+  const currentSources = new Map(current.sources.map((source) => [source.id, sourceFingerprint(source)]));
+  const latestSources = new Map(latest.sources.map((source) => [source.id, sourceFingerprint(source)]));
+  const ids = new Set([...currentSources.keys(), ...latestSources.keys()]);
+  const changedSources = [...ids].filter((id) => currentSources.get(id) !== latestSources.get(id)).length;
+  const coverageChanged = JSON.stringify(current.coverage) !== JSON.stringify(latest.coverage);
+  return Math.max(changedSources, coverageChanged ? 1 : 0);
+};
+
+const carryUserImpacts = (current: RecapDraftVersion | undefined, next: RecapDraftVersion): RecapDraftVersion => {
+  if (!current) return next;
+  const impacts = current.themes.flatMap((theme) => theme.copy.cv.lines)
+    .filter((line) => line.userImpact?.trim());
+  if (!impacts.length) return next;
+  return {
+    ...next,
+    themes: next.themes.map((theme) => ({
+      ...theme,
+      copy: {
+        ...theme.copy,
+        cv: {
+          ...theme.copy.cv,
+          lines: theme.copy.cv.lines.map((line) => {
+            const match = impacts
+              .map((candidate) => ({ candidate, overlap: candidate.refs.filter((ref) => line.refs.includes(ref)).length }))
+              .filter(({ overlap }) => overlap > 0)
+              .sort((a, b) => b.overlap - a.overlap)[0]?.candidate;
+            return match ? { ...line, needsImpact: false, userImpact: match.userImpact } : line;
+          })
+        }
+      }
+    }))
+  };
+};
 
 const routeParams = () => {
   if (typeof window === "undefined" || !window.location.hash.startsWith("#/recap")) return new URLSearchParams();
@@ -85,6 +142,7 @@ const confirmedRecurring = (
 });
 
 export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDemo, onSuccess, onError, demoEvidence, seedSavedRecaps, onSavedRecap }: UseRecapWorkspaceOptions) => {
+  const currentDateMs = currentDate.getTime();
   const initialParams = useMemo(routeParams, []);
   const prefs = useMemo(readPrefs, []);
   const initialPeriod = PERIODS.includes(initialParams.get("period") as RecapPeriod)
@@ -103,11 +161,11 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   });
   const interval = intervals[period];
   const [record, setRecord] = useState<RecapDraftRecord>();
-  const [evidence, setEvidence] = useState<RecapEvidenceInput>();
   const [saved, setSaved] = useState<SavedRecap[]>([]);
   const [selectedSavedId, setSelectedSavedId] = useState<string | undefined>(initialParams.get("saved") ?? undefined);
   const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [operation, setOperation] = useState<RecapOperation>();
+  const [newEvidenceCount, setNewEvidenceCount] = useState(0);
   const requestRef = useRef(0);
   const demoHistorySeededRef = useRef(false);
   const aiConnection = useAiConnection(settings);
@@ -115,6 +173,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   const activeDraft = useMemo(() => record?.versions.find((version) => version.version === record.activeVersion), [record]);
   const selectedSaved = saved.find((item) => item.id === selectedSavedId);
   const displayedDraft = selectedSaved?.version ?? activeDraft;
+  const isGenerating = Boolean(operation);
 
   useEffect(() => {
     if (!selectedSaved) return;
@@ -205,64 +264,92 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
       reconstructDrafts: drafts
     };
   }, [demoEvidence, isDemo, recurringEvents]);
+  const loadEvidenceRef = useRef(loadEvidence);
+  const onErrorRef = useRef(onError);
+  loadEvidenceRef.current = loadEvidence;
+  onErrorRef.current = onError;
 
   useEffect(() => {
     const request = ++requestRef.current;
     setIsLoading(true);
-    setIsGenerating(false);
-    void Promise.all([loadEvidence(interval), isDemo ? Promise.resolve(undefined) : getRecapDraft(interval.key)]).then(async ([nextEvidence, stored]) => {
+    setOperation(undefined);
+    void Promise.all([loadEvidenceRef.current(interval), isDemo ? Promise.resolve(undefined) : getRecapDraft(interval.key)]).then(([nextEvidence, stored]) => {
       if (request !== requestRef.current) return;
-      setEvidence(nextEvidence);
-      if (stored?.versions.length) {
+      const storedActive = stored?.versions.find((version) => version.version === stored.activeVersion);
+      if (stored?.versions.length && storedActive?.schemaVersion === RECAP_SCHEMA_VERSION) {
         setRecord(stored);
+        setNewEvidenceCount(evidenceChangeCount(storedActive, buildDeterministicRecap(nextEvidence, storedActive.version, new Date(currentDateMs))));
         setIsLoading(false);
         return;
       }
-      const first = buildDeterministicRecap(nextEvidence, 1, currentDate);
-      const created = { intervalKey: interval.key, activeVersion: 1, versions: [first] };
+      const version = stored?.versions.length ? Math.max(...stored.versions.map((item) => item.version)) + 1 : 1;
+      const first = carryUserImpacts(storedActive, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
+      const created = {
+        intervalKey: interval.key,
+        activeVersion: version,
+        versions: [...(stored?.versions ?? []), first]
+      };
       setRecord(created);
+      setNewEvidenceCount(0);
       setIsLoading(false);
-      if (!isDemo) void saveRecapDraft(created).catch(() => onError("Unable to save the recap draft."));
-      if (!settings.aiEnabled || !first.themes.length) return;
-      setIsGenerating(true);
-      const enhanced = await enhanceRecapWorkspace(first, aiConnection);
-      if (request !== requestRef.current) return;
-      const completed = { ...created, versions: [enhanced] };
-      setRecord(completed);
-      if (!isDemo) void saveRecapDraft(completed).catch(() => onError("Unable to save the recap draft."));
-      setIsGenerating(false);
+      if (!isDemo) void saveRecapDraft(created).catch(() => onErrorRef.current("Unable to save the recap draft."));
     }).catch((error) => {
       console.error(error);
       if (request === requestRef.current) {
-        setIsGenerating(false);
+        setOperation(undefined);
         setIsLoading(false);
-        onError("Unable to build this recap from local history.");
+        onErrorRef.current("Unable to build this recap from local history.");
       }
     });
-  }, [aiConnection, currentDate, interval, isDemo, loadEvidence, onError, settings.aiEnabled]);
+  }, [currentDateMs, interval, isDemo]);
 
   const persistRecord = useCallback((next: RecapDraftRecord) => {
     setRecord(next);
     if (!isDemo) void saveRecapDraft(next).catch(() => onError("Unable to save the recap draft."));
   }, [isDemo, onError]);
 
-  const regenerate = useCallback(async () => {
-    if (!evidence || isGenerating) return;
+  const refreshActivity = useCallback(async () => {
+    if (operation) return;
+    const request = ++requestRef.current;
+    setOperation("refreshing");
+    try {
+      const nextEvidence = await loadEvidence(interval);
+      if (request !== requestRef.current) return;
+      const version = Math.max(0, ...(record?.versions.map((item) => item.version) ?? [])) + 1;
+      const draft = carryUserImpacts(activeDraft, buildDeterministicRecap(nextEvidence, version, new Date(currentDateMs)));
+      persistRecord({ intervalKey: interval.key, activeVersion: version, versions: [...(record?.versions ?? []), draft] });
+      setNewEvidenceCount(0);
+      onSuccess(`Refreshed from cached activity as version ${version}`);
+    } catch (error) {
+      console.error(error);
+      if (request === requestRef.current) onError("Unable to refresh this recap from cached activity.");
+    } finally {
+      if (request === requestRef.current) setOperation(undefined);
+    }
+  }, [activeDraft, currentDateMs, interval, loadEvidence, onError, onSuccess, operation, persistRecord, record]);
+
+  const rewriteWithAi = useCallback(async () => {
+    if (!activeDraft || operation || !settings.aiEnabled || !activeDraft.themes.length) return;
     const request = ++requestRef.current;
     const version = Math.max(0, ...(record?.versions.map((item) => item.version) ?? [])) + 1;
-    setIsGenerating(true);
-    const draft = buildDeterministicRecap(evidence, version);
-    const next = { intervalKey: interval.key, activeVersion: version, versions: [...(record?.versions ?? []), draft] };
-    persistRecord(next);
-    if (!settings.aiEnabled || !draft.themes.length) {
-      setIsGenerating(false);
+    const candidate = {
+      ...structuredClone(activeDraft),
+      version,
+      generatedAt: new Date().toISOString(),
+      editedAt: undefined
+    };
+    setOperation("rewriting");
+    const enhanced = await enhanceRecapWorkspace(candidate, aiConnection, format, detail);
+    if (request !== requestRef.current) return;
+    if (!enhanced.aiFormats?.includes(format)) {
+      onError("AI could not produce a grounded recap. Kept the current version unchanged.");
+      setOperation(undefined);
       return;
     }
-    const enhanced = await enhanceRecapWorkspace(draft, aiConnection);
-    if (request !== requestRef.current) return;
-    persistRecord({ ...next, versions: next.versions.map((item) => item.version === version ? enhanced : item) });
-    setIsGenerating(false);
-  }, [aiConnection, evidence, interval.key, isGenerating, persistRecord, record, settings.aiEnabled]);
+    persistRecord({ intervalKey: interval.key, activeVersion: version, versions: [...(record?.versions ?? []), enhanced] });
+    onSuccess(`Created AI version ${version}`);
+    setOperation(undefined);
+  }, [activeDraft, aiConnection, detail, format, interval.key, onError, onSuccess, operation, persistRecord, record, settings.aiEnabled]);
 
   const updateTheme = useCallback((themeId: string, update: (theme: RecapTheme) => RecapTheme) => {
     if (!record || selectedSaved) return;
@@ -311,8 +398,10 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
 
   return {
     period, format: selectedSaved?.format ?? format, detail: selectedSaved?.detail ?? detail, interval,
-    record, activeDraft, displayedDraft, selectedSaved, saved, isLoading, isGenerating, canStepNext,
-    setPeriod, setFormat, setDetail, stepInterval, regenerate, updateTheme, setActiveVersion,
+    record, activeDraft, displayedDraft, selectedSaved, saved, isLoading, isGenerating,
+    isRefreshing: operation === "refreshing", isRewriting: operation === "rewriting", newEvidenceCount, canStepNext,
+    canEnhanceWithAi: settings.aiEnabled,
+    setPeriod, setFormat, setDetail, stepInterval, refreshActivity, rewriteWithAi, updateTheme, setActiveVersion,
     saveCurrent, duplicateSaved, selectSaved: setSelectedSavedId, closeSaved: () => setSelectedSavedId(undefined)
   };
 };
