@@ -37,8 +37,8 @@ workflow, and prepare controlled publication through the Snap Store.
 
 ## External actions
 
-- Complete Store listing metadata and media.
-- Test the Store revision on Ubuntu and promote it beyond `edge`.
+- [x] Complete Store listing metadata and media.
+- [ ] Test the Store revision on Ubuntu and promote it beyond `edge`.
 
 ## Verification
 
@@ -65,6 +65,9 @@ workflow, and prepare controlled publication through the Snap Store.
   for `timebro` version `2.7.2` (`amd64`) and released it to `latest/edge` on
   2026-07-22. The public Store API reports the MIT license and
   <https://snapcraft.io/timebro> listing URL.
+- The public listing shows the full description, Productivity category, MIT
+  license, icon, and five screenshots for Today, Week, Month, Reports, and
+  Settings.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.

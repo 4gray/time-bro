@@ -47,7 +47,7 @@ by Atlassian.
 
 ## Links
 
-- Website: `https://github.com/4gray/time-bro`
+- Website: `https://4gray.github.io/time-bro/`
 - Source code: `https://github.com/4gray/time-bro`
 - Contact/support: `https://github.com/4gray/time-bro/issues`
 - Privacy information: `https://github.com/4gray/time-bro#data--privacy`
@@ -55,24 +55,25 @@ by Atlassian.
 ## Media
 
 - Store icon: `build/icons/512x512.png`
-- Recommended screenshots:
-  - `docs/screenshots/v2.4.0/dark-week.png`
+- Uploaded screenshots:
   - `docs/screenshots/v2.4.0/dark-today.png`
-  - `docs/screenshots/v2.4.0/dark-recon.png`
+  - `docs/screenshots/v2.4.0/dark-week.png`
+  - `docs/screenshots/v2.4.0/dark-month.png`
   - `docs/screenshots/v2.4.0/dark-reports.png`
   - `docs/screenshots/v2.4.0/dark-settings.png`
 
-The icon is 512×512 and below the Store's 256 KB limit. The listed screenshots
-fit the Store's size and aspect-ratio limits. Re-capture or confirm them from
-the final Snap on Ubuntu before submitting the stable listing.
+The icon is 512×512 and below the Store's 256 KB limit. Version 2.4.0 is the
+latest repository media set containing all five requested views. The listed
+screenshots fit the Store's size and aspect-ratio limits. Re-capture or confirm
+them from the final Snap on Ubuntu before promoting the snap to stable.
 
 ## Final dashboard checklist
 
 - [x] Register `timebro` with the intended publisher account.
 - [x] Add the MIT license.
 - [x] Configure restricted GitHub Actions Store credentials.
-- [ ] Paste the title, summary, categories, description, and links.
-- [ ] Upload the icon and up to five final Linux screenshots.
+- [x] Paste the title, summary, primary category, description, and links.
+- [x] Upload the icon and five Linux screenshots.
 - [x] Upload the first revision to `edge` (version 2.7.2, revision 1).
 - [ ] Install the Store revision on a clean Ubuntu system.
 - [ ] Complete the Wayland and X11 smoke-test checklist in the README.
