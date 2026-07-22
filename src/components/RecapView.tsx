@@ -66,6 +66,13 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
     setImpactLineId(undefined);
     setImpactDraft("");
   };
+  const removeImpact = (lineId: string) => {
+    onUpdate({ ...theme, copy: { ...theme.copy, cv: { ...theme.copy.cv,
+      lines: theme.copy.cv.lines.map((line) => line.id === lineId ? { ...line, needsImpact: true, userImpact: undefined } : line)
+    } } });
+    setImpactLineId(undefined);
+    setImpactDraft("");
+  };
   return <article className={`recap-theme is-${theme.colorToken}`}>
     <header className="recap-theme-head">
       <span className="recap-theme-chip" />
@@ -98,7 +105,7 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
           <p>Describe an observed result, who benefited, or a measure you can stand behind.</p>
           <textarea id={`impact-${line.id}`} autoFocus value={impactDraft} onChange={(event) => setImpactDraft(event.target.value)} placeholder="Describe the result you observed" />
           <small>Examples: unblocked a release, reduced a recurring task, helped another team adopt the flow.</small>
-          <div><button type="button" onClick={() => setImpactLineId(undefined)}>Cancel</button><button type="submit" className="is-primary" disabled={!impactDraft.trim()}><Check size={13} /> Save outcome</button></div>
+          <div>{line.userImpact && <button type="button" onClick={() => removeImpact(line.id)}>Remove outcome</button>}<button type="button" onClick={() => setImpactLineId(undefined)}>Cancel</button><button type="submit" className="is-primary" disabled={!impactDraft.trim()}><Check size={13} /> Save outcome</button></div>
         </form>}</div>)}
       </div>
       {format === "perf" && detail === "detailed" && <footer className="recap-theme-sources"><span>SOURCES</span>{sourceRefs.slice(0, 3).map((ref) => <code key={ref}>{ref}</code>)}</footer>}

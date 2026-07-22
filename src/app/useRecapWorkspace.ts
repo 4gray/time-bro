@@ -161,6 +161,8 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   });
   const interval = intervals[period];
   const [record, setRecord] = useState<RecapDraftRecord>();
+  const recordRef = useRef<RecapDraftRecord>();
+  recordRef.current = record;
   const [saved, setSaved] = useState<SavedRecap[]>([]);
   const [selectedSavedId, setSelectedSavedId] = useState<string | undefined>(initialParams.get("saved") ?? undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -304,6 +306,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   }, [currentDateMs, interval, isDemo]);
 
   const persistRecord = useCallback((next: RecapDraftRecord) => {
+    recordRef.current = next;
     setRecord(next);
     if (!isDemo) void saveRecapDraft(next).catch(() => onError("Unable to save the recap draft."));
   }, [isDemo, onError]);
@@ -331,6 +334,8 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
   const rewriteWithAi = useCallback(async () => {
     if (!activeDraft || operation || !settings.aiEnabled || !activeDraft.themes.length) return;
     const request = ++requestRef.current;
+    const sourceVersion = activeDraft.version;
+    const sourceEditedAt = activeDraft.editedAt;
     const version = Math.max(0, ...(record?.versions.map((item) => item.version) ?? [])) + 1;
     const candidate = {
       ...structuredClone(activeDraft),
@@ -346,8 +351,21 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
       setOperation(undefined);
       return;
     }
-    persistRecord({ intervalKey: interval.key, activeVersion: version, versions: [...(record?.versions ?? []), enhanced] });
-    onSuccess(`Created AI version ${version}`);
+    const latest = recordRef.current;
+    if (!latest || latest.intervalKey !== interval.key) {
+      setOperation(undefined);
+      return;
+    }
+    const completedVersion = Math.max(0, ...latest.versions.map((item) => item.version)) + 1;
+    const latestSource = latest.versions.find((item) => item.version === sourceVersion);
+    const sourceChangedWhileWriting = latestSource?.editedAt !== sourceEditedAt;
+    const keepCurrentSelection = latest.activeVersion !== sourceVersion || sourceChangedWhileWriting;
+    persistRecord({
+      ...latest,
+      activeVersion: keepCurrentSelection ? latest.activeVersion : completedVersion,
+      versions: [...latest.versions, { ...enhanced, version: completedVersion }]
+    });
+    onSuccess(`Created AI version ${completedVersion}`);
     setOperation(undefined);
   }, [activeDraft, aiConnection, detail, format, interval.key, onError, onSuccess, operation, persistRecord, record, settings.aiEnabled]);
 

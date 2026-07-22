@@ -154,6 +154,39 @@ describe("useRecapWorkspace generation", () => {
     expect(getWorkspace().activeDraft?.version).toBe(1);
   });
 
+  it("preserves edits and version selection made while an AI rewrite is pending", async () => {
+    act(() => root.render(<Harness />));
+    await flush();
+    await act(async () => { await getWorkspace().refreshActivity(); });
+    expect(getWorkspace().activeDraft?.version).toBe(2);
+
+    const pending = deferred<RecapDraftVersion>();
+    let candidate: RecapDraftVersion | undefined;
+    vi.spyOn(aiApi, "enhanceRecapWorkspace").mockImplementation(async (draft) => {
+      candidate = draft;
+      return pending.promise;
+    });
+    let rewrite!: Promise<void>;
+    act(() => { rewrite = getWorkspace().rewriteWithAi(); });
+
+    const theme = getWorkspace().activeDraft!.themes[0];
+    act(() => getWorkspace().updateTheme(theme.id, (current) => ({ ...current, name: "Edited while AI was writing" })));
+    await flush();
+    act(() => getWorkspace().setActiveVersion(1));
+    await flush();
+
+    await act(async () => {
+      pending.resolve({ ...candidate!, generator: "ai", aiFormats: ["perf"] });
+      await rewrite;
+    });
+
+    expect(getWorkspace().record?.activeVersion).toBe(1);
+    expect(getWorkspace().record?.versions).toHaveLength(3);
+    expect(getWorkspace().record?.versions.find((version) => version.version === 2)?.themes[0].name)
+      .toBe("Edited while AI was writing");
+    expect(getWorkspace().record?.versions.find((version) => version.version === 3)).toMatchObject({ generator: "ai" });
+  });
+
   it("refreshes into a new local version and carries user-provided CV impact", async () => {
     act(() => root.render(<Harness />));
     await flush();

@@ -124,4 +124,26 @@ describe("RecapView", () => {
       userImpact: "Unblocked the release review for the platform team"
     });
   });
+
+  it("removes a saved CV outcome and marks the candidate as needing impact again", () => {
+    const withImpact = structuredClone(draft);
+    withImpact.themes[0].copy.cv.lines[0] = {
+      ...withImpact.themes[0].copy.cv.lines[0],
+      needsImpact: false,
+      userImpact: "Reduced the weekly release review by one hour"
+    };
+    const ws = workspace(undefined, "cv");
+    ws.record = { intervalKey: withImpact.interval.key, activeVersion: 1, versions: [withImpact] };
+    ws.activeDraft = withImpact;
+    ws.displayedDraft = withImpact;
+    render(ws);
+
+    click(button("Edit outcome"));
+    click(button("Remove outcome"));
+
+    expect(ws.updateTheme).toHaveBeenCalledOnce();
+    const updated = vi.mocked(ws.updateTheme).mock.calls[0][1](withImpact.themes[0]);
+    expect(updated.copy.cv.lines[0]).toMatchObject({ needsImpact: true });
+    expect(updated.copy.cv.lines[0].userImpact).toBeUndefined();
+  });
 });
