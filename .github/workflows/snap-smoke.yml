@@ -40,7 +40,7 @@ jobs:
 
           for plug in network home browser-support; do
             snap connections yesterlog | awk -v expected="yesterlog:$plug" '
-              $1 == expected && $2 != "-" { connected = 1 }
+              $2 == expected && $3 != "-" { connected = 1 }
               END { exit connected ? 0 : 1 }
             '
           done
