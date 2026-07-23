@@ -103,13 +103,13 @@ function snapTypography() {
       font-weight="700" letter-spacing="-3">Yester<tspan fill="#6f93ff">log</tspan></text>
     <text x="120" y="334" fill="#f5f3f0"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="72"
-      font-weight="700" letter-spacing="-2.5">Your whole week.</text>
+      font-weight="700" letter-spacing="-2.5">Your work,</text>
     <text x="120" y="420" fill="#8fabff"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="68"
-      font-weight="600" letter-spacing="-2.2">Every gap. One window.</text>
+      font-weight="600" letter-spacing="-2.2">remembered.</text>
     <text x="120" y="500" fill="#b7b4ad"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="29"
-      font-weight="500" letter-spacing="-.35">Local-first Jira time tracking on your desktop.</text>`,
+      font-weight="500" letter-spacing="-.35">Reconstruct · complete · recap — local-first.</text>`,
   );
 }
 
@@ -130,13 +130,13 @@ function githubTypography() {
       font-weight="700" letter-spacing="-2.4">Yester<tspan fill="#6f93ff">log</tspan></text>
     <text x="72" y="278" fill="#f5f3f0"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="66"
-      font-weight="700" letter-spacing="-2.6">Your whole week.</text>
+      font-weight="700" letter-spacing="-2.6">Your work,</text>
     <text x="72" y="352" fill="#8fabff"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="50"
-      font-weight="600" letter-spacing="-1.8">Every gap. One window.</text>
+      font-weight="600" letter-spacing="-1.8">remembered.</text>
     <text x="72" y="422" fill="#b7b4ad"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="27"
-      font-weight="500" letter-spacing="-.35">Local-first Jira time tracking.</text>`,
+      font-weight="500" letter-spacing="-.35">Reconstruct · complete · recap.</text>`,
   );
 }
 

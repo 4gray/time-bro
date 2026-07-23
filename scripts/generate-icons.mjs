@@ -93,7 +93,7 @@ await writeFile(
     {
       name: "Yesterlog",
       short_name: "Yesterlog",
-      description: "Local weekly Jira time tracking",
+      description: "Local-first work memory for developers who use Jira",
       icons: [
         {
           src: "/src/assets/app-icon-192.png",

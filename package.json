@@ -2,7 +2,7 @@
   "name": "yesterlog",
   "version": "3.0.0",
   "private": true,
-  "description": "Yesterlog is local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.",
+  "description": "Yesterlog is a local-first work memory for developers who use Jira.",
   "license": "MIT",
   "author": "fourgray <fourgray@proton.me>",
   "repository": {
@@ -115,8 +115,8 @@
     "linux": {
       "icon": "build/icons/512x512.png",
       "category": "Office",
-      "synopsis": "Local weekly Jira time tracking",
-      "description": "Yesterlog is a local-first desktop companion for weekly Jira time tracking. Sync and review Jira worklogs, reconstruct forgotten days without AI, or optionally polish drafts with local Ollama, Anthropic via the Claude CLI, or OpenAI via the Codex CLI. Cloud AI is opt-in and uses your existing CLI authentication. There is no Yesterlog backend or telemetry.",
+      "synopsis": "Local-first work memory for developers who use Jira",
+      "description": "Yesterlog is a local-first work memory for developers who use Jira. Reconstruct forgotten days from Jira and optional Bitbucket activity, complete accurate worklogs, and turn grounded work history into standups, manager updates, performance reviews, CV drafts, and changelogs. The deterministic core needs no AI; optional Ollama, Claude CLI, and Codex CLI assistance is explicit and off by default. There is no Yesterlog backend or telemetry.",
       "syncDesktopName": true,
       "target": [
         "AppImage",
@@ -134,7 +134,7 @@
       "base": "core24",
       "core24": {
         "title": "Yesterlog",
-        "summary": "Local weekly Jira time tracking for your desktop",
+        "summary": "Local-first work memory for developers who use Jira",
         "confinement": "strict",
         "grade": "stable",
         "extensions": [

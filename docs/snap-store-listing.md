@@ -6,7 +6,7 @@ Use this copy and media checklist when completing the Snap Store dashboard.
 
 - Snap name: `yesterlog`
 - Title: `Yesterlog`
-- Summary: `Local weekly Jira time tracking for your desktop`
+- Summary: `Local-first work memory for developers who use Jira`
 - Primary category: Productivity
 - Secondary category: Development
 - License: MIT
@@ -16,29 +16,35 @@ long-term publisher.
 
 ## Description
 
-Yesterlog is a local-first desktop companion for weekly Jira time tracking.
+Yesterlog is a local-first work memory for developers who use Jira.
 
-Connect your Jira Cloud account with a regular Atlassian API token, review the
-worklogs you have already recorded, and log new work without living in Jira's
-timesheet screens. Yesterlog keeps Monday-local weekly totals, daily targets,
-vacation adjustments, ticket history, reports, recurring events, and personal
-notes together in one focused desktop workspace.
+Connect your Jira Cloud account with a regular Atlassian API token and Yesterlog
+turns the work evidence you already leave behind into a record you can use.
+Review and complete worklogs without living in Jira's timesheet screens, find
+missing days, and keep Monday-local totals, daily targets, ticket history,
+recurring events, reports, and personal notes in one focused desktop workspace.
 
 Day Reconstruction can rebuild a forgotten workday from Jira worklogs and
 optional Bitbucket commits and pull-request review activity. Its deterministic
-core works without AI. If you enable the optional AI layer, choose Ollama for
-fully local processing, Anthropic through the Claude CLI, or OpenAI through the
-Codex CLI. The cloud options use your existing CLI authentication and receive a
-best-effort-redacted version of the day's signals. Yesterlog has no hosted backend
-or telemetry.
+core works without AI. Recap uses the same grounded local history to draft a
+standup, manager update, performance review, CV candidate, or changelog for a
+week, month, or quarter, with links back to the supporting sources and a local
+brag doc for saved snapshots.
+
+If you enable the optional AI layer, choose Ollama for fully local processing,
+Anthropic through the Claude CLI, or OpenAI through the Codex CLI. The cloud
+options use your existing CLI authentication and receive best-effort-redacted
+signals. Yesterlog has no hosted backend or telemetry.
 
 Highlights:
 
-- Sync and review your Jira worklogs by day, week, and month.
+- Reconstruct forgotten days from Jira and optional Bitbucket activity.
 - Add, edit, and delete Jira worklogs from the intentional time-entry flow.
+- Turn a week, month, or quarter into a grounded recap for standups, managers,
+  performance reviews, CV drafts, or changelogs.
+- Inspect recap sources, compare versions, export drafts, and save a local brag doc.
 - Search Jira tickets and keep frequently used work close at hand.
-- Reconstruct missed days from Jira and optional Bitbucket activity.
-- Review reporting, daily targets, recurring events, and local personal notes.
+- Review reports, daily targets, recurring events, and local personal notes.
 - Import and export weekly CSV data.
 - Keep credentials and synced data on your own device.
 - No Yesterlog account, hosted backend, telemetry, or cloud AI requirement.
@@ -57,7 +63,7 @@ by Atlassian.
 
 - Store icon: `build/icons/512x512.png`
 - Featured banner: `docs/media/yesterlog-snap-featured-banner.png`
-  - 2160×720 (3:1), 513 KB; Store limit: 720×240-4320×1440, 2 MB.
+  - 2160×720 (3:1), 584 KB; Store limit: 720×240-4320×1440, 2 MB.
 - GitHub social preview: `docs/media/yesterlog-github-social-preview.png`
   - 1280×640 (2:1), 253 KB; GitHub limit: below 1 MB.
 - Release screenshots:

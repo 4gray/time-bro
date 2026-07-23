@@ -5,7 +5,11 @@
 <h1 align="center">Yesterlog 🐻⏱️</h1>
 
 <p align="center">
-  <strong>Your desk buddy for Jira time tracking — so logging hours stops feeling like a chore.</strong>
+  <strong>Your work, remembered.</strong>
+</p>
+
+<p align="center">
+  Reconstruct your days, complete your Jira worklogs, and turn your work history into recaps you can actually use.
 </p>
 
 <p align="center">
@@ -23,11 +27,11 @@ So your manager has bravely decided that **every minute is a tiny KPI waiting to
 
 That's where Yesterlog comes in. 🤝
 
-Yesterlog is a calm little desktop app that turns your messy week into a tidy cockpit: **what's logged, what's missing, which days are off, and which ticket still needs a few hours before the week closes.** Pick a ticket, tap a duration, done. Or just **drag an in-progress ticket onto a day** and watch your weekly ring fill up.
+Yesterlog reconstructs your work from the evidence you already leave behind — **Jira activity and worklogs, commits, pull-request reviews, recurring meetings, and local notes.** It helps you find the gaps, complete the record, and turn the same grounded history into standups, manager updates, performance reviews, CV bullets, and changelogs.
 
-Your manager gets clean worklogs. You get your Friday back. 🎉
+Your manager gets clean worklogs. You get your Friday back — and a record of the work you'll need when review season arrives. 🎉
 
-> 🔒 **No Yesterlog backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB. Yesterlog connects directly to the services you choose: Jira, optional Bitbucket, and—only if you enable a cloud AI provider—Anthropic or OpenAI.
+> 🔒 **Local-first by design. No Yesterlog backend. No telemetry. No "log in with your soul."** The deterministic core works without AI. Your data lives on your machine in plain old IndexedDB; optional AI is always your choice: local through Ollama, or through your existing Claude or Codex CLI authentication.
 
 <p align="center">
   <img src="./docs/screenshots/v3.0.0/dark-week.png" alt="Yesterlog Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
@@ -39,16 +43,14 @@ Your manager gets clean worklogs. You get your Friday back. 🎉
 
 ---
 
-## Why you'll like it
+## From traces to proof
 
-- ⚡ **Two-click logging.** Pick a ticket, tap `2h`, hit save. There's even a `Cmd/Ctrl-K` for the impatient.
-- 🎯 **Targets that keep you honest.** Daily and weekly goals, with vacation days that quietly redistribute the rest of your week.
-- 🖱️ **Drag-and-drop time.** Grab a card from the Active Work dock and drop it on any day.
-- 🔍 **Log to *any* ticket.** Search all of Jira from the composer — not just the handful assigned to you.
-- ✏️ **Fix mistakes.** Edit or delete worklogs right from the app.
-- 👀 **Code review counts too.** Optional Bitbucket integration estimates your PR-review time and logs it for you.
-- 📅 **Zoom out.** A Month calendar hunts down the days you forgot, and Reports turn it all into numbers (and CSV).
-- 🌗 **Light or dark, your call.** A warm, editorial design that's easy on the eyes either way.
+- 🧩 **Reconstruct.** Rebuild a forgotten day from Jira and Bitbucket activity, with a deterministic core that never needs AI.
+- ✅ **Complete.** Fill the gaps with two-click logging, drag-and-drop, timeline editing, recurring rituals, and local-only notes.
+- ✨ **Recap.** Turn a week, month, or quarter into a standup, manager update, performance review, CV draft, or changelog.
+- 🔎 **See what is missing.** Week and Month views surface under-target days; Reports show the shape and focus of your recorded work.
+- 🔗 **Keep the evidence attached.** Recap lines stay grounded in the tickets, commits, pull requests, meetings, and notes behind them.
+- 🔒 **Stay in control.** No hosted Yesterlog account or telemetry. AI is optional, explicit, and off by default.
 
 ---
 
@@ -83,6 +85,18 @@ Connect Bitbucket Cloud and Yesterlog estimates how long you spent reviewing eac
 Forgot to log a day? Open **Reconstruct** and Yesterlog rebuilds it from the signals it already syncs — your Bitbucket **commits**, **PR reviews**, and the Jira time **already logged** — laid out on a 09:00→18:00 timeline. **Drag each signal onto the hour it belongs to** (or place them all at once), fine-tune any entry's duration, and watch the day add up. Step back through the last couple of weeks to catch the day you missed; today never offers hours that haven't happened yet.
 
 It works **completely without AI**. Optional AI can polish raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences: choose **[Ollama](https://ollama.com)** for fully local processing, **Anthropic via the Claude CLI**, or **OpenAI via the Codex CLI**. The cloud options use your existing CLI authentication and receive a best-effort-redacted version of the day’s signals. AI is off by default; the deterministic reconstruction is always the floor, and Yesterlog still has no hosted backend or telemetry.
+
+<p align="center">
+  <img src="./docs/screenshots/v3.0.0/dark-recon.png" alt="Yesterlog Reconstruct view with work signals arranged on a day timeline, visible gaps, duration controls, and optional AI-drafted worklog descriptions." width="900" />
+</p>
+
+### ✨ Recap — turn work history into something useful
+
+Choose a week, month, or quarter and Yesterlog turns the local evidence it already has into a **performance review, manager update, CV draft, standup digest, or changelog**. Every section stays linked to its sources. Edit the draft, compare versions, optionally rewrite one with AI, export it as text, Markdown, or PDF, and save the strongest snapshots to your local brag doc.
+
+<p align="center">
+  <img src="./docs/screenshots/v3.0.0/dark-recap.png" alt="Yesterlog Recap workspace with performance-review copy grouped by workstream, period and format controls, source links, version history, export actions, and a local brag doc." width="900" />
+</p>
 
 ### 🏷️ Tickets — your workload, starred and sorted
 
@@ -141,6 +155,18 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 - Activity on **your own PRs** counts as work, not review; your commits are grouped by branch → ticket.
 - Optional AI drafts clean worklog prose, with a clear highlight and a **Stop** control. Choose **local [Ollama](https://ollama.com)**, **Anthropic through the Claude CLI**, or **OpenAI through the Codex CLI**.
 - Placements, durations, and AI drafts are cached per day in IndexedDB. Ollama stays on-device; Claude and Codex send best-effort-redacted prompts to their respective clouds using your existing CLI authentication.
+
+</details>
+
+<details>
+<summary><strong>Recap &amp; brag doc</strong> <em>(optional AI)</em></summary>
+
+- Build grounded recaps for a **week, month, or quarter** from cached Jira, Bitbucket, recurring, reconstruction, and local-note evidence.
+- Switch between **Performance review, Manager update, CV bullets, Standup digest, and Changelog** without re-syncing.
+- Choose Brief, Standard, or Detailed copy; inspect the sources behind every workstream and edit the result in place.
+- Keep deterministic local drafts as the floor, and create a separate version only when you explicitly ask AI to rewrite one.
+- Save immutable snapshots to a local **brag doc**, then copy text, download Markdown, or print/save as PDF.
+- Add trusted outcomes to CV candidates without letting AI invent impact that was never present in the evidence.
 
 </details>
 
@@ -312,7 +338,7 @@ The **Review** nav item only appears once Bitbucket is configured, and the integ
 - API calls are made by the Electron main process over IPC.
 - **AI is optional and off by default.** [Ollama](https://ollama.com) runs on-device (default `localhost:11434`) and sends nothing to a cloud. You can instead select Anthropic via the Claude CLI or OpenAI via the Codex CLI; those choices send a best-effort-redacted prompt to the selected provider under your existing CLI authentication and provider terms. Yesterlog does not store those CLI credentials, operate an AI proxy, or add telemetry.
 
-**IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`, `reconstructDrafts`, `reconstructAiDrafts`.
+**IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `jiraActivityResults`, `jiraWorklogs`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`, `reconstructDrafts`, `reconstructAiDrafts`, `recapDrafts`, `savedRecaps`, `worklogAllocationPreferences`.
 
 <details>
 <summary>How the Jira work log sync actually works</summary>
