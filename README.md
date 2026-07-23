@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/4gray/yesterlog/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/4gray/yesterlog?style=flat-square&amp;label=version&amp;color=4C6EF5"></a>
+  <a href="https://github.com/4gray/yesterlog/releases/latest"><img alt="Version 3.0.0" src="https://img.shields.io/badge/version-3.0.0-4C6EF5?style=flat-square"></a>
   <img alt="macOS, Windows, and Linux" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-2DBF7F?style=flat-square">
   <img alt="Local-first with no telemetry" src="https://img.shields.io/badge/local--first-no%20telemetry-EC9A3C?style=flat-square">
   <img alt="Built with Electron and React" src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-2A2724?style=flat-square">
