@@ -26,6 +26,7 @@ import {
 import { getWindowStateOptions, MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH, trackWindowState } from "./windowState";
 import { getSafeReleaseUrl } from "../shared/releases";
 import { isCursorPromptDeeplink } from "../shared/cursorDeeplink";
+import { migrateLegacyUserData } from "./userDataMigration";
 import type {
   AddWorklogRequest,
   AiGenerateRequest,
@@ -45,6 +46,23 @@ import type {
 
 let mainWindow: BrowserWindow | undefined;
 let appAutoUpdater: AppAutoUpdaterService | undefined;
+
+const appDataPath = app.getPath("appData");
+const yesterlogUserDataPath = path.join(appDataPath, "yesterlog");
+const userDataMigration = migrateLegacyUserData({
+  appDataPath,
+  currentUserDataPath: yesterlogUserDataPath,
+  env: process.env
+});
+
+app.setPath("userData", userDataMigration.userDataPath);
+
+if (userDataMigration.status === "legacy-fallback") {
+  console.error(
+    `Yesterlog could not migrate the desktop profile and will use the existing profile at ${userDataMigration.userDataPath}.`,
+    userDataMigration.error
+  );
+}
 
 const sendAutoUpdateState = (state: ReturnType<AppAutoUpdaterService["getState"]>) => {
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -82,7 +100,7 @@ const createWindow = async () => {
     ...windowStateOptions,
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
-    title: "TimeBro",
+    title: "Yesterlog",
     backgroundColor: "#fdfdfb",
     icon: getWindowIconPath(),
     autoHideMenuBar: process.platform === "linux",
@@ -254,7 +272,7 @@ ipcMain.handle("app:open-cursor-prompt", async (_event, url: unknown): Promise<O
 });
 
 app.whenReady().then(async () => {
-  app.setAppUserModelId("local.timebro");
+  app.setAppUserModelId("io.github.fourgray.yesterlog");
   await createWindow();
 
   app.on("activate", async () => {

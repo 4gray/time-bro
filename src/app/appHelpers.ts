@@ -198,17 +198,17 @@ export const createDemoUpdateInfo = (updateAvailable = false): AppUpdateInfo => 
   return {
     currentVersion: "1.0.0",
     latestVersion,
-    releaseName: updateAvailable ? "TimeBro v1.3.0" : undefined,
+    releaseName: updateAvailable ? "Yesterlog v1.3.0" : undefined,
     releaseNotes: updateAvailable
       ? "## Highlights\n\n- Added in-app release notes for update prompts.\n- Added direct platform downloads from GitHub release assets.\n- Kept the update snackbar visible while the notes dialog is open."
       : "Maintenance polish for the local preview build.",
     releasePageUrl: updateAvailable
-      ? "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+      ? "https://github.com/4gray/yesterlog/releases/tag/v1.3.0"
       : GITHUB_RELEASES_URL,
     downloadUrl: updateAvailable
-      ? "https://github.com/4gray/time-bro/releases/download/v1.3.0/TimeBro-1.3.0-arm64.dmg"
+      ? "https://github.com/4gray/yesterlog/releases/download/v1.3.0/Yesterlog-1.3.0-arm64.dmg"
       : undefined,
-    downloadName: updateAvailable ? "TimeBro-1.3.0-arm64.dmg" : undefined,
+    downloadName: updateAvailable ? "Yesterlog-1.3.0-arm64.dmg" : undefined,
     downloadPlatform: updateAvailable ? "macos" : undefined,
     publishedAt: updateAvailable ? "2026-06-24T09:00:00.000Z" : undefined,
     checkedAt: new Date().toISOString(),
@@ -219,7 +219,7 @@ export const createDemoUpdateInfo = (updateAvailable = false): AppUpdateInfo => 
 export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInfo[] => [
   {
     version: updateAvailable ? "1.3.0" : "1.0.0",
-    releaseName: updateAvailable ? "TimeBro v1.3.0" : "TimeBro v1.0.0",
+    releaseName: updateAvailable ? "Yesterlog v1.3.0" : "Yesterlog v1.0.0",
     releaseNotes: updateAvailable
       ? [
           "## Highlights",
@@ -231,19 +231,19 @@ export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInf
           "![Dark Today screenshot](screenshots/v1.4.0/dark-today.png)"
         ].join("\n")
       : [
-          "## TimeBro v1.0.0",
+          "## Yesterlog v1.0.0",
           "",
           "- First stable desktop release.",
           "- Local Jira weekly time tracking with no backend server.",
           "- CSV export for weekly summaries."
         ].join("\n"),
     releasePageUrl: updateAvailable
-      ? "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
-      : "https://github.com/4gray/time-bro/releases/tag/v1.0.0",
+      ? "https://github.com/4gray/yesterlog/releases/tag/v1.3.0"
+      : "https://github.com/4gray/yesterlog/releases/tag/v1.0.0",
     downloadUrl: updateAvailable
-      ? "https://github.com/4gray/time-bro/releases/download/v1.3.0/TimeBro-1.3.0-arm64.dmg"
+      ? "https://github.com/4gray/yesterlog/releases/download/v1.3.0/Yesterlog-1.3.0-arm64.dmg"
       : undefined,
-    downloadName: updateAvailable ? "TimeBro-1.3.0-arm64.dmg" : undefined,
+    downloadName: updateAvailable ? "Yesterlog-1.3.0-arm64.dmg" : undefined,
     downloadPlatform: updateAvailable ? "macos" : undefined,
     publishedAt: updateAvailable ? "2026-06-24T09:00:00.000Z" : "2026-06-17T09:00:00.000Z"
   },
@@ -251,7 +251,7 @@ export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInf
     ? [
         {
           version: "1.2.0",
-          releaseName: "TimeBro v1.2.0",
+          releaseName: "Yesterlog v1.2.0",
           releaseNotes: [
             "## Changed",
             "",
@@ -259,12 +259,12 @@ export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInf
             "- Improved ticket search feedback.",
             "- Tightened renderer screenshot checks."
           ].join("\n"),
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.2.0",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.2.0",
           publishedAt: "2026-06-21T09:00:00.000Z"
         },
         {
           version: "1.1.0",
-          releaseName: "TimeBro v1.1.0",
+          releaseName: "Yesterlog v1.1.0",
           releaseNotes: [
             "## Fixed",
             "",
@@ -272,34 +272,34 @@ export const createDemoReleaseHistory = (updateAvailable = false): AppReleaseInf
             "- Added safer update download links.",
             "- Improved settings copy for API tokens."
           ].join("\n"),
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           publishedAt: "2026-06-19T09:00:00.000Z"
         },
         {
           version: "1.0.0",
-          releaseName: "TimeBro v1.0.0",
+          releaseName: "Yesterlog v1.0.0",
           releaseNotes: [
-            "## TimeBro v1.0.0",
+            "## Yesterlog v1.0.0",
             "",
             "- First stable desktop release.",
             "- Local Jira weekly time tracking with no backend server.",
             "- CSV export for weekly summaries."
           ].join("\n"),
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.0.0",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.0.0",
           publishedAt: "2026-06-17T09:00:00.000Z"
         }
       ]
     : [
         {
           version: "0.9.0",
-          releaseName: "TimeBro v0.9.0",
+          releaseName: "Yesterlog v0.9.0",
           releaseNotes: [
             "## Beta",
             "",
             "- Added the first local settings flow.",
             "- Added Jira connection checks."
           ].join("\n"),
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v0.9.0",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v0.9.0",
           publishedAt: "2026-06-10T09:00:00.000Z"
         }
       ])

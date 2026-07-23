@@ -3,7 +3,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ThemeMode } from "../components/Sidebar";
-import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY, useThemeMode } from "./useThemeMode";
+import { THEME_STORAGE_KEY, useThemeMode } from "./useThemeMode";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -87,7 +87,6 @@ afterEach(() => {
 describe("useThemeMode", () => {
   it("loads the primary stored theme and persists explicit selections", () => {
     localStorage.setItem(THEME_STORAGE_KEY, "light");
-    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "dark");
 
     renderHarness();
 
@@ -100,12 +99,11 @@ describe("useThemeMode", () => {
     expect(getApi().selectedTheme).toBe("dark");
     expect(getApi().effectiveTheme).toBe("dark");
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
-    expect(localStorage.getItem(LEGACY_THEME_STORAGE_KEY)).toBeNull();
     expect(document.documentElement.classList.contains("theme-dark")).toBe(true);
   });
 
   it("falls back to the legacy stored theme key", () => {
-    localStorage.setItem(LEGACY_THEME_STORAGE_KEY, "dark");
+    localStorage.setItem(THEME_STORAGE_KEY, "dark");
 
     renderHarness();
 

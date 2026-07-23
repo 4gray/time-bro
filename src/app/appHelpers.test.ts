@@ -39,7 +39,7 @@ const buildTicket = (key: string, createdAt?: string): JiraTicket => ({
   key,
   summary: key,
   projectKey: "TB",
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "Open",
   statusCategory: "new",
   loggedSecondsTotal: 0,
@@ -72,7 +72,7 @@ describe("app helpers", () => {
   });
 
   it("normalizes Jira site input into an origin URL", () => {
-    expect(normalizeJiraSiteInput(" timebro ")).toBe("https://timebro.atlassian.net");
+    expect(normalizeJiraSiteInput(" yesterlog ")).toBe("https://yesterlog.atlassian.net");
     expect(normalizeJiraSiteInput("jira.example.com/project/")).toBe("https://jira.example.com");
     expect(normalizeJiraSiteInput("http://jira.example.com/path")).toBe("http://jira.example.com");
     expect(normalizeJiraSiteInput("   ")).toBe("");
@@ -207,7 +207,7 @@ describe("app helpers", () => {
     expect(available).toMatchObject({
       currentVersion: "1.0.0",
       latestVersion: "1.3.0",
-      releaseName: "TimeBro v1.3.0",
+      releaseName: "Yesterlog v1.3.0",
       downloadPlatform: "macos",
       updateAvailable: true
     });

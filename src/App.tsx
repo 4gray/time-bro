@@ -592,7 +592,7 @@ export const App = () => {
   });
 
   // TODO(nl-parsing): the brief's headline command is free-text ("Log 2h on
-  // TBRO-352", "go to week 28"). Until the parser lands these are the static
+  // YLOG-352", "go to week 28"). Until the parser lands these are the static
   // fallbacks the palette offers.
   const commands = useMemo<CommandPaletteCommand[]>(
     () => [

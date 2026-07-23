@@ -78,7 +78,7 @@ describe("useDemoScenario", () => {
     expect(toLocalDateKey(firstApi.currentDate)).toBe("2026-06-18");
     expect(firstApi.currentDate.getHours()).toBe(14);
     expect(firstApi.currentDate.getMinutes()).toBe(30);
-    expect(firstApi.demoScenario?.settings.jiraBaseUrl).toBe("https://timebro-demo.example.test");
+    expect(firstApi.demoScenario?.settings.jiraBaseUrl).toBe("https://yesterlog-demo.example.test");
     expect(firstApi.demoScenario?.weekOverride.weekKey).toBe("2026-06-15");
     expect(setIntervalSpy).not.toHaveBeenCalled();
 

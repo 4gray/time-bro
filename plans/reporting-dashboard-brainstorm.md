@@ -6,7 +6,7 @@
 
 ## Goal
 
-Move TimeBro reporting from **"one week, pass/fail vs target"** to **"trend + self-vs-self
+Move Yesterlog reporting from **"one week, pass/fail vs target"** to **"trend + self-vs-self
 + composition + behavioral shape"**. Surface metrics and patterns a *solo developer* finds
 genuinely valuable, without vanity metrics, perverse incentives, or surveillance creep.
 

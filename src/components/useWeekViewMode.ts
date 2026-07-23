@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 
 export type WeekViewMode = "summary" | "timeline";
 
-export const WEEK_VIEW_MODE_STORAGE_KEY = "timebro-week-view-mode";
+export const WEEK_VIEW_MODE_STORAGE_KEY = "yesterlog-week-view-mode";
 
 const readStoredMode = (): WeekViewMode => {
   if (typeof window === "undefined") {

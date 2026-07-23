@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add Jira-wide ticket search to the time logging flow so a user can log work to tickets that are not assigned to them, while keeping the current TimeBro visual style.
+Add Jira-wide ticket search to the time logging flow so a user can log work to tickets that are not assigned to them, while keeping the current Yesterlog visual style.
 
 ## Decisions
 
@@ -29,4 +29,4 @@ Add Jira-wide ticket search to the time logging flow so a user can log work to t
 - Verified Today composer search for `ops`: `OPS-77` appeared under `JIRA SEARCH`, selecting it changed submit target to `OPS-77`, console warnings/errors empty.
 - Verified Add time modal search for `pay`: `PAY-142` appeared under `JIRA SEARCH`, selecting it changed submit target to `PAY-142`, console warnings/errors empty.
 - Checked a narrow desktop viewport for the search UI. A 390px mobile viewport still exposes the app's pre-existing desktop/sidebar horizontal overflow, so the new picker was verified at a practical narrow desktop width instead.
-- After the final stale-result cleanup, Browser runtime was stuck at 390px viewport after a CDP screenshot timeout, so final post-patch rendered smoke used regular Playwright fallback at 1280x720. It passed: `JIRA SEARCH` visible, one `OPS-77` result, no console warnings/errors, screenshot saved at `/tmp/timebro-final-search.png`.
+- After the final stale-result cleanup, Browser runtime was stuck at 390px viewport after a CDP screenshot timeout, so final post-patch rendered smoke used regular Playwright fallback at 1280x720. It passed: `JIRA SEARCH` visible, one `OPS-77` result, no console warnings/errors, screenshot saved at `/tmp/yesterlog-final-search.png`.

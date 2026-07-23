@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-const DOCK_OPEN_STORAGE_KEY = "timebro-active-dock";
+const DOCK_OPEN_STORAGE_KEY = "yesterlog-active-dock";
 const DOCK_INITIAL_SHOWN = 6;
 const DOCK_PAGE_SIZE = 4;
 

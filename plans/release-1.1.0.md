@@ -27,6 +27,6 @@ Prepare the `v1.1.0` GitHub draft release for manual review and publishing.
 - `npm run test` passed: 16 test files, 55 tests.
 - `npm run build` passed.
 - GitHub Actions release run `27978533160` passed.
-- Draft GitHub release `v1.1.0` was updated to title `TimeBro v1.1.0`.
+- Draft GitHub release `v1.1.0` was updated to title `Yesterlog v1.1.0`.
 - Draft release notes include the `screenshots/v1.1.0/dark-week.png` raw GitHub image and the `v1.0.0...v1.1.0` changelog link.
 - Draft release has 7 package assets: macOS DMG/ZIP, Windows installer/ZIP, Linux AppImage/DEB/tar.gz.

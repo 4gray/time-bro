@@ -2,7 +2,7 @@
 
 ## Goal
 
-Audit TimeBro's current product and icon, then develop the selected Ticket Stopwatch direction into Apple-style macOS 27 variants with a sharper, larger central mark and restrained neo-brutalist character.
+Audit Yesterlog's current product and icon, then develop the selected Ticket Stopwatch direction into Apple-style macOS 27 variants with a sharper, larger central mark and restrained neo-brutalist character.
 
 ## Decisions
 
@@ -22,7 +22,7 @@ Audit TimeBro's current product and icon, then develop the selected Ticket Stopw
 - User approved the refined Midnight Cyan Ticket Clock for production. Preserve Cobalt Check, Safety Orange, and Light Cobalt as versioned fallback sources.
 - The installed Dock result exposed a small-scale failure: the polished outer rim reads as a white halo, the screws and minute ticks disappear, and the dark layered housing loses optical mass against a dark Dock. Treat this as a design-frequency problem, not an SVG/ICNS packaging problem.
 - Explore a Dock-first eighth round with three simplified families: Hardware Flat, Ticket Dial, and Light Enamel. Keep each concept non-destructive and judge the 64/32/16 px renders before proposing a replacement.
-- The Dock-first clock studies improved legibility but moved too far from the earlier TimeBro identity. Recover the exact pre-Ticket-Stopwatch production icon from Git and use it as the locked reference for a ninth round.
+- The Dock-first clock studies improved legibility but moved too far from the earlier Yesterlog identity. Recover the exact pre-Ticket-Stopwatch production icon from Git and use it as the locked reference for a ninth round.
 - Preserve the legacy icon's core recognition stack: cobalt system squircle, one dominant white ticket/card, a compact blue checkbox/task chip, and one clock badge. Apply the new small-size constraints by removing rear-card clutter, enlarging the front ticket, simplifying its lines/fold, strengthening the task/time relationship, and avoiding baked outer frames or micro-detail.
 - User selected Legacy XL as the new direction. Explore a tenth round that locks its geometry while testing a warm light inversion, a dark appearance palette, and a shadowless source-art treatment.
 - Follow current Apple guidance by keeping source artwork frontal, simple, and suitable for layers. Compare fully flat internal layers against the selected softly shaded raster baseline; avoid hard baked drop shadows either way.
@@ -33,7 +33,7 @@ Audit TimeBro's current product and icon, then develop the selected Ticket Stopw
 
 - The current icon combines a foreground ticket, two rear cards, a folded corner, a checkbox, two text rows, and a separate clock badge. Its story is accurate but its hierarchy collapses at Dock scale.
 - The foreground symbol uses roughly the middle half of the squircle, leaving excessive optical padding; the small clock badge becomes the only recognizable detail at 32-64 px.
-- TimeBro's most distinctive product behavior is not a generic stopwatch: it turns Jira worklogs, local rituals, commits, reviews, and personal notes into draggable blocks on Today/Week/Reconstruct timelines, then exposes gaps and totals.
+- Yesterlog's most distinctive product behavior is not a generic stopwatch: it turns Jira worklogs, local rituals, commits, reviews, and personal notes into draggable blocks on Today/Week/Reconstruct timelines, then exposes gaps and totals.
 - The product's secondary identity signals are local-first privacy, command-palette/CLI fluency, optional local or CLI AI polish, and the friendly "Bro" tone.
 - Apple's June 2026 guidance uses one layered icon system across iOS, iPadOS, and macOS. Artwork should be exported as square, unmasked layers and composed in Icon Composer.
 - For the macOS 27 round, remove baked shadows, blur, bevel, gradients, and translucency from source artwork; keep a frontal view, rounder geometry, bold weights, strong mono contrast, and let Icon Composer add material effects.

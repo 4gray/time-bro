@@ -272,7 +272,7 @@ Make Add Time safe for longer entries and weekend usage:
 ## v8 — compact chrome cleanup
 
 ### Goal
-Remove the empty top titlebar strip and the TimeBro brand block from the left
+Remove the empty top titlebar strip and the Yesterlog brand block from the left
 sidebar so the app starts closer to the top of the window while still leaving
 room for macOS traffic-light controls.
 

@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="./src/assets/app-icon-512.png" alt="TimeBro logo" width="128" />
+  <img src="./src/assets/app-icon-512.png" alt="Yesterlog logo" width="128" />
 </p>
 
-<h1 align="center">TimeBro 🐻⏱️</h1>
+<h1 align="center">Yesterlog 🐻⏱️</h1>
 
 <p align="center">
   <strong>Your desk buddy for Jira time tracking — so logging hours stops feeling like a chore.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.4.0-4C6EF5?style=flat-square" alt="Version 2.4.0" />
+  <img src="https://img.shields.io/badge/version-3.0.0-4C6EF5?style=flat-square" alt="Version 3.0.0" />
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-2DBF7F?style=flat-square" alt="macOS, Windows, Linux" />
   <img src="https://img.shields.io/badge/local--first-no%20telemetry-EC9A3C?style=flat-square" alt="Local-first, no telemetry" />
   <img src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-2A2724?style=flat-square" alt="Built with Electron and React" />
@@ -17,20 +17,20 @@
 
 ---
 
-## Meet TimeBro 👋
+## Meet Yesterlog 👋
 
 So your manager has bravely decided that **every minute is a tiny KPI waiting to be loved.** ❤️ And now it's Friday afternoon and you're squinting at an empty Jira worklog, trying to remember what Tuesday-you actually did.
 
-That's where TimeBro comes in. 🤝
+That's where Yesterlog comes in. 🤝
 
-TimeBro is a calm little desktop app that turns your messy week into a tidy cockpit: **what's logged, what's missing, which days are off, and which ticket still needs a few hours before the week closes.** Pick a ticket, tap a duration, done. Or just **drag an in-progress ticket onto a day** and watch your weekly ring fill up.
+Yesterlog is a calm little desktop app that turns your messy week into a tidy cockpit: **what's logged, what's missing, which days are off, and which ticket still needs a few hours before the week closes.** Pick a ticket, tap a duration, done. Or just **drag an in-progress ticket onto a day** and watch your weekly ring fill up.
 
 Your manager gets clean worklogs. You get your Friday back. 🎉
 
-> 🔒 **No TimeBro backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB. TimeBro connects directly to the services you choose: Jira, optional Bitbucket, and—only if you enable a cloud AI provider—Anthropic or OpenAI.
+> 🔒 **No Yesterlog backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB. Yesterlog connects directly to the services you choose: Jira, optional Bitbucket, and—only if you enable a cloud AI provider—Anthropic or OpenAI.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-week.png" alt="TimeBro Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
+  <img src="./docs/screenshots/v3.0.0/dark-week.png" alt="Yesterlog Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
 </p>
 
 <p align="center">
@@ -59,7 +59,7 @@ Your manager gets clean worklogs. You get your Friday back. 🎉
 Pick a ticket (or search all of Jira), tap a duration preset, jot a note, and you're done. A **"touched today, not logged"** rail nudges you about tickets you clearly worked on but haven't logged yet, and a target bar shows exactly how much is left in the day. Prefer to keep something to yourself? Flip to **Personal note** for a local-only entry that never touches Jira.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-today.png" alt="TimeBro Today view with a daily target bar, a worklog composer with ticket picker and duration presets, today's logged entries, and a sidebar of tickets touched but not yet logged." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-today.png" alt="Yesterlog Today view with a daily target bar, a worklog composer with ticket picker and duration presets, today's logged entries, and a sidebar of tickets touched but not yet logged." width="900" />
 </p>
 
 ### 🗓️ Month — the big picture
@@ -67,29 +67,29 @@ Pick a ticket (or search all of Jira), tap a duration preset, jot a note, and yo
 The whole month as a calendar, color-coded by whether each day hit target. The **"jump to next gap"** button walks you straight to the days you forgot, so backfilling a sloppy month takes minutes instead of detective work.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-month.png" alt="TimeBro Month view: a calendar grid of daily hour totals color-coded by target attainment, weekly totals on the right, and a jump-to-next-gap button." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-month.png" alt="Yesterlog Month view: a calendar grid of daily hour totals color-coded by target attainment, weekly totals on the right, and a jump-to-next-gap button." width="900" />
 </p>
 
 ### 👀 Review — get credit for code review too *(optional)*
 
-Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each pull request from your actual review activity. Tick the sessions you want, choose whether they land on **the reviewed ticket** or a dedicated **code-review bucket**, and log them all to Jira in **one batch**. It's strictly read-only on the Bitbucket side — Jira worklogs stay the only thing TimeBro ever writes.
+Connect Bitbucket Cloud and Yesterlog estimates how long you spent reviewing each pull request from your actual review activity. Tick the sessions you want, choose whether they land on **the reviewed ticket** or a dedicated **code-review bucket**, and log them all to Jira in **one batch**. It's strictly read-only on the Bitbucket side — Jira worklogs stay the only thing Yesterlog ever writes.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-review.png" alt="TimeBro Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-review.png" alt="Yesterlog Review view: estimated review time totals, PR review sessions grouped by day with status badges, per-session durations, and a Log sessions button." width="900" />
 </p>
 
 ### 🧩 Reconstruct — rebuild a day you forgot to track *(optional AI)*
 
-Forgot to log a day? Open **Reconstruct** and TimeBro rebuilds it from the signals it already syncs — your Bitbucket **commits**, **PR reviews**, and the Jira time **already logged** — laid out on a 09:00→18:00 timeline. **Drag each signal onto the hour it belongs to** (or place them all at once), fine-tune any entry's duration, and watch the day add up. Step back through the last couple of weeks to catch the day you missed; today never offers hours that haven't happened yet.
+Forgot to log a day? Open **Reconstruct** and Yesterlog rebuilds it from the signals it already syncs — your Bitbucket **commits**, **PR reviews**, and the Jira time **already logged** — laid out on a 09:00→18:00 timeline. **Drag each signal onto the hour it belongs to** (or place them all at once), fine-tune any entry's duration, and watch the day add up. Step back through the last couple of weeks to catch the day you missed; today never offers hours that haven't happened yet.
 
-It works **completely without AI**. Optional AI can polish raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences: choose **[Ollama](https://ollama.com)** for fully local processing, **Anthropic via the Claude CLI**, or **OpenAI via the Codex CLI**. The cloud options use your existing CLI authentication and receive a best-effort-redacted version of the day’s signals. AI is off by default; the deterministic reconstruction is always the floor, and TimeBro still has no hosted backend or telemetry.
+It works **completely without AI**. Optional AI can polish raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences: choose **[Ollama](https://ollama.com)** for fully local processing, **Anthropic via the Claude CLI**, or **OpenAI via the Codex CLI**. The cloud options use your existing CLI authentication and receive a best-effort-redacted version of the day’s signals. AI is off by default; the deterministic reconstruction is always the floor, and Yesterlog still has no hosted backend or telemetry.
 
 ### 🏷️ Tickets — your workload, starred and sorted
 
 Everything assigned and in progress, plus recently closed tickets and your **starred favorites**, each with a status badge, project context, hours logged this week, and a one-click **LOG** button that drops you into Today with the ticket pre-selected.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-tickets.png" alt="TimeBro Tickets view listing favorite and in-progress tickets with status and issue-type badges, weekly logged hours, project names, and per-row LOG buttons." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-tickets.png" alt="Yesterlog Tickets view listing favorite and in-progress tickets with status and issue-type badges, weekly logged hours, project names, and per-row LOG buttons." width="900" />
 </p>
 
 ### 📊 Reports — numbers your manager will love
@@ -97,7 +97,7 @@ Everything assigned and in progress, plus recently closed tickets and your **sta
 Daily average, days on target, tickets touched, billable percentage, an hours-per-day chart, and a per-ticket breakdown. Browse previous weeks, then **export to CSV** for the inevitable "can you send me the spreadsheet?"
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-reports.png" alt="TimeBro Reports view with weekly KPIs, an hours-per-day bar chart, and a by-ticket breakdown showing hours and percentage of the week." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-reports.png" alt="Yesterlog Reports view with weekly KPIs, an hours-per-day bar chart, and a by-ticket breakdown showing hours and percentage of the week." width="900" />
 </p>
 
 ### ⚙️ Settings — five minutes, tops
@@ -105,18 +105,18 @@ Daily average, days on target, tickets touched, billable percentage, an hours-pe
 Connect Jira (and optionally Bitbucket), set your weekly target and working days, schedule a gentle end-of-day reminder, import/export your personal notes, and pick **light, dark, or auto**.
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/dark-settings.png" alt="TimeBro Settings view with a Jira Cloud sign-in panel and a left rail of sections: Jira, Bitbucket, Tracking, Recurring, Appearance, Data, and About." width="900" />
+  <img src="./docs/screenshots/v3.0.0/dark-settings.png" alt="Yesterlog Settings view with a Jira Cloud sign-in panel and a left rail of sections: Jira, Bitbucket, Tracking, Recurring, Appearance, Data, and About." width="900" />
 </p>
 
 ### 🌗 Looks great in the light, too
 
 <p align="center">
-  <img src="./docs/screenshots/v2.4.0/light-week.png" alt="TimeBro Week view in the light theme, showing the same weekly cockpit with a cooler gray palette." width="900" />
+  <img src="./docs/screenshots/v3.0.0/light-week.png" alt="Yesterlog Week view in the light theme, showing the same weekly cockpit with a cooler gray palette." width="900" />
 </p>
 
 ---
 
-## Everything TimeBro can do
+## Everything Yesterlog can do
 
 <details open>
 <summary><strong>Time logging</strong></summary>
@@ -195,13 +195,13 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 
 ---
 
-## Get TimeBro
+## Get Yesterlog
 
 **Just want to use it?** Grab the installer for your platform from the [latest release](../../releases/latest):
 
 - 🍎 **macOS** — `.dmg` (signed &amp; notarized) or `.zip`
 - 🪟 **Windows** — `.exe` installer or `.zip`
-- 🐧 **Linux** — `AppImage`, `.deb`, `.tar.gz`, or `sudo snap install timebro` after the first stable Snap Store release
+- 🐧 **Linux** — `AppImage`, `.deb`, `.tar.gz`, or `sudo snap install yesterlog` after the first stable Snap Store release
 
 Then head to **Settings → Jira** and paste in your site, email, and API token (see [Connect Jira](#connect-jira) below). That's the whole setup.
 
@@ -209,7 +209,7 @@ Then head to **Settings → Jira** and paste in your site, email, and API token 
 
 ## Build it yourself
 
-TimeBro is a small desktop app built with **React, TypeScript, Vite, Electron, and IndexedDB**. No backend, no telemetry, no credential relay.
+Yesterlog is a small desktop app built with **React, TypeScript, Vite, Electron, and IndexedDB**. No backend, no telemetry, no credential relay.
 
 ```bash
 npm install      # install dependencies
@@ -276,7 +276,7 @@ The token acts as *you*, so Jira still enforces your normal permissions — if a
 
 1. Open [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens).
 2. Choose **Create API token** (for now, *not* the scoped-token flow).
-3. Give it a label like `TimeBro`.
+3. Give it a label like `Yesterlog`.
 4. Copy the token once and paste it into **Settings → Jira** with your email.
 5. Enter your site as `mycompany`, `mycompany.atlassian.net`, or `https://mycompany.atlassian.net`.
 
@@ -285,9 +285,9 @@ The token acts as *you*, so Jira still enforces your normal permissions — if a
 <details>
 <summary>Why a regular token instead of OAuth or scoped tokens?</summary>
 
-OAuth 2.0 3LO is better for a distributed product with a registered Atlassian integration, consent screen, client ID/secret, redirect URL, and scopes. For this local app it's *more* setup, not less. Scoped API tokens also require Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway with a Cloud ID, while TimeBro talks to the simpler direct Jira site URL. The code is kept open for OAuth or scoped-token gateway support later, but regular token auth is the simplest path today.
+OAuth 2.0 3LO is better for a distributed product with a registered Atlassian integration, consent screen, client ID/secret, redirect URL, and scopes. For this local app it's *more* setup, not less. Scoped API tokens also require Atlassian's `api.atlassian.com/ex/jira/{cloudId}` gateway with a Cloud ID, while Yesterlog talks to the simpler direct Jira site URL. The code is kept open for OAuth or scoped-token gateway support later, but regular token auth is the simplest path today.
 
-If your org *requires* scoped tokens, the read-only scopes TimeBro needs are `read:jira-work` (JQL issue search + work log items) and `read:jira-user` (`/rest/api/3/myself`, to identify your account ID so it keeps only your worklogs). Gateway support would need to be added before scoped tokens work. No write, project-management, or admin scopes are needed for read-only sync.
+If your org *requires* scoped tokens, the read-only scopes Yesterlog needs are `read:jira-work` (JQL issue search + work log items) and `read:jira-user` (`/rest/api/3/myself`, to identify your account ID so it keeps only your worklogs). Gateway support would need to be added before scoped tokens work. No write, project-management, or admin scopes are needed for read-only sync.
 
 </details>
 
@@ -310,14 +310,14 @@ The **Review** nav item only appears once Bitbucket is configured, and the integ
 - Credentials are sent only to the Jira/Bitbucket sites you configure, and only when testing a connection or syncing.
 - **No backend server.** Sync results, skipped days, favorites, and personal notes stay on your machine.
 - API calls are made by the Electron main process over IPC.
-- **AI is optional and off by default.** [Ollama](https://ollama.com) runs on-device (default `localhost:11434`) and sends nothing to a cloud. You can instead select Anthropic via the Claude CLI or OpenAI via the Codex CLI; those choices send a best-effort-redacted prompt to the selected provider under your existing CLI authentication and provider terms. TimeBro does not store those CLI credentials, operate an AI proxy, or add telemetry.
+- **AI is optional and off by default.** [Ollama](https://ollama.com) runs on-device (default `localhost:11434`) and sends nothing to a cloud. You can instead select Anthropic via the Claude CLI or OpenAI via the Codex CLI; those choices send a best-effort-redacted prompt to the selected provider under your existing CLI authentication and provider terms. Yesterlog does not store those CLI credentials, operate an AI proxy, or add telemetry.
 
 **IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`, `reconstructDrafts`, `reconstructAiDrafts`.
 
 <details>
 <summary>How the Jira work log sync actually works</summary>
 
-TimeBro syncs Jira **work log items**, not issue discussion comments. Jira stores worklog notes on the work log item under `worklogs[*].comment` as Atlassian Document Format (ADF); the app flattens that with `shared/adf.ts`.
+Yesterlog syncs Jira **work log items**, not issue discussion comments. Jira stores worklog notes on the work log item under `worklogs[*].comment` as Atlassian Document Format (ADF); the app flattens that with `shared/adf.ts`.
 
 It identifies your account with:
 
@@ -384,7 +384,7 @@ npm run release:push      # push commit + tag → starts the release workflow
 <details>
 <summary>Snap Store packaging &amp; publishing</summary>
 
-TimeBro uses electron-builder's `core24` Snap target with strict confinement.
+Yesterlog uses electron-builder's `core24` Snap target with strict confinement.
 The Snap has outbound network access for Jira, Bitbucket, GitHub, and Ollama;
 home-directory access for CSV import/export; and the normal Electron desktop
 interfaces. Snap installs manage their own updates, so the app does not offer
@@ -396,8 +396,8 @@ then run:
 ```bash
 npm run dist:snap
 sudo snap install --dangerous release/*.snap
-snap connections timebro
-timebro
+snap connections yesterlog
+yesterlog
 ```
 
 One-time Store setup:
@@ -406,16 +406,16 @@ One-time Store setup:
 
    ```bash
    snapcraft login
-   snapcraft register timebro
+   snapcraft register yesterlog
    ```
 
-2. Export a login restricted to TimeBro and `edge`. Set `SNAP_LOGIN_EXPIRES`
+2. Export a login restricted to Yesterlog and `edge`. Set `SNAP_LOGIN_EXPIRES`
    to an ISO-8601 UTC timestamp around 90 days in the future:
 
    ```bash
    export SNAP_LOGIN_EXPIRES="YYYY-MM-DDTHH:MM:SSZ"
    snapcraft export-login \
-     --snaps=timebro \
+     --snaps=yesterlog \
      --channels=edge \
      --acls=package_access,package_push,package_update,package_release \
      --expires="$SNAP_LOGIN_EXPIRES" \
@@ -431,9 +431,9 @@ Tagged releases go to `edge`. After installing and testing the Store revision
 on Ubuntu, promote the exact revision without rebuilding it:
 
 ```bash
-snapcraft revisions timebro
-snapcraft release timebro <revision> candidate
-snapcraft release timebro <revision> stable
+snapcraft revisions yesterlog
+snapcraft release yesterlog <revision> candidate
+snapcraft release yesterlog <revision> stable
 ```
 
 Test both Wayland and X11. Check launch and icon integration, Jira worklog
@@ -474,7 +474,7 @@ Generate the Snap Store featured banner and GitHub repository social preview:
 npm run media:banners
 ```
 
-The command composites the exact TimeBro icon and real Week-view screenshot
+The command composites the exact Yesterlog icon and real Week-view screenshot
 over the art-directed source plates in `assets/marketing/`, validates platform
 dimensions and file-size limits, and writes the final PNGs to `docs/media/`.
 

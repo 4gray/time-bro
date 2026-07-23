@@ -6,17 +6,17 @@ import { buildTicketPickerGroups, limitTicketPickerGroups, TicketPickerItem } fr
 
 const assignedTicket: JiraTicket = {
   id: "1001",
-  key: "TBRO-397",
+  key: "YLOG-397",
   summary: "Restructure the access domain in nx monorepo",
-  projectKey: "TBRO",
-  projectName: "TimeBro Product",
+  projectKey: "YLOG",
+  projectName: "Yesterlog Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   createdAt: "2026-06-10T09:00:00.000Z",
   assigneeDisplayName: "Demo Timekeeper",
   issueType: { name: "Task", hierarchyLevel: 0 },
-  url: "https://elevait.atlassian.net/browse/TBRO-397"
+  url: "https://elevait.atlassian.net/browse/YLOG-397"
 };
 
 const searchedTicket: JiraTicket = {
@@ -97,7 +97,7 @@ describe("buildTicketPickerGroups", () => {
     const newestAssignedTicket: JiraTicket = {
       ...assignedTicket,
       id: "1003",
-      key: "TBRO-401",
+      key: "YLOG-401",
       summary: "Polish Add Time modal keyboard flow",
       createdAt: "2026-06-21T09:00:00.000Z"
     };
@@ -117,7 +117,7 @@ describe("buildTicketPickerGroups", () => {
 
     expect(groups.map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
       ["OPS-77", "OPS-12"],
-      ["TBRO-401", "TBRO-397"]
+      ["YLOG-401", "YLOG-397"]
     ]);
   });
 
@@ -125,7 +125,7 @@ describe("buildTicketPickerGroups", () => {
     const newestAssignedTicket: JiraTicket = {
       ...assignedTicket,
       id: "1003",
-      key: "TBRO-401",
+      key: "YLOG-401",
       summary: "Polish Add Time modal keyboard flow",
       createdAt: "2026-06-21T09:00:00.000Z"
     };
@@ -145,7 +145,7 @@ describe("buildTicketPickerGroups", () => {
 
     expect(groups.map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
       ["OPS-12", "OPS-77"],
-      ["TBRO-397", "TBRO-401"]
+      ["YLOG-397", "YLOG-401"]
     ]);
   });
 
@@ -156,7 +156,7 @@ describe("buildTicketPickerGroups", () => {
         {
           ...assignedTicket,
           id: "1003",
-          key: "TBRO-401",
+          key: "YLOG-401",
           summary: "Polish Add Time modal keyboard flow"
         }
       ],
@@ -174,7 +174,7 @@ describe("buildTicketPickerGroups", () => {
 
     expect(limitTicketPickerGroups(groups, 3).map((group) => group.tickets.map((ticket) => ticket.key))).toEqual([
       ["OPS-77", "OPS-12"],
-      ["TBRO-397"]
+      ["YLOG-397"]
     ]);
   });
 

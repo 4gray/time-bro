@@ -30,7 +30,7 @@ existing Add Time flow for the selected active ticket on the current day.
   and would need delete semantics — out of scope).
 - Droppable days = configured working, non-skipped, not in the future.
 - `started` for a dropped log = day at the current time-of-day.
-- Dock open/closed persisted in localStorage `timebro-active-dock`.
+- Dock open/closed persisted in localStorage `yesterlog-active-dock`.
 - Week and Today share that saved open/closed preference and dock paging logic.
 - Today uses a view-specific hint and card activation copy so the reused dock
   remains accurate outside the Week drag surface.

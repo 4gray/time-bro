@@ -26,7 +26,7 @@ const displays = [
 let tempUserDataPaths: string[] = [];
 
 const createUserDataPath = () => {
-  const userDataPath = mkdtempSync(path.join(os.tmpdir(), "timebro-window-state-"));
+  const userDataPath = mkdtempSync(path.join(os.tmpdir(), "yesterlog-window-state-"));
   tempUserDataPaths.push(userDataPath);
   return userDataPath;
 };

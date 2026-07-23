@@ -107,19 +107,19 @@ const currentDate = new Date(2026, 5, 17, 12);
 
 const ticket: JiraTicket = {
   id: "10001",
-  key: "TBRO-101",
+  key: "YLOG-101",
   summary: "Refactor today route",
-  projectKey: "TBRO",
-  projectName: "TimeBro",
+  projectKey: "YLOG",
+  projectName: "Yesterlog",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 3600,
-  url: "https://example.atlassian.net/browse/TBRO-101"
+  url: "https://example.atlassian.net/browse/YLOG-101"
 };
 
 const worklog = {
   id: "wl-1",
-  issueKey: "TBRO-101"
+  issueKey: "YLOG-101"
 } as JiraWorklog;
 
 const note = {

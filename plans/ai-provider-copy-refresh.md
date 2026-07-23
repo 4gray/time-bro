@@ -12,9 +12,9 @@ promise.
 - Present Ollama as the fully private, local provider.
 - Present OpenAI (via the Codex CLI) and Anthropic (via the Claude CLI) as
   optional cloud providers that use the user's existing CLI authentication.
-- Explain that TimeBro applies best-effort redaction before cloud prompts leave
+- Explain that Yesterlog applies best-effort redaction before cloud prompts leave
   the device, without implying that cloud processing is private or local.
-- Preserve the no TimeBro backend and no telemetry claims.
+- Preserve the no Yesterlog backend and no telemetry claims.
 
 ## Work
 

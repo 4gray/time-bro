@@ -56,9 +56,9 @@
   - Restarted Electron with the updated main process and verified against the real app at `http://127.0.0.1:5173/`, not demo fixtures.
   - Confirmed the Add Time picker now shows `JIRA TICKETS` from empty-query Jira browse with real Jira keys.
   - Confirmed the real Electron picker starts with 12 rendered Jira rows and is scrollable; after scrolling, it renders 24 rows.
-  - Captured screenshot: `/tmp/timebro-electron-jira-picker-scroll.png`.
+  - Captured screenshot: `/tmp/yesterlog-electron-jira-picker-scroll.png`.
   - Follow-up UX check: verified the filter and created-date sort now render as one row in Electron; the picker still renders 12 rows initially and 24 after scrolling.
-  - Captured screenshot: `/tmp/timebro-electron-picker-controls-one-row.png`.
+  - Captured screenshot: `/tmp/yesterlog-electron-picker-controls-one-row.png`.
   - Sticky-header check: verified in Electron that the picker shell has `overflow: hidden`, the ticket list has `overflow: auto`, and only `.ticket-picker-list` scrolls.
   - Verified search and controls keep the same top position after list scroll; ticket rows still lazy-load from 12 to 24.
-  - Captured screenshot: `/tmp/timebro-electron-picker-sticky-head.png`.
+  - Captured screenshot: `/tmp/yesterlog-electron-picker-sticky-head.png`.

@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit brand identity
+        run: npm run check:brand
+
       - name: Run tests
         run: npm run test
 
