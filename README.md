@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./src/assets/app-icon-512.png" width="112" alt="Yesterlog app icon">
+  <img src="./src/assets/app-icon-512.png" width="128" alt="Yesterlog app icon">
 </p>
 
-<h1 align="center">Yesterlog</h1>
+<h1 align="center">Yesterlog ⏱️</h1>
 
 <p align="center">
   <strong>Your work, remembered.</strong>
@@ -13,21 +13,23 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/4gray/yesterlog/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/4gray/yesterlog"></a>
-  <img alt="macOS, Windows, and Linux" src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-5b6470">
-  <img alt="Local-first" src="https://img.shields.io/badge/data-local--first-5f8f77">
-  <img alt="Electron and React" src="https://img.shields.io/badge/Electron%20%2B%20React-20232a">
+  <a href="https://github.com/4gray/yesterlog/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/4gray/yesterlog?style=flat-square&amp;label=version&amp;color=4C6EF5"></a>
+  <img alt="macOS, Windows, and Linux" src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-2DBF7F?style=flat-square">
+  <img alt="Local-first with no telemetry" src="https://img.shields.io/badge/local--first-no%20telemetry-EC9A3C?style=flat-square">
+  <img alt="Built with Electron and React" src="https://img.shields.io/badge/built%20with-Electron%20%2B%20React-2A2724?style=flat-square">
 </p>
 
-## Meet Yesterlog
+## Meet Yesterlog 👋
 
-So your manager has bravely decided that every minute is a tiny KPI.
+So your manager has bravely decided that **every minute is a tiny KPI waiting to be loved.** ❤️
 
-The only problem: by Friday, you can barely remember what happened on Monday.
+And now it's Friday afternoon, you're staring at an empty Jira worklog, and Tuesday-you has left no forwarding address.
+
+That's where Yesterlog comes in. 🤝
 
 Yesterlog rebuilds the story from traces you already leave behind — Jira activity and worklogs, commits, pull-request reviews, recurring meetings, and local notes. It helps you recover missing context, complete the record, and keep evidence of the work that disappears between tickets.
 
-You get Friday afternoon back. And when review season arrives, the examples are already there.
+Your manager gets clean worklogs. You get your Friday back — and a record of the work you'll need when review season arrives. 🎉
 
 > No account. No Yesterlog cloud. No telemetry. Your credentials, synced activity, notes, and drafts stay on your machine.
 
