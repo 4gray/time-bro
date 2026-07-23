@@ -48,7 +48,7 @@ export const useWeekActions = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `timebro-week-${weekState.weekKey}.csv`;
+    link.download = `yesterlog-week-${weekState.weekKey}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();

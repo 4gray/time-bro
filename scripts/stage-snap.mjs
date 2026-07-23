@@ -39,7 +39,7 @@ await appendFile(
     `contact: ${JSON.stringify(packageJson.bugs.url)}`,
     `issues: ${JSON.stringify(packageJson.bugs.url)}`,
     `source-code: ${JSON.stringify(sourceCodeUrl)}`,
-    `website: ${JSON.stringify(sourceCodeUrl)}`,
+    `website: ${JSON.stringify(packageJson.homepage)}`,
     "",
   ].join("\n"),
 );

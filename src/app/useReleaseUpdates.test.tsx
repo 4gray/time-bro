@@ -91,7 +91,7 @@ beforeEach(() => {
   }));
   downloadUpdate = vi.fn(async () => ({
     ok: true,
-    message: "Update downloaded. Restart TimeBro to install it.",
+    message: "Update downloaded. Restart Yesterlog to install it.",
     state: {
       supported: true,
       phase: "downloaded",
@@ -100,7 +100,7 @@ beforeEach(() => {
   }));
   installUpdate = vi.fn(async () => ({
     ok: true,
-    message: "Restarting TimeBro to install the update.",
+    message: "Restarting Yesterlog to install the update.",
     state: {
       supported: true,
       phase: "downloaded",
@@ -143,7 +143,7 @@ describe("useReleaseUpdates", () => {
     });
 
     expect(showSnackbar).toHaveBeenCalledTimes(1);
-    expect(showSnackbar.mock.calls[0][1]).toContain("TimeBro v1.3.0 is available");
+    expect(showSnackbar.mock.calls[0][1]).toContain("Yesterlog v1.3.0 is available");
 
     const snackbarOptions = showSnackbar.mock.calls[0][2];
     expect(snackbarOptions?.actions).toHaveLength(2);
@@ -162,7 +162,7 @@ describe("useReleaseUpdates", () => {
       await getApi().checkForUpdates({ notifyWhenCurrent: true });
     });
 
-    expect(showSuccess).toHaveBeenCalledWith("TimeBro is up to date.");
+    expect(showSuccess).toHaveBeenCalledWith("Yesterlog is up to date.");
     expect(showSnackbar).not.toHaveBeenCalled();
   });
 
@@ -194,7 +194,7 @@ describe("useReleaseUpdates", () => {
 
     expect(getUpdateInfo).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(UPDATE_INFO_CACHE_KEY)).toContain(APP_VERSION);
-    expect(showSuccess).toHaveBeenCalledWith("TimeBro is up to date.");
+    expect(showSuccess).toHaveBeenCalledWith("Yesterlog is up to date.");
     expect(getApi().isCheckingUpdates).toBe(false);
   });
 
@@ -220,7 +220,7 @@ describe("useReleaseUpdates", () => {
   it("opens release pages, release notes, and downloads through the native client", async () => {
     const update = makeInfo({
       latestVersion: "1.4.0",
-      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+      downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.4.0/Yesterlog.dmg",
       updateAvailable: true
     });
     getUpdateInfo.mockResolvedValue(update);
@@ -258,16 +258,16 @@ describe("useReleaseUpdates", () => {
       releases: [
         {
           version: "1.4.0",
-          releaseName: "TimeBro v1.4.0",
+          releaseName: "Yesterlog v1.4.0",
           releaseNotes: "## Latest",
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.4.0",
           publishedAt: "2026-06-24T12:00:00.000Z"
         },
         {
           version: "1.3.2",
-          releaseName: "TimeBro v1.3.2",
+          releaseName: "Yesterlog v1.3.2",
           releaseNotes: "## Current\n\n![Week](screenshots/v1.3.0/dark-week.png)",
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.2",
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.3.2",
           publishedAt: "2026-06-20T12:00:00.000Z"
         }
       ]
@@ -281,7 +281,7 @@ describe("useReleaseUpdates", () => {
     act(() => getApi().openCurrentReleaseNotes());
     expect(getApi().releaseNotesDialogInfo).toMatchObject({
       latestVersion: "1.3.2",
-      releaseName: "TimeBro v1.3.2",
+      releaseName: "Yesterlog v1.3.2",
       updateAvailable: false
     });
 
@@ -304,7 +304,7 @@ describe("useReleaseUpdates", () => {
   it("downloads and installs automatic updates through the native client", async () => {
     const update = makeInfo({
       latestVersion: "1.4.0",
-      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+      downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.4.0/Yesterlog.dmg",
       updateAvailable: true,
       autoUpdate: {
         supported: true,
@@ -329,7 +329,7 @@ describe("useReleaseUpdates", () => {
     await flushAsync();
 
     expect(downloadUpdate).toHaveBeenCalledTimes(1);
-    expect(showSuccess).toHaveBeenCalledWith("Update downloaded. Restart TimeBro to install it.");
+    expect(showSuccess).toHaveBeenCalledWith("Update downloaded. Restart Yesterlog to install it.");
     expect(getApi().autoUpdateState).toMatchObject({
       phase: "downloaded"
     });
@@ -429,7 +429,7 @@ describe("useReleaseUpdates", () => {
   it("keeps a known available update when a later background poll fails", async () => {
     const available = makeInfo({
       latestVersion: "1.6.0",
-      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.6.0/TimeBro.dmg",
+      downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.6.0/Yesterlog.dmg",
       updateAvailable: true
     });
     const failedCheck = makeInfo({
@@ -460,7 +460,7 @@ describe("useReleaseUpdates", () => {
   it("exposes Settings callbacks that use the current update info", async () => {
     const update = makeInfo({
       latestVersion: "1.4.0",
-      downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+      downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.4.0/Yesterlog.dmg",
       updateAvailable: true
     });
     getUpdateInfo.mockResolvedValue(update);

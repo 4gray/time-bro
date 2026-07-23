@@ -11,7 +11,7 @@ const weekScreenshotPath = path.join(
   root,
   "docs",
   "screenshots",
-  "v2.4.0",
+  "v3.0.0",
   "dark-week.png",
 );
 
@@ -23,7 +23,7 @@ const assets = {
       "marketing",
       "snap-featured-background.png",
     ),
-    output: path.join(outputDirectory, "timebro-snap-featured-banner.png"),
+    output: path.join(outputDirectory, "yesterlog-snap-featured-banner.png"),
     width: 2160,
     height: 720,
     maxBytes: 2_000_000,
@@ -35,7 +35,7 @@ const assets = {
       "marketing",
       "github-social-background.png",
     ),
-    output: path.join(outputDirectory, "timebro-github-social-preview.png"),
+    output: path.join(outputDirectory, "yesterlog-github-social-preview.png"),
     width: 1280,
     height: 640,
     maxBytes: 1_000_000,
@@ -99,8 +99,8 @@ function snapTypography() {
     </defs>
     <rect width="1060" height="720" fill="url(#copyShade)" />
     <text x="260" y="170" fill="#f5f3f0"
-      font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="76"
-      font-weight="700" letter-spacing="-3">Time<tspan fill="#6f93ff">Bro</tspan></text>
+      font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="70"
+      font-weight="700" letter-spacing="-3">Yester<tspan fill="#6f93ff">log</tspan></text>
     <text x="120" y="334" fill="#f5f3f0"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="72"
       font-weight="700" letter-spacing="-2.5">Your whole week.</text>
@@ -126,8 +126,8 @@ function githubTypography() {
     </defs>
     <rect width="720" height="640" fill="url(#copyShade)" />
     <text x="178" y="123" fill="#f5f3f0"
-      font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="58"
-      font-weight="700" letter-spacing="-2.4">Time<tspan fill="#6f93ff">Bro</tspan></text>
+      font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="52"
+      font-weight="700" letter-spacing="-2.4">Yester<tspan fill="#6f93ff">log</tspan></text>
     <text x="72" y="278" fill="#f5f3f0"
       font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="66"
       font-weight="700" letter-spacing="-2.6">Your whole week.</text>

@@ -23,18 +23,18 @@ describe("checkForAppUpdate", () => {
       async () =>
         jsonResponse({
           tag_name: "v1.1.0",
-          name: "TimeBro v1.1.0",
-          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          name: "Yesterlog v1.1.0",
+          html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           body: "## Changed\n\n- Added direct downloads.",
           published_at: "2026-06-22T12:00:00Z",
           assets: [
             {
-              name: "TimeBro-1.1.0-arm64.dmg",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0-arm64.dmg"
+              name: "Yesterlog-1.1.0-arm64.dmg",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0-arm64.dmg"
             },
             {
-              name: "TimeBro-1.1.0.deb",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+              name: "Yesterlog-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.deb"
             }
           ]
         }),
@@ -43,12 +43,12 @@ describe("checkForAppUpdate", () => {
 
     expect(result.currentVersion).toBe("1.0.0");
     expect(result.latestVersion).toBe("1.1.0");
-    expect(result.releaseName).toBe("TimeBro v1.1.0");
+    expect(result.releaseName).toBe("Yesterlog v1.1.0");
     expect(result.releaseNotes).toContain("Added direct downloads.");
-    expect(result.releasePageUrl).toBe("https://github.com/4gray/time-bro/releases/tag/v1.1.0");
-    expect(result.downloadName).toBe("TimeBro-1.1.0-arm64.dmg");
+    expect(result.releasePageUrl).toBe("https://github.com/4gray/yesterlog/releases/tag/v1.1.0");
+    expect(result.downloadName).toBe("Yesterlog-1.1.0-arm64.dmg");
     expect(result.downloadUrl).toBe(
-      "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0-arm64.dmg"
+      "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0-arm64.dmg"
     );
     expect(result.downloadPlatform).toBe("macos");
     expect(result.updateAvailable).toBe(true);
@@ -61,22 +61,22 @@ describe("checkForAppUpdate", () => {
       async () =>
         jsonResponse({
           tag_name: "v1.1.0",
-          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           assets: [
             {
-              name: "TimeBro-1.1.0.exe",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.exe"
+              name: "Yesterlog-1.1.0.exe",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.exe"
             },
             {
-              name: "TimeBro-1.1.0.deb",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+              name: "Yesterlog-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.deb"
             }
           ]
         }),
       "linux"
     );
 
-    expect(result.downloadName).toBe("TimeBro-1.1.0.deb");
+    expect(result.downloadName).toBe("Yesterlog-1.1.0.deb");
     expect(result.downloadPlatform).toBe("linux");
   });
 
@@ -86,24 +86,24 @@ describe("checkForAppUpdate", () => {
       async () =>
         jsonResponse({
           tag_name: "v1.1.0",
-          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           assets: [
             {
-              name: "TimeBro-1.1.0.AppImage",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.AppImage"
+              name: "Yesterlog-1.1.0.AppImage",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.AppImage"
             },
             {
-              name: "TimeBro-1.1.0.deb",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+              name: "Yesterlog-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.deb"
             }
           ]
         }),
       "linux",
-      getAutoUpdateCapability("linux", true, { APPIMAGE: "/Applications/TimeBro.AppImage" }),
-      { APPIMAGE: "/Applications/TimeBro.AppImage" }
+      getAutoUpdateCapability("linux", true, { APPIMAGE: "/Applications/Yesterlog.AppImage" }),
+      { APPIMAGE: "/Applications/Yesterlog.AppImage" }
     );
 
-    expect(result.downloadName).toBe("TimeBro-1.1.0.AppImage");
+    expect(result.downloadName).toBe("Yesterlog-1.1.0.AppImage");
     expect(result.downloadPlatform).toBe("linux");
     expect(result.autoUpdate).toMatchObject({
       supported: true,
@@ -113,19 +113,19 @@ describe("checkForAppUpdate", () => {
 
   it("does not advertise GitHub installers as Snap updates", async () => {
     const env = {
-      SNAP: "/snap/timebro/current",
-      SNAP_NAME: "timebro"
+      SNAP: "/snap/yesterlog/current",
+      SNAP_NAME: "yesterlog"
     };
     const result = await checkForAppUpdate(
       "1.0.0",
       async () =>
         jsonResponse({
           tag_name: "v1.1.0",
-          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           assets: [
             {
-              name: "TimeBro-1.1.0.deb",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.deb"
+              name: "Yesterlog-1.1.0.deb",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.deb"
             }
           ]
         }),
@@ -142,7 +142,7 @@ describe("checkForAppUpdate", () => {
       supported: false,
       phase: "unsupported",
       platform: "linux-snap",
-      reason: expect.stringContaining("snap refresh timebro")
+      reason: expect.stringContaining("snap refresh yesterlog")
     });
   });
 
@@ -152,22 +152,22 @@ describe("checkForAppUpdate", () => {
       async () =>
         jsonResponse({
           tag_name: "v1.1.0",
-          html_url: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
+          html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
           assets: [
             {
-              name: "TimeBro-1.1.0-arm64.dmg",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0-arm64.dmg"
+              name: "Yesterlog-1.1.0-arm64.dmg",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0-arm64.dmg"
             },
             {
-              name: "TimeBro-1.1.0.exe",
-              browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0.exe"
+              name: "Yesterlog-1.1.0.exe",
+              browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0.exe"
             }
           ]
         }),
       "win32"
     );
 
-    expect(result.downloadName).toBe("TimeBro-1.1.0.exe");
+    expect(result.downloadName).toBe("Yesterlog-1.1.0.exe");
     expect(result.downloadPlatform).toBe("windows");
   });
 
@@ -196,26 +196,26 @@ describe("fetchAppReleaseHistory", () => {
         jsonResponse([
           {
             tag_name: "v1.4.0",
-            name: "TimeBro v1.4.0",
-            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+            name: "Yesterlog v1.4.0",
+            html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.4.0",
             body: "## Added\n\n![Week](screenshots/v1.4.0/dark-week.png)",
             published_at: "2026-06-24T12:00:00Z",
             assets: [
               {
-                name: "TimeBro-1.4.0-arm64.dmg",
-                browser_download_url: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro-1.4.0-arm64.dmg"
+                name: "Yesterlog-1.4.0-arm64.dmg",
+                browser_download_url: "https://github.com/4gray/yesterlog/releases/download/v1.4.0/Yesterlog-1.4.0-arm64.dmg"
               }
             ]
           },
           {
             tag_name: "v1.5.0-beta.1",
             prerelease: true,
-            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.5.0-beta.1"
+            html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.5.0-beta.1"
           },
           {
             tag_name: "v1.3.2",
             draft: true,
-            html_url: "https://github.com/4gray/time-bro/releases/tag/v1.3.2"
+            html_url: "https://github.com/4gray/yesterlog/releases/tag/v1.3.2"
           }
         ]),
       "darwin"
@@ -225,10 +225,10 @@ describe("fetchAppReleaseHistory", () => {
     expect(result.releases).toHaveLength(1);
     expect(result.releases[0]).toMatchObject({
       version: "1.4.0",
-      releaseName: "TimeBro v1.4.0",
+      releaseName: "Yesterlog v1.4.0",
       releaseNotes: expect.stringContaining("dark-week.png"),
-      releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
-      downloadName: "TimeBro-1.4.0-arm64.dmg",
+      releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.4.0",
+      downloadName: "Yesterlog-1.4.0-arm64.dmg",
       downloadPlatform: "macos"
     });
   });
@@ -241,7 +241,7 @@ describe("getAutoUpdateCapability", () => {
       phase: "idle",
       platform: "macos"
     });
-    expect(getAutoUpdateCapability("linux", true, { APPIMAGE: "/tmp/TimeBro.AppImage" })).toMatchObject({
+    expect(getAutoUpdateCapability("linux", true, { APPIMAGE: "/tmp/Yesterlog.AppImage" })).toMatchObject({
       supported: true,
       phase: "idle",
       platform: "linux-appimage"
@@ -266,8 +266,8 @@ describe("getAutoUpdateCapability", () => {
   it("delegates packaged Snap updates to Snap", () => {
     expect(
       getAutoUpdateCapability("linux", true, {
-        SNAP: "/snap/timebro/current",
-        SNAP_NAME: "timebro"
+        SNAP: "/snap/yesterlog/current",
+        SNAP_NAME: "yesterlog"
       })
     ).toMatchObject({
       supported: false,
@@ -302,7 +302,7 @@ describe("createAppAutoUpdater", () => {
           percent: 42
         });
         emit("update-downloaded");
-        return ["/tmp/TimeBro.zip"];
+        return ["/tmp/Yesterlog.zip"];
       }),
       quitAndInstall: vi.fn(),
       on: (event, listener) => {
@@ -331,7 +331,7 @@ describe("createAppAutoUpdater", () => {
     expect(adapter.setFeedURL).toHaveBeenCalledWith({
       provider: "github",
       owner: "4gray",
-      repo: "time-bro",
+      repo: "yesterlog",
       releaseType: "release"
     });
     expect(downloadResult).toMatchObject({

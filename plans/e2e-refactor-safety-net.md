@@ -30,6 +30,6 @@ Add a renderer E2E safety net before refactoring the large `App.tsx` and `src/st
 - Existing screenshot smoke passed for `week/dark` before changes.
 - `npm run e2e:renderer` passed: 5/5 renderer E2E scenarios.
 - `npm run release:dry-run` passed: Vitest 121/121, E2E 5/5, production build.
-- Screenshot smoke passed: `npm run screenshots -- --views week --themes dark --out /tmp/timebro-e2e-screenshot-smoke`.
+- Screenshot smoke passed: `npm run screenshots -- --views week --themes dark --out /tmp/yesterlog-e2e-screenshot-smoke`.
 - `agent-browser` smoke passed against `http://127.0.0.1:5187/?demo=1&view=week&theme=dark&seed=e2e&today=2026-06-17`.
 - GitHub Actions CI passed on `main` run `28112409112`: unit tests, Chromium install, renderer E2E, and build.

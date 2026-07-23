@@ -10,21 +10,21 @@ import { TimeEntryModalLayer } from "./TimeEntryModalLayer";
 
 const ticket: JiraTicket = {
   id: "133470",
-  key: "TBRO-397",
+  key: "YLOG-397",
   summary: "Restructure the access domain in nx monorepo",
-  projectKey: "TBRO",
-  projectName: "TimeBro Product",
+  projectKey: "YLOG",
+  projectName: "Yesterlog Product",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,
   issueType: { name: "Task", hierarchyLevel: 0 },
-  url: "https://example.atlassian.net/browse/TBRO-397"
+  url: "https://example.atlassian.net/browse/YLOG-397"
 };
 
 const worklog: JiraWorklog = {
   id: "wl-1",
   issueId: "133470",
-  issueKey: "TBRO-397",
+  issueKey: "YLOG-397",
   issueSummary: "Restructure the access domain in nx monorepo",
   authorAccountId: "account-1",
   started: "2026-06-18T08:00:00.000Z",

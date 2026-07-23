@@ -40,7 +40,7 @@ const keyTone = (ticket: JiraTicket) => {
   if (ticket.statusCategory === "done") {
     return "is-muted";
   }
-  return ticket.projectKey === "TBRO" ? "" : "is-amber";
+  return ticket.projectKey === "YLOG" ? "" : "is-amber";
 };
 
 const TicketRow = ({

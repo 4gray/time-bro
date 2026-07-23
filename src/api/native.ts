@@ -34,12 +34,12 @@ import type {
 } from "../../shared/types";
 import { GITHUB_RELEASES_URL, getSafeReleaseUrl } from "../../shared/releases";
 
-const getNativeBridge = () => window.timeBro ?? window.jiraWeekTracker;
+const getNativeBridge = () => window.yesterlog;
 type NativeBridge = NonNullable<ReturnType<typeof getNativeBridge>>;
 type NativeBridgeMethod = keyof NativeBridge;
 
 const getNativeBridgeWithMethod = <Method extends NativeBridgeMethod>(method: Method) => {
-  const bridges = [window.timeBro, window.jiraWeekTracker];
+  const bridges = [window.yesterlog];
   return bridges.find((bridge): bridge is NativeBridge & Required<Pick<NativeBridge, Method>> => {
     if (!bridge) {
       return false;
@@ -107,7 +107,7 @@ export const nativeApi = {
       return Promise.reject(
         new Error(
           hasStaleBridge
-            ? "Restart TimeBro to finish enabling Jira activity sync. The current window is using an older native bridge."
+            ? "Restart Yesterlog to finish enabling Jira activity sync. The current window is using an older native bridge."
             : "Open the Electron app to sync Jira activity."
         )
       );
@@ -124,7 +124,7 @@ export const nativeApi = {
       return Promise.reject(
         new Error(
           hasStaleBridge
-            ? "Restart TimeBro to finish enabling Bitbucket review sync. The current window is using an older native bridge."
+            ? "Restart Yesterlog to finish enabling Bitbucket review sync. The current window is using an older native bridge."
             : "Open the Electron app to sync Bitbucket review sessions."
         )
       );
@@ -208,7 +208,7 @@ export const nativeApi = {
       return Promise.resolve({
         ok: false,
         models: [],
-        message: "Open the TimeBro desktop app to reach an AI provider."
+        message: "Open the Yesterlog desktop app to reach an AI provider."
       });
     }
 
@@ -221,7 +221,7 @@ export const nativeApi = {
     if (!bridge) {
       return Promise.resolve({
         ok: false,
-        message: "Open the TimeBro desktop app to reach an AI provider."
+        message: "Open the Yesterlog desktop app to reach an AI provider."
       });
     }
 
@@ -334,7 +334,7 @@ export const nativeApi = {
     if (!bridge) {
       return Promise.resolve({
         ok: false,
-        error: "Open the TimeBro desktop app to launch Cursor."
+        error: "Open the Yesterlog desktop app to launch Cursor."
       });
     }
 

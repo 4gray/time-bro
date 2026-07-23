@@ -165,9 +165,9 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
   const meta = recapFormatMeta[ws.format];
   const exportText = (markdown: boolean) => draft ? (markdown ? recapToMarkdown(draft, ws.format, ws.detail) : recapToPlainText(draft, ws.format, ws.detail)) : "";
   const copy = async () => { await navigator.clipboard.writeText(exportText(false)); setExportOpen(false); };
-  const download = () => { if (!draft) return; const url = URL.createObjectURL(new Blob([exportText(true)], { type: "text/markdown;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = `timebro-recap-${draft.interval.key.replace(":", "-")}-v${draft.version}.md`; link.click(); URL.revokeObjectURL(url); setExportOpen(false); };
+  const download = () => { if (!draft) return; const url = URL.createObjectURL(new Blob([exportText(true)], { type: "text/markdown;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = `yesterlog-recap-${draft.interval.key.replace(":", "-")}-v${draft.version}.md`; link.click(); URL.revokeObjectURL(url); setExportOpen(false); };
   const print = () => { document.body.classList.add("recap-printing"); setExportOpen(false); window.setTimeout(() => { window.print(); document.body.classList.remove("recap-printing"); }, 20); };
-  const grounding = draft ? `Bro read ${draft.coverage.pullRequestCount} PRs, ${draft.coverage.commitCount} commits and ${draft.coverage.ticketCount} tickets to draft this.` : "Building from local evidence…";
+  const grounding = draft ? `Yesterlog reviewed ${draft.coverage.pullRequestCount} PRs, ${draft.coverage.commitCount} commits and ${draft.coverage.ticketCount} tickets to draft this.` : "Building from local evidence…";
   const coverageNote = draft ? recapCoverageNote(draft) : undefined;
   const currentFormatEnhanced = Boolean(draft && (
     draft.aiFormats?.includes(ws.format) || (draft.generator === "ai" && !draft.aiFormats)
@@ -189,7 +189,7 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
         <div className="recap-grounding"><img src={appIcon} alt="" /><p>{grounding}</p></div>
       </aside>
       <main className={`recap-document ${ws.isGenerating ? "is-generating" : ""}`}>
-        {ws.isLoading ? <div className="recap-empty"><Loader2 className="spin" /><h2>Reading local history…</h2></div> : !draft?.themes.length ? <div className="recap-empty"><Sparkles size={30} /><h2>No reconstructed work in {ws.interval.shortLabel}</h2><p>Recap only reads weeks already cached in TimeBro. Open the calendar and sync the weeks you want to include.</p><button className="recap-secondary" onClick={onOpenCalendar}>Open calendar</button></div> : <>
+        {ws.isLoading ? <div className="recap-empty"><Loader2 className="spin" /><h2>Reading local history…</h2></div> : !draft?.themes.length ? <div className="recap-empty"><Sparkles size={30} /><h2>No reconstructed work in {ws.interval.shortLabel}</h2><p>Recap only reads weeks already cached in Yesterlog. Open the calendar and sync the weeks you want to include.</p><button className="recap-secondary" onClick={onOpenCalendar}>Open calendar</button></div> : <>
           {coverageNote && <div className={`recap-coverage-warning is-${draft.coverage.status ?? "partial"}`}><div><strong>Partial history</strong><p>{coverageNote}</p></div><button type="button" onClick={onOpenCalendar}>Review cached weeks</button></div>}
           <div className="recap-doc-eyebrow">{meta.eyebrow} · {draft.interval.label}</div><h1>{recapTitle(ws.format, draft.interval, draft.themes, draft.coverage)}</h1><p className="recap-doc-sub">{meta.sub}</p>
           <div className="recap-generation-row" aria-busy={ws.isGenerating}>{!ws.selectedSaved && <><button className="recap-secondary" onClick={ws.refreshActivity} disabled={ws.isGenerating} title="Rebuild from cached Jira, Bitbucket and local activity">{ws.isRefreshing ? <Loader2 className="spin" size={13} /> : <RefreshCw size={13} />} {ws.isRefreshing ? "Refreshing activity" : `Refresh activity${ws.newEvidenceCount ? ` (${ws.newEvidenceCount})` : ""}`}</button>

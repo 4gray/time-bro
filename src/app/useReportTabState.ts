@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { REPORT_TABS, type ReportTab } from "../components/Sidebar";
 
-const STORAGE_KEY = "timebro.reportTab";
+const STORAGE_KEY = "yesterlog.reportTab";
 const VALID_TABS = REPORT_TABS.map((tab) => tab.id);
 
 const isReportTab = (value: string | null): value is ReportTab =>

@@ -36,11 +36,11 @@ export interface DemoScenario {
   recurringOccurrences: RecurringOccurrence[];
 }
 
-const DEMO_JIRA_BASE_URL = "https://timebro-demo.example.test";
+const DEMO_JIRA_BASE_URL = "https://yesterlog-demo.example.test";
 const ACCOUNT_ID = "demo-account-001";
 const DEMO_ASSIGNEES: Record<string, string> = {
   DOC: "Mina Park",
-  TBRO: "Demo Timekeeper",
+  YLOG: "Demo Timekeeper",
   INT: "Noah Klein",
   MOB: "Iris Chen",
   OPS: "Sam Rivera",
@@ -253,8 +253,8 @@ const commitGroup = ({
   const first = new Date(localStartISO(dateKey, time));
   const last = new Date(first.getTime() + durationSeconds * 1000);
   return {
-    id: `timebro-demo/${repositorySlug}#${pullRequestId}:commits:${dateKey}`,
-    workspace: "timebro-demo",
+    id: `yesterlog-demo/${repositorySlug}#${pullRequestId}:commits:${dateKey}`,
+    workspace: "yesterlog-demo",
     repositorySlug,
     repositoryName,
     branch: `feature/${issueKey.toLowerCase()}`,
@@ -287,7 +287,7 @@ const buildBitbucketReviewResult = ({
   syncedAt: today.toISOString(),
   accountId: "demo-bitbucket-account",
   displayName: "Demo Reviewer",
-  workspace: "timebro-demo",
+  workspace: "yesterlog-demo",
   repositoryCount: new Set(sessions.map((session) => session.repositorySlug)).size,
   pullRequestCount: new Set(sessions.map((session) => `${session.repositorySlug}#${session.pullRequestId}`)).size,
   sessionCount: sessions.length,
@@ -381,9 +381,9 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
   const inProgress = [
     ticket({
       id: "demo-204",
-      key: "TBRO-204",
+      key: "YLOG-204",
       summary: "Rework weekly progress model for skipped days",
-      projectName: "TimeBro Product",
+      projectName: "Yesterlog Product",
       statusName: "In Progress",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(18, 30),
@@ -392,9 +392,9 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     ticket({
       id: "demo-401",
-      key: "TBRO-401",
+      key: "YLOG-401",
       summary: "Polish Add Time modal keyboard flow",
-      projectName: "TimeBro Product",
+      projectName: "Yesterlog Product",
       statusName: "In Review",
       statusCategory: "indeterminate",
       loggedSecondsTotal: seconds(6, 45),
@@ -436,9 +436,9 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     ticket({
       id: "demo-512",
-      key: "TBRO-512",
+      key: "YLOG-512",
       summary: "Normalize Jira ticket picker filters",
-      projectName: "TimeBro Product",
+      projectName: "Yesterlog Product",
       statusName: "Selected for Development",
       statusCategory: "new",
       loggedSecondsTotal: 0,
@@ -447,9 +447,9 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     ticket({
       id: "demo-506",
-      key: "TBRO-506",
+      key: "YLOG-506",
       summary: "Backfill created date in ticket summaries",
-      projectName: "TimeBro Product",
+      projectName: "Yesterlog Product",
       statusName: "In Progress",
       statusCategory: "indeterminate",
       loggedSecondsTotal: 0,
@@ -600,7 +600,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
   const logs = [
     worklog({
       id: "demo-wl-1001",
-      ticket: byKey("TBRO-204"),
+      ticket: byKey("YLOG-204"),
       dateKey: mondayKey,
       time: "09:10",
       duration: seconds(2, 15),
@@ -632,7 +632,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     worklog({
       id: "demo-wl-1005",
-      ticket: byKey("TBRO-204"),
+      ticket: byKey("YLOG-204"),
       dateKey: tuesdayKey,
       time: "09:20",
       duration: seconds(3, 30),
@@ -656,7 +656,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     worklog({
       id: "demo-wl-1008",
-      ticket: byKey("TBRO-401"),
+      ticket: byKey("YLOG-401"),
       dateKey: todayKey,
       time: "09:30",
       duration: seconds(2, 15),
@@ -672,7 +672,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
     }),
     worklog({
       id: "demo-wl-1010",
-      ticket: byKey("TBRO-204"),
+      ticket: byKey("YLOG-204"),
       dateKey: todayKey,
       time: "15:00",
       duration: seconds(2),
@@ -682,12 +682,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
 
   const reviewSessions = [
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "explorer-web",
       repositoryName: "explorer-web",
       pullRequestId: 214,
       title: "Active interrupt handling for poller",
-      issueKey: "TBRO-328",
+      issueKey: "YLOG-328",
       dateKey: mondayKey,
       time: "09:40",
       duration: seconds(0, 45),
@@ -696,12 +696,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       author: "Mira Novak"
     }),
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "explorer-web",
       repositoryName: "explorer-web",
       pullRequestId: 221,
       title: "Add documents dialog empty states",
-      issueKey: "TBRO-363",
+      issueKey: "YLOG-363",
       dateKey: tuesdayKey,
       time: "11:00",
       duration: seconds(1),
@@ -710,12 +710,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       author: "Jules Patel"
     }),
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "auth",
       repositoryName: "auth",
       pullRequestId: 219,
       title: "Bump keycloak-admin-client",
-      issueKey: "TBRO-391",
+      issueKey: "YLOG-391",
       dateKey: tuesdayKey,
       time: "16:10",
       duration: seconds(0, 20),
@@ -725,12 +725,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       confidence: "medium"
     }),
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "explorer-core",
       repositoryName: "explorer-core",
       pullRequestId: 226,
       title: "Interrupt-safe queue draining",
-      issueKey: "TBRO-410",
+      issueKey: "YLOG-410",
       dateKey: todayKey,
       time: "10:15",
       duration: seconds(1, 5),
@@ -739,12 +739,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       author: "Lina Park"
     }),
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "explorer-core",
       repositoryName: "explorer-core",
       pullRequestId: 230,
       title: "Scaffold monorepo domains",
-      issueKey: "TBRO-393",
+      issueKey: "YLOG-393",
       dateKey: thursdayKey,
       time: "15:20",
       duration: seconds(0, 30),
@@ -754,12 +754,12 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       confidence: "medium"
     }),
     reviewSession({
-      workspace: "timebro-demo",
+      workspace: "yesterlog-demo",
       repositorySlug: "explorer-web",
       repositoryName: "explorer-web",
       pullRequestId: 231,
       title: "Edge cases in poller interrupts",
-      issueKey: "TBRO-377",
+      issueKey: "YLOG-377",
       dateKey: thursdayKey,
       time: "13:00",
       duration: seconds(0, 25),
@@ -774,7 +774,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       repositorySlug: "explorer-web",
       repositoryName: "explorer-web",
       pullRequestId: 220,
-      issueKey: "TBRO-328",
+      issueKey: "YLOG-328",
       dateKey: mondayKey,
       time: "09:12",
       durationSeconds: seconds(1, 50),
@@ -785,7 +785,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       repositorySlug: "api",
       repositoryName: "api",
       pullRequestId: 224,
-      issueKey: "TBRO-377",
+      issueKey: "YLOG-377",
       dateKey: tuesdayKey,
       time: "10:25",
       durationSeconds: seconds(1, 10),
@@ -797,7 +797,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       repositorySlug: "explorer-web",
       repositoryName: "explorer-web",
       pullRequestId: 230,
-      issueKey: "TBRO-410",
+      issueKey: "YLOG-410",
       dateKey: todayKey,
       time: "09:20",
       durationSeconds: seconds(2, 5),
@@ -901,9 +901,9 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       jiraApiToken: "demo-token-not-real",
       bitbucketEmail: "demo.user@example.test",
       bitbucketApiToken: "demo-bitbucket-token-not-real",
-      bitbucketWorkspace: "timebro-demo",
+      bitbucketWorkspace: "yesterlog-demo",
       bitbucketRepositories: "explorer-web, explorer-core, auth",
-      bitbucketReviewBucketIssueKey: "TBRO-999",
+      bitbucketReviewBucketIssueKey: "YLOG-999",
       weeklyTargetHours: 40,
       workingDays: [1, 2, 3, 4, 5],
       reminderTime: "16:30",
@@ -924,7 +924,7 @@ export const createDemoScenario = (config: DemoConfig): DemoScenario => {
       inProgress,
       recentlyClosed
     },
-    favoriteKeys: ["TBRO-204", "PAY-142", "WEB-88"],
-    selectedTicket: byKey("TBRO-401")
+    favoriteKeys: ["YLOG-204", "PAY-142", "WEB-88"],
+    selectedTicket: byKey("YLOG-401")
   };
 };

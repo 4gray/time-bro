@@ -1,19 +1,19 @@
 {
-  "name": "timebro",
+  "name": "yesterlog",
   "version": "2.7.2",
   "private": true,
-  "description": "Local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.",
+  "description": "Yesterlog is local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.",
   "license": "MIT",
   "author": "fourgray <fourgray@proton.me>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/4gray/time-bro.git"
+    "url": "https://github.com/4gray/yesterlog.git"
   },
-  "homepage": "https://github.com/4gray/time-bro#readme",
+  "homepage": "https://4gray.github.io/yesterlog/",
   "bugs": {
-    "url": "https://github.com/4gray/time-bro/issues"
+    "url": "https://github.com/4gray/yesterlog/issues"
   },
-  "desktopName": "timebro.desktop",
+  "desktopName": "yesterlog.desktop",
   "main": "dist-electron/electron/main.js",
   "scripts": {
     "dev": "concurrently -k -n VITE,ELECTRON_TS,ELECTRON -c green,blue,magenta \"vite --host 127.0.0.1\" \"tsc -p tsconfig.electron.json --watch --preserveWatchOutput\" \"wait-on tcp:5173 dist-electron/electron/main.js && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron dist-electron/electron/main.js\"",
@@ -28,7 +28,8 @@
     "dist:linux": "npm run build && electron-builder --linux AppImage deb tar.gz --publish never",
     "dist:snap": "npm run build && electron-builder --linux snap --publish never",
     "dist:snap:stage": "npm run build && node scripts/stage-snap.mjs",
-    "release:dry-run": "npm run test && npm run e2e:renderer && npm run build",
+    "check:brand": "node scripts/check-brand.mjs",
+    "release:dry-run": "npm run check:brand && npm run test && npm run e2e:renderer && npm run build",
     "release:patch": "npm version patch -m \"chore(release): v%s\"",
     "release:minor": "npm version minor -m \"chore(release): v%s\"",
     "release:major": "npm version major -m \"chore(release): v%s\"",
@@ -68,8 +69,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "local.timebro",
-    "productName": "TimeBro",
+    "appId": "io.github.fourgray.yesterlog",
+    "productName": "Yesterlog",
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
@@ -89,7 +90,7 @@
       {
         "provider": "github",
         "owner": "4gray",
-        "repo": "time-bro",
+        "repo": "yesterlog",
         "releaseType": "release"
       }
     ],
@@ -108,11 +109,14 @@
         "zip"
       ]
     },
+    "nsis": {
+      "guid": "29d07a6a-c22b-5254-9ae6-80b17064706b"
+    },
     "linux": {
       "icon": "build/icons/512x512.png",
       "category": "Office",
       "synopsis": "Local weekly Jira time tracking",
-      "description": "TimeBro is a local-first desktop companion for weekly Jira time tracking. Sync and review Jira worklogs, reconstruct forgotten days without AI, or optionally polish drafts with local Ollama, Anthropic via the Claude CLI, or OpenAI via the Codex CLI. Cloud AI is opt-in and uses your existing CLI authentication. There is no TimeBro backend or telemetry.",
+      "description": "Yesterlog is a local-first desktop companion for weekly Jira time tracking. Sync and review Jira worklogs, reconstruct forgotten days without AI, or optionally polish drafts with local Ollama, Anthropic via the Claude CLI, or OpenAI via the Codex CLI. Cloud AI is opt-in and uses your existing CLI authentication. There is no Yesterlog backend or telemetry.",
       "syncDesktopName": true,
       "target": [
         "AppImage",
@@ -120,10 +124,16 @@
         "tar.gz"
       ]
     },
+    "deb": {
+      "fpm": [
+        "--replaces=timebro",
+        "--conflicts=timebro"
+      ]
+    },
     "snapcraft": {
       "base": "core24",
       "core24": {
-        "title": "TimeBro",
+        "title": "Yesterlog",
         "summary": "Local weekly Jira time tracking for your desktop",
         "confinement": "strict",
         "grade": "stable",

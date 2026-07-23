@@ -5,7 +5,7 @@ _Brainstorm 2026-06-30. Status: proposal, implementation deferred pending buy-in
 ## TL;DR
 
 **Build it — but tightly scoped to a read-only "what I did yesterday" recap, personal-only,
-deterministic-first.** It is the natural read-side twin of Day Reconstruction over data TimeBro
+deterministic-first.** It is the natural read-side twin of Day Reconstruction over data Yesterlog
 *already* holds, surfaced at the exact moment the user opens the app for standup. The line that
 keeps it "standup prep" and not "a team async-standup tool": **no new forward-looking data capture
 (no stored plan/blockers fields), no posting/sharing integrations, no multi-person, no persisted
@@ -19,7 +19,7 @@ Genuinely useful, and *not* scope creep, for three structural reasons:
    `issues[]` (tickets), `personalNotes[]` (now `category`-tagged), `recurringEntries[]`, and
    optional Bitbucket signals. No schema change, no new IPC, no new storage. It is the cheapest
    possible feature on the data axis.
-2. **Same justification as reconstruction.** TimeBro exists because developers *don't* remember how
+2. **Same justification as reconstruction.** Yesterlog exists because developers *don't* remember how
    their day went — that premise is the whole reason Day Reconstruction exists. The recap is just the
    *verbalized* form of the reconstructed day. If reconstruction is justified, the recap is justified
    by identical logic. It's reconstruction's natural read-side twin.
@@ -46,7 +46,7 @@ Yes. The line between "adjacent output of data we already have" and "a different
 Two specific calls:
 
 - **Format = "what I did," not the done/plan/blockers template.** Done/plan/blockers is a *team
-  async-standup* convention; TimeBro only authoritatively holds "done." "Plan" is forward-looking —
+  async-standup* convention; Yesterlog only authoritatively holds "done." "Plan" is forward-looking —
   the opposite of a reconstruction tool — and would require new capture. Leave it out. (The
   `touched-not-logged` rail already partially answers "what I'm on.")
 - **Blockers = at most a derived, low-confidence chip, not a field.** There's a cheap in-scope version
@@ -107,7 +107,7 @@ the *shape* frame. The recap must be the deliberately-lightest **text formatter*
 
 ## Explicit scope boundary (the one paragraph to hold the line)
 
-The standup recap is a **read-only, single-developer, on-device formatting of work TimeBro already
+The standup recap is a **read-only, single-developer, on-device formatting of work Yesterlog already
 recorded for the previous working day**, copyable as text. It captures no new data, stores no plan or
 blockers, keeps no recap history, and integrates with no chat tool. The moment any of those is added,
 it has stopped being standup *prep* and started becoming a standup *tool* — a different product with

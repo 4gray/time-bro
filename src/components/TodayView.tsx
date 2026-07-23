@@ -241,7 +241,7 @@ export const TodayView = ({
                       url={ticket.url}
                       issueType={ticket.issueType}
                       epic={ticket.epic}
-                      keyClassName={`touched-key ${ticket.projectKey === "TBRO" ? "" : "is-amber"}`}
+                      keyClassName={`touched-key ${ticket.projectKey === "YLOG" ? "" : "is-amber"}`}
                     />
                     <div className="touched-meta">{ticket.statusName}</div>
                   </div>

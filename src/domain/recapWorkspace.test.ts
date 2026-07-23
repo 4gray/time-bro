@@ -78,8 +78,8 @@ describe("Recap evidence", () => {
   it("preserves repeated ticket notes and groups the ticket under its product context", () => {
     const input = evidence();
     const worklog = (id: string, started: string, comment: string) => ({
-      id, issueId: "100", issueKey: "TBRO-204", issueSummary: "Weekly progress model",
-      projectKey: "TBRO", projectName: "TimeBro", authorAccountId: "me", started,
+      id, issueId: "100", issueKey: "YLOG-204", issueSummary: "Weekly progress model",
+      projectKey: "YLOG", projectName: "Yesterlog", authorAccountId: "me", started,
       timeSpentSeconds: 3600, comment
     });
     input.syncResults = [{
@@ -92,8 +92,8 @@ describe("Recap evidence", () => {
 
     const sources = buildRecapSources(input);
     expect(sources).toHaveLength(1);
-    expect(sources[0]).toMatchObject({ projectName: "TimeBro", details: ["Built the model", "Validated skipped days"] });
-    expect(buildRecapThemes(sources, "week")[0].name).toBe("TimeBro");
+    expect(sources[0]).toMatchObject({ projectName: "Yesterlog", details: ["Built the model", "Validated skipped days"] });
+    expect(buildRecapThemes(sources, "week")[0].name).toBe("Yesterlog");
   });
 
   it("filters exact interval bounds and honors reconstruction placement and duration overrides", () => {

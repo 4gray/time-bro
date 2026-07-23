@@ -34,7 +34,7 @@ import type {
   UpdateWorklogResult
 } from "../shared/types";
 
-const timeBroApi = {
+const yesterlogApi = {
   testJiraConnection: (settings: AppSettings): Promise<JiraConnectionResult> => {
     return ipcRenderer.invoke("jira:test-connection", settings);
   },
@@ -102,5 +102,4 @@ const timeBroApi = {
   }
 };
 
-contextBridge.exposeInMainWorld("timeBro", timeBroApi);
-contextBridge.exposeInMainWorld("jiraWeekTracker", timeBroApi);
+contextBridge.exposeInMainWorld("yesterlog", yesterlogApi);

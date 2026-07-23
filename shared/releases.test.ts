@@ -20,21 +20,21 @@ describe("release helpers", () => {
     expect(isNewerReleaseVersion("release-latest", "1.0.0")).toBe(false);
   });
 
-  it("allows only TimeBro GitHub release URLs", () => {
-    expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases/tag/v1.1.0")).toBe(
-      "https://github.com/4gray/time-bro/releases/tag/v1.1.0"
+  it("allows only Yesterlog GitHub release URLs", () => {
+    expect(getSafeReleaseUrl("https://github.com/4gray/yesterlog/releases/tag/v1.1.0")).toBe(
+      "https://github.com/4gray/yesterlog/releases/tag/v1.1.0"
     );
-    expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.deb")).toBe(
-      "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.deb"
+    expect(getSafeReleaseUrl("https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog.deb")).toBe(
+      "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog.deb"
     );
-    expect(getSafeReleaseUrl("https://github.com/4gray/time-bro/releases-preview")).toBe(GITHUB_RELEASES_URL);
-    expect(getSafeReleaseUrl("https://example.com/4gray/time-bro/releases")).toBe(GITHUB_RELEASES_URL);
+    expect(getSafeReleaseUrl("https://github.com/4gray/yesterlog/releases-preview")).toBe(GITHUB_RELEASES_URL);
+    expect(getSafeReleaseUrl("https://example.com/4gray/yesterlog/releases")).toBe(GITHUB_RELEASES_URL);
   });
 
   it("returns undefined for unsafe release asset URLs", () => {
-    expect(getSafeReleaseAssetUrl("https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.exe")).toBe(
-      "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro.exe"
+    expect(getSafeReleaseAssetUrl("https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog.exe")).toBe(
+      "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog.exe"
     );
-    expect(getSafeReleaseAssetUrl("https://example.com/TimeBro.exe")).toBeUndefined();
+    expect(getSafeReleaseAssetUrl("https://example.com/Yesterlog.exe")).toBeUndefined();
   });
 });

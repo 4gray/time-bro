@@ -13,7 +13,7 @@ Add a compact day-timeline editor to the Add Time dialog so the selected start, 
 - Use the dialog's available width: keep the form in the left column and place a tall day cut-out in the right column; stack it below the form only on narrow windows.
 - Align the right timeline with the mode tabs directly below the modal header, so ticket selection and all form controls sit entirely in the left column and the timeline gains the full content height.
 - Match the established Today calendar tokens and interaction language in the modal-specific layout.
-- Use the neutral `TBRO-*` project prefix in demo fixtures, test fixtures, and example UI copy instead of `FTDM-*`.
+- Use the neutral `YLOG-*` project prefix in demo fixtures, test fixtures, and example UI copy instead of `FTDM-*`.
 
 ## Work
 
@@ -29,5 +29,5 @@ Add a compact day-timeline editor to the Add Time dialog so the selected start, 
 - `npm run test` — 119 files / 769 tests passed.
 - `npm run e2e:renderer` — 7 renderer flows passed.
 - `npm run build` — passed (existing Vite chunk-size warning only).
-- Prefix regression — demo E2E asserts that no `FTDM-*` ticket appears; demo fixtures and example copy now use `TBRO-*` / `TimeBro Product`.
+- Prefix regression — demo E2E asserts that no `FTDM-*` ticket appears; demo fixtures and example copy now use `YLOG-*` / `Yesterlog Product`.
 - Browser preview — inspected the two-column dark-theme dialog at desktop and narrow widths; confirmed the timeline begins level with the mode buttons, opens around the selected slot, keeps nearby entries visible, does not clip the footer, and stacks below the form without horizontal overflow.

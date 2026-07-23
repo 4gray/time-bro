@@ -35,7 +35,7 @@ import type {
   UpdateWorklogResult
 } from "../shared/types";
 
-interface TimeBroNativeApi {
+interface YesterlogNativeApi {
   testJiraConnection: (settings: AppSettings) => Promise<JiraConnectionResult>;
   testBitbucketConnection: (settings: AppSettings) => Promise<BitbucketConnectionResult>;
   syncJiraWorklogs: (request: SyncRequest) => Promise<SyncResult>;
@@ -65,7 +65,6 @@ interface ImportMetaEnv {
 
 declare global {
   interface Window {
-    timeBro?: TimeBroNativeApi;
-    jiraWeekTracker?: TimeBroNativeApi;
+    yesterlog?: YesterlogNativeApi;
   }
 }

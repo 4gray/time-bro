@@ -96,7 +96,7 @@ export const ReleaseNotesDialog = ({
   }, [releaseHistory, updateInfo]);
 
   const notes = updateInfo.releaseNotes?.trim() || "No release notes were published for this release.";
-  const releaseTitle = updateInfo.releaseName?.trim() || `TimeBro ${formatReleaseVersion(updateInfo.latestVersion)}`;
+  const releaseTitle = updateInfo.releaseName?.trim() || `Yesterlog ${formatReleaseVersion(updateInfo.latestVersion)}`;
   const selectedVersion = normalizeReleaseVersion(updateInfo.latestVersion ?? "");
   const canDownload = Boolean(updateInfo.updateAvailable && (updateInfo.downloadUrl || updateInfo.autoUpdate?.supported));
   const downloadLabel = updateInfo.autoUpdate?.supported

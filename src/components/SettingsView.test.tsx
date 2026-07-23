@@ -29,9 +29,9 @@ const updateInfo: AppUpdateInfo = {
   latestVersion: "1.1.0",
   releaseName: "v1.1.0",
   releaseNotes: "## Changed\n\n- Added the download button.",
-  releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.1.0",
-  downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.1.0/TimeBro-1.1.0-arm64.dmg",
-  downloadName: "TimeBro-1.1.0-arm64.dmg",
+  releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.1.0",
+  downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.1.0/Yesterlog-1.1.0-arm64.dmg",
+  downloadName: "Yesterlog-1.1.0-arm64.dmg",
   downloadPlatform: "macos",
   checkedAt: "2026-06-22T12:00:00.000Z",
   updateAvailable: true
@@ -168,13 +168,13 @@ describe("SettingsView", () => {
           supported: false,
           phase: "unsupported",
           platform: "linux-snap",
-          reason: "Snap installs updates automatically. Run `sudo snap refresh timebro` to check for an update now."
+          reason: "Snap installs updates automatically. Run `sudo snap refresh yesterlog` to check for an update now."
         }
       }
     });
 
     expect(markup).toContain("Updates are managed by Snap.");
-    expect(markup).toContain("sudo snap refresh timebro");
+    expect(markup).toContain("sudo snap refresh yesterlog");
     expect(markup).toContain("Refresh release notes");
     expect(markup).not.toContain(">Download<");
   });

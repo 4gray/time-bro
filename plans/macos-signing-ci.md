@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make GitHub Actions produce signed and notarized macOS TimeBro release artifacts so Gatekeeper accepts the downloaded app.
+Make GitHub Actions produce signed and notarized macOS Yesterlog release artifacts so Gatekeeper accepts the downloaded app.
 
 ## Decisions
 
@@ -22,7 +22,7 @@ Make GitHub Actions produce signed and notarized macOS TimeBro release artifacts
 - Document where to create Apple credentials and which GitHub secret names to use. Done.
 - Run tests/build. Done.
 - Provision GitHub Actions signing secrets in the repository. Done.
-- Revoke the two earlier TimeBro App Store Connect API keys that were generated before the successful Chrome download. Done.
+- Revoke the two earlier Yesterlog App Store Connect API keys that were generated before the successful Chrome download. Done.
 - Commit the signing changes onto current `main`, push them, and move `v1.0.0` to the resulting commit so the release workflow rebuilds signed artifacts. In progress.
 - Preserve the existing draft release notes when GitHub creates the replacement `v1.0.0` draft. Pending workflow completion.
 
@@ -36,5 +36,5 @@ Make GitHub Actions produce signed and notarized macOS TimeBro release artifacts
 - `plutil -lint build/entitlements.mac.plist build/entitlements.mac.inherit.plist` passed.
 - `CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac dir --publish never -c.mac.notarize=false` passed, validating the macOS packaging config without CI secrets.
 - Full signed `npm run dist:mac` was not run locally because it requires the real Apple Developer certificate and App Store Connect secrets in CI.
-- `gh secret list --repo 4gray/time-bro` shows all six required repository secrets: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, and `APPLE_TEAM_ID`.
-- App Store Connect now shows active keys `HG55VW4Z24` and `HGWTQFKGP4`; the earlier TimeBro keys `6K8CXJHYN5` and `DGXBF23Q86` are listed under revoked keys.
+- `gh secret list --repo 4gray/yesterlog` shows all six required repository secrets: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, and `APPLE_TEAM_ID`.
+- App Store Connect now shows active keys `HG55VW4Z24` and `HGWTQFKGP4`; the earlier Yesterlog keys `6K8CXJHYN5` and `DGXBF23Q86` are listed under revoked keys.

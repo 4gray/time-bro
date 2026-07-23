@@ -91,7 +91,7 @@ There is **no UI primitive layer** — no `Button`, `Tooltip`, `SegmentedControl
 | `TimeSplit.tsx` | Unchanged; stays in the identity block. |
 | `formatRelativeTime` (`activeWork.ts:62`) | **Reuse for "2M AGO"** — already produces `12m ago` / `3d ago`, takes an injectable `now`, returns `just now` under 45s. |
 | `useLiveDate.ts` | Reuse as the clock for the relative label. Use a **separate instance** at ~15s (`useLiveDate(undefined, 15_000)`); its docblock warns that speeding up the shared tick rebuilds derived week state. |
-| `useWeekViewMode.ts` | **Already exactly right** — `'summary' \| 'timeline'`, localStorage `timebro-week-view-mode`. No change needed. |
+| `useWeekViewMode.ts` | **Already exactly right** — `'summary' \| 'timeline'`, localStorage `yesterlog-week-view-mode`. No change needed. |
 | `AppOverlays.tsx` | Mount the command palette here alongside the existing dialogs. |
 | Icons | lucide-react: `Search`, `RefreshCw`, `Plus`, `ChevronLeft`, `ChevronRight`, `Loader2`. |
 

@@ -61,7 +61,7 @@ const settingsDraft: AppSettings = {
 const updateInfo: AppUpdateInfo = {
   currentVersion: "1.3.2",
   latestVersion: "1.4.0",
-  releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
+  releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.4.0",
   checkedAt: "2026-06-25T08:00:00.000Z",
   updateAvailable: true
 };

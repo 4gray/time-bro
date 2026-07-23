@@ -46,7 +46,7 @@ const ticket: JiraTicket = {
   key: "TB-42",
   summary: "Refactor modal actions",
   projectKey: "TB",
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,

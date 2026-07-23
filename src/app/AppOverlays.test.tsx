@@ -77,8 +77,8 @@ vi.mock("../components/SnackbarStack", () => ({
 const updateInfo: AppUpdateInfo = {
   currentVersion: "1.3.2",
   latestVersion: "1.4.0",
-  releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.4.0",
-  downloadUrl: "https://github.com/4gray/time-bro/releases/download/v1.4.0/TimeBro.dmg",
+  releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.4.0",
+  downloadUrl: "https://github.com/4gray/yesterlog/releases/download/v1.4.0/Yesterlog.dmg",
   checkedAt: "2026-06-24T12:00:00.000Z",
   updateAvailable: true
 };
@@ -163,7 +163,7 @@ describe("AppOverlays", () => {
       releaseHistory: [
         {
           version: "1.3.0",
-          releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+          releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.3.0"
         }
       ],
       onCloseReleaseNotes,
@@ -186,7 +186,7 @@ describe("AppOverlays", () => {
     expect(onOpenReleasePage).toHaveBeenCalledWith(updateInfo.releasePageUrl);
     expect(onSelectReleaseNotesVersion).toHaveBeenCalledWith({
       version: "1.3.0",
-      releasePageUrl: "https://github.com/4gray/time-bro/releases/tag/v1.3.0"
+      releasePageUrl: "https://github.com/4gray/yesterlog/releases/tag/v1.3.0"
     });
   });
 

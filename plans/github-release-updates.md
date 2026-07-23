@@ -8,7 +8,7 @@ Add a lightweight, cross-platform update checker that shows the current app vers
 
 - Use Electron main-process IPC for app metadata, GitHub release fetching, and opening external release URLs.
 - Use `app.getVersion()` for the installed/current version instead of reading `package.json` in the renderer.
-- Query GitHub Releases for `4gray/time-bro` and treat the release tag/name as the latest version.
+- Query GitHub Releases for `4gray/yesterlog` and treat the release tag/name as the latest version.
 - Keep this as a manual download/open-release flow rather than a packaged auto-updater.
 - Reuse the existing snackbar layer with an optional action button for the release link.
 - Read release notes from the public GitHub Releases API and render them in an in-app dialog.

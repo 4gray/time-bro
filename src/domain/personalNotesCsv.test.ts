@@ -61,7 +61,7 @@ describe("personal notes CSV", () => {
     expect(csv).toContain('LOCAL-NOTE,"Planning, notes",1.25');
   });
 
-  it("imports only local personal note rows from TimeBro CSV", () => {
+  it("imports only local personal note rows from Yesterlog CSV", () => {
     const csv = [
       "Date,Weekday,Issue,Summary,Hours",
       "2026-06-18,Thursday,TB-12,Ignored Jira work,2.00",

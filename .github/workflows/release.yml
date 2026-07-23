@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit brand identity
+        run: npm run check:brand
+
       - name: Run tests
         run: npm run test
 
@@ -51,7 +54,7 @@ jobs:
           - platform: macos
             os: macos-latest
             script: npm run dist:mac -- -c.mac.forceCodeSigning=true
-            artifact_name: timebro-macos
+            artifact_name: yesterlog-macos
             artifact_paths: |
               release/*.dmg
               release/*.zip
@@ -60,7 +63,7 @@ jobs:
           - platform: windows
             os: windows-latest
             script: npm run dist:win
-            artifact_name: timebro-windows
+            artifact_name: yesterlog-windows
             artifact_paths: |
               release/*.exe
               release/*.zip
@@ -69,7 +72,7 @@ jobs:
           - platform: linux
             os: ubuntu-latest
             script: npm run dist:linux
-            artifact_name: timebro-linux
+            artifact_name: yesterlog-linux
             artifact_paths: |
               release/*.AppImage
               release/*.deb
@@ -183,7 +186,7 @@ jobs:
       - name: Upload Snap artifact
         uses: actions/upload-artifact@v4
         with:
-          name: timebro-snap
+          name: yesterlog-snap
           path: ${{ steps.snapcraft.outputs.snap }}
           if-no-files-found: error
 
@@ -234,7 +237,7 @@ jobs:
       - name: Download Snap artifact
         uses: actions/download-artifact@v4
         with:
-          name: timebro-snap
+          name: yesterlog-snap
           path: release
 
       - name: Locate Snap

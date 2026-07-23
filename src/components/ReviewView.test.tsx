@@ -41,7 +41,7 @@ const buildSession = (
   pullRequestAuthorAccountId: "author-account",
   pullRequestAuthorDisplayName: "Feature Author",
   isPullRequestAuthor: false,
-  jiraIssueKey: `TBRO-${pullRequestId}`,
+  jiraIssueKey: `YLOG-${pullRequestId}`,
   dateKey: "2026-06-15",
   startedISO: "2026-06-15T09:40:00.000Z",
   endedISO: "2026-06-15T10:25:00.000Z",
@@ -75,7 +75,7 @@ const reviewResult: BitbucketReviewSyncResult = {
   sessions: [
     buildSession(214, {
       pullRequestTitle: "Active interrupt handling for poller",
-      jiraIssueKey: "TBRO-328"
+      jiraIssueKey: "YLOG-328"
     })
   ]
 };
@@ -87,7 +87,7 @@ const baseProps = (): ReviewViewProps => ({
   weekStartISO: "2026-06-15T00:00:00.000Z",
   settings,
   result: reviewResult,
-  issueUrlsByKey: { "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" },
+  issueUrlsByKey: { "YLOG-328": "https://example.atlassian.net/browse/YLOG-328" },
   issueTypesByKey: {},
   isConfigured: true,
   isSyncing: false,
@@ -151,7 +151,7 @@ describe("ReviewView", () => {
         weekStartISO="2026-06-15T00:00:00.000Z"
         settings={settings}
         result={reviewResult}
-        issueUrlsByKey={{ "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" }}
+        issueUrlsByKey={{ "YLOG-328": "https://example.atlassian.net/browse/YLOG-328" }}
         issueTypesByKey={{}}
         isConfigured={true}
         isSyncing={false}
@@ -174,7 +174,7 @@ describe("ReviewView", () => {
     expect(markup).toContain("APPROVED");
     expect(markup).toContain("Active interrupt handling for poller");
     expect(markup).toContain("author: Feature Author");
-    expect(markup).toContain("TBRO-328");
+    expect(markup).toContain("YLOG-328");
     expect(markup).toContain("LOG 1 SESSION");
   });
 
@@ -184,10 +184,10 @@ describe("ReviewView", () => {
       sessions: [
         buildSession(214, {
           pullRequestTitle: "Active interrupt handling for poller",
-          jiraIssueKey: "TBRO-328",
+          jiraIssueKey: "YLOG-328",
           status: "logged",
           logged: {
-            issueKey: "TBRO-328",
+            issueKey: "YLOG-328",
             worklogId: "wl-214",
             loggedAt: "2026-06-15T12:30:00.000Z",
             targetMode: "reviewed-ticket",
@@ -202,7 +202,7 @@ describe("ReviewView", () => {
       <ReviewView
         {...baseProps()}
         result={loggedResult}
-        issueUrlsByKey={{ "TBRO-328": "https://example.atlassian.net/browse/TBRO-328" }}
+        issueUrlsByKey={{ "YLOG-328": "https://example.atlassian.net/browse/YLOG-328" }}
       />
     );
 
@@ -211,7 +211,7 @@ describe("ReviewView", () => {
     expect(markup).toContain("1h 00m");
     expect(markup).toContain("suggested 45m");
     expect(markup).toContain("+15m");
-    expect(markup).toContain("TBRO-328");
+    expect(markup).toContain("YLOG-328");
     expect(markup).toContain("LOG 0 SESSIONS");
   });
 
@@ -223,11 +223,11 @@ describe("ReviewView", () => {
       sessions: [
         buildSession(214, {
           pullRequestTitle: "Active interrupt handling for poller",
-          jiraIssueKey: "TBRO-328"
+          jiraIssueKey: "YLOG-328"
         }),
         buildSession(215, {
           pullRequestTitle: "Refresh account picker",
-          jiraIssueKey: "TBRO-329"
+          jiraIssueKey: "YLOG-329"
         })
       ]
     };
@@ -235,8 +235,8 @@ describe("ReviewView", () => {
     renderView({
       result,
       issueUrlsByKey: {
-        "TBRO-328": "https://example.atlassian.net/browse/TBRO-328",
-        "TBRO-329": "https://example.atlassian.net/browse/TBRO-329"
+        "YLOG-328": "https://example.atlassian.net/browse/YLOG-328",
+        "YLOG-329": "https://example.atlassian.net/browse/YLOG-329"
       },
       onLogSessions
     });

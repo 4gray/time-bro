@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS } from "../domain/week";
 import type { BitbucketReviewSyncRequest, BitbucketReviewSyncResult } from "../../shared/types";
 import { nativeApi } from "./native";
 
-type NativeApiBridge = NonNullable<Window["timeBro"]>;
+type NativeApiBridge = NonNullable<Window["yesterlog"]>;
 
 const originalWindow = globalThis.window;
 
@@ -35,10 +35,7 @@ const syncResult: BitbucketReviewSyncResult = {
   sessions: []
 };
 
-const setNativeWindow = (bridges: {
-  jiraWeekTracker?: Partial<NativeApiBridge>;
-  timeBro?: Partial<NativeApiBridge>;
-}) => {
+const setNativeWindow = (bridges: { yesterlog?: Partial<NativeApiBridge> }) => {
   Object.defineProperty(globalThis, "window", {
     configurable: true,
     value: bridges
@@ -60,14 +57,12 @@ describe("nativeApi Bitbucket bridge", () => {
     Reflect.deleteProperty(globalThis, "window");
   });
 
-  it("uses the bridge namespace that exposes Bitbucket review sync", async () => {
+  it("uses the Yesterlog bridge namespace for Bitbucket review sync", async () => {
     const syncBitbucketReviews = vi.fn().mockResolvedValue(syncResult);
 
     setNativeWindow({
-      timeBro: {
-        testBitbucketConnection: vi.fn()
-      },
-      jiraWeekTracker: {
+      yesterlog: {
+        testBitbucketConnection: vi.fn(),
         syncBitbucketReviews
       }
     });
@@ -78,13 +73,13 @@ describe("nativeApi Bitbucket bridge", () => {
 
   it("reports a stale native bridge instead of throwing a raw TypeError", async () => {
     setNativeWindow({
-      timeBro: {
+      yesterlog: {
         testBitbucketConnection: vi.fn()
       }
     });
 
     await expect(nativeApi.syncBitbucketReviews(request)).rejects.toThrow(
-      "Restart TimeBro to finish enabling Bitbucket review sync"
+      "Restart Yesterlog to finish enabling Bitbucket review sync"
     );
   });
 });

@@ -162,7 +162,7 @@ describe("useWeekActions", () => {
     await expect(blob.text()).resolves.toContain("Date,Weekday,Issue,Summary,Hours,Title");
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:week-csv");
-    expect(document.querySelector('a[download="timebro-week-2026-06-15.csv"]')).toBeNull();
+    expect(document.querySelector('a[download="yesterlog-week-2026-06-15.csv"]')).toBeNull();
     expect(showSuccess).toHaveBeenCalledWith("Exported Jun 15 - 21, 2026 CSV.");
   });
 });

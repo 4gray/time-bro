@@ -8,7 +8,7 @@ import type {
 /**
  * Day Reconstruction — deterministic core engine.
  *
- * This module rebuilds a single day's proposed worklog from the signals TimeBro already
+ * This module rebuilds a single day's proposed worklog from the signals Yesterlog already
  * syncs (Bitbucket PR reviews) plus the Jira worklogs already logged for that day. It is
  * a pure, fully deterministic engine with **no model and no network** — it is the product
  * core and works completely on its own. An optional local-AI layer (`enhancePrompt.ts` +
@@ -28,7 +28,7 @@ export type ReconstructConfidence = "high" | "med" | "low";
 export interface ReconstructSignal {
   id: string;
   kind: SignalKind;
-  /** Ticket key (e.g. `TBRO-328`) or "" when none could be derived. */
+  /** Ticket key (e.g. `YLOG-328`) or "" when none could be derived. */
   key: string;
   title: string;
   /** Mono sub-line: "web-app · 5 commits · 09:12–11:05". */

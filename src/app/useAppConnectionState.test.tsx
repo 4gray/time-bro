@@ -17,7 +17,7 @@ const connectedSettings: AppSettings = {
   jiraApiToken: "token",
   bitbucketEmail: "person@example.com",
   bitbucketApiToken: "bb-token",
-  bitbucketWorkspace: "timebro",
+  bitbucketWorkspace: "yesterlog",
   bitbucketRepositories: "web, core"
 };
 

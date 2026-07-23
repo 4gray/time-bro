@@ -97,7 +97,7 @@ const parseViewport = (value) => {
 };
 
 const printHelp = () => {
-  console.log(`Capture TimeBro release screenshots.
+  console.log(`Capture Yesterlog release screenshots.
 
 Usage:
   npm run screenshots -- [options]
