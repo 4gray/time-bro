@@ -84,6 +84,20 @@ afterEach(() => {
 });
 
 describe("useRecapWorkspace generation", () => {
+  it("falls back to Performance review when a legacy Standup preference or link is opened", async () => {
+    window.localStorage.setItem("yesterlog-recap-preferences", JSON.stringify({
+      format: "standup",
+      detail: "detailed"
+    }));
+    window.location.hash = "#/recap?period=week&interval=2026-06-15&format=standup";
+
+    act(() => root.render(<Harness />));
+    await flush();
+
+    expect(getWorkspace().format).toBe("perf");
+    expect(window.location.hash).toContain("format=perf");
+  });
+
   it("opens with a local draft and creates a separate AI version only on request", async () => {
     const pending = deferred<RecapDraftVersion>();
     let candidate: RecapDraftVersion | undefined;

@@ -141,8 +141,12 @@ describe("Recap evidence", () => {
     input.personalNotes = [note("collab", "2026-06-17", 1.5, "meeting"), note("ops", "2026-06-18", 2)];
     const draft = buildDeterministicRecap(input, 1, new Date("2026-06-30T12:00:00Z"));
     const performance = recapToPlainText(draft, "perf", "detailed");
-    expect(performance).toContain("Work on");
-    expect(performance).toContain("The supporting notes include");
+    expect(performance).toContain("The largest concentration of recorded work");
+    expect(performance).toContain("A second area of focus");
+    expect(performance).toContain("Supporting notes mention");
+    expect(performance.match(/does not infer outcomes/g)).toHaveLength(1);
+    expect(draft.narratives?.perf?.paragraphs).toHaveLength(draft.themes.length);
+    expect(recapToMarkdown(draft, "perf", "detailed")).not.toContain("## Meetings & collaboration");
     const cv = recapToPlainText(draft, "cv", "detailed");
     expect(cv).toMatch(/Supported|Contributed to/);
     expect(cv).not.toContain("Delivered");
@@ -214,12 +218,14 @@ describe("Recap evidence", () => {
     const input = evidence("month");
     input.personalNotes = [note("collab", "2026-06-17", 1.5, "meeting"), note("ops", "2026-06-18", 2)];
     const draft = buildDeterministicRecap(input, 1, new Date("2026-06-30T12:00:00Z"));
-    for (const format of ["perf", "manager", "cv", "standup", "changelog"] as const) {
+    for (const format of ["perf", "manager", "cv", "changelog"] as const) {
       for (const detail of ["headline", "balanced", "detailed"] as const) {
         expect(recapToPlainText(draft, format, detail)).toContain(draft.interval.label);
         expect(recapToMarkdown(draft, format, detail)).toMatch(/^# /);
       }
     }
+    expect(recapToPlainText(draft, "manager", "headline")).toContain("My month centered on");
+    expect(recapToPlainText(draft, "manager", "headline")).not.toContain("\nMeetings & collaboration\n");
     expect(buildDeterministicRecap(evidence()).themes).toEqual([]);
   });
 

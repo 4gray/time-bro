@@ -5,7 +5,9 @@ import type {
   RecapDraftRecord,
   RecapDraftVersion,
   RecapFormat,
+  RecapFormatCopy,
   RecapInterval,
+  RecapNarrativeFormat,
   RecapPeriod,
   RecapSourceItem,
   RecapTheme,
@@ -21,6 +23,7 @@ import {
   recapIntervalForDate,
   recapIntervalFromKey,
   recapIntervalParam,
+  recapNarrativeCopy,
   recapRecordHasCurrentSchema,
   recapWeekKeys,
   shiftRecapInterval,
@@ -42,10 +45,12 @@ import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 import { useAiConnection } from "./useAiConnection";
 
 const PREF_KEY = "yesterlog-recap-preferences";
-const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "standup", "changelog"];
+const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "changelog"];
 const DETAILS: RecapDetail[] = ["headline", "balanced", "detailed"];
 const PERIODS: RecapPeriod[] = ["week", "month", "quarter"];
 type RecapOperation = "refreshing" | "rewriting";
+const isRecapFormat = (value: unknown): value is RecapFormat =>
+  typeof value === "string" && FORMATS.includes(value as RecapFormat);
 
 const sourceFingerprint = (source: RecapSourceItem) => JSON.stringify({
   kind: source.kind,
@@ -82,7 +87,7 @@ const routeParams = () => {
 
 const readPrefs = () => {
   try {
-    return JSON.parse(localStorage.getItem(PREF_KEY) ?? "{}") as { format?: RecapFormat; detail?: RecapDetail };
+    return JSON.parse(localStorage.getItem(PREF_KEY) ?? "{}") as { format?: unknown; detail?: unknown };
   } catch {
     return {};
   }
@@ -125,10 +130,11 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     ? initialParams.get("period") as RecapPeriod
     : "quarter";
   const [period, setPeriodState] = useState<RecapPeriod>(initialPeriod);
-  const [format, setFormatState] = useState<RecapFormat>(FORMATS.includes(initialParams.get("format") as RecapFormat)
-    ? initialParams.get("format") as RecapFormat : prefs.format ?? "perf");
+  const [format, setFormatState] = useState<RecapFormat>(isRecapFormat(initialParams.get("format"))
+    ? initialParams.get("format") as RecapFormat : isRecapFormat(prefs.format) ? prefs.format : "perf");
   const [detail, setDetailState] = useState<RecapDetail>(DETAILS.includes(initialParams.get("detail") as RecapDetail)
-    ? initialParams.get("detail") as RecapDetail : prefs.detail ?? "detailed");
+    ? initialParams.get("detail") as RecapDetail
+    : DETAILS.includes(prefs.detail as RecapDetail) ? prefs.detail as RecapDetail : "detailed");
   const initialInterval = recapIntervalFromKey(initialPeriod, initialParams.get("interval") ?? "", currentDate);
   const [intervals, setIntervals] = useState<Record<RecapPeriod, RecapInterval>>({
     week: initialPeriod === "week" ? initialInterval : recapIntervalForDate("week", currentDate),
@@ -179,7 +185,9 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
       return;
     }
     let cancelled = false;
-    void getSavedRecaps().then((items) => { if (!cancelled) setSaved(items); }).catch(() => onError("Unable to load saved recaps."));
+    void getSavedRecaps().then((items) => {
+      if (!cancelled) setSaved(items.filter((item) => isRecapFormat(item.format)));
+    }).catch(() => onError("Unable to load saved recaps."));
     return () => { cancelled = true; };
   }, [isDemo, onError, seedSavedRecaps]);
 
@@ -364,6 +372,27 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
       : version) });
   }, [persistRecord, record, selectedSaved]);
 
+  const updateNarrative = useCallback((
+    narrativeFormat: RecapNarrativeFormat,
+    update: (copy: RecapFormatCopy) => RecapFormatCopy
+  ) => {
+    if (!record || selectedSaved) return;
+    const now = new Date().toISOString();
+    persistRecord({
+      ...record,
+      versions: record.versions.map((version) => version.version === record.activeVersion
+        ? {
+            ...version,
+            editedAt: now,
+            narratives: {
+              ...version.narratives,
+              [narrativeFormat]: update(recapNarrativeCopy(version, narrativeFormat))
+            }
+          }
+        : version)
+    });
+  }, [persistRecord, record, selectedSaved]);
+
   const setActiveVersion = useCallback((version: number) => {
     if (record?.versions.some((item) => item.version === version)) persistRecord({ ...record, activeVersion: version });
   }, [persistRecord, record]);
@@ -406,7 +435,7 @@ export const useRecapWorkspace = ({ currentDate, settings, recurringEvents, isDe
     record, activeDraft, displayedDraft, selectedSaved, saved, isLoading, isGenerating,
     isRefreshing: operation === "refreshing", isRewriting: operation === "rewriting", newEvidenceCount, canStepNext,
     canEnhanceWithAi: settings.aiEnabled,
-    setPeriod, setFormat, setDetail, stepInterval, refreshActivity, rewriteWithAi, updateTheme, setActiveVersion,
+    setPeriod, setFormat, setDetail, stepInterval, refreshActivity, rewriteWithAi, updateTheme, updateNarrative, setActiveVersion,
     saveCurrent, duplicateSaved, selectSaved: setSelectedSavedId, closeSaved: () => setSelectedSavedId(undefined)
   };
 };

@@ -12,6 +12,7 @@ import type {
   RecapFormat,
   RecapFormatCopy,
   RecapInterval,
+  RecapNarrativeFormat,
   RecapPeriod,
   RecapSourceItem,
   RecapTheme,
@@ -40,7 +41,7 @@ const MONTH_LONG = new Intl.DateTimeFormat(undefined, { month: "long", year: "nu
 const MONTH_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", year: "numeric" });
 const DAY_SHORT = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" });
 const COLORS: RecapColorToken[] = ["blue", "purple", "teal", "amber", "coral"];
-export const RECAP_SCHEMA_VERSION = 3;
+export const RECAP_SCHEMA_VERSION = 4;
 
 export const recapRecordHasCurrentSchema = (record: RecapDraftRecord | undefined) =>
   Boolean(record?.versions.some((version) => version.schemaVersion === RECAP_SCHEMA_VERSION));
@@ -569,9 +570,6 @@ const formatCopy = (name: string, sources: RecapSourceItem[], format: RecapForma
       needsImpact: true
     }] };
   }
-  if (format === "standup") {
-    return { lead: `Work recorded for ${name}.`, lines: base.map((line, index) => ({ ...line, id: `${line.id}:standup:${index}` })) };
-  }
   if (format === "changelog") {
     return { version: `Available changes for ${name}`, lines: sources.map((source, index) => ({
       ...lineForSource(source),
@@ -609,7 +607,7 @@ export const buildRecapThemes = (sources: RecapSourceItem[], period: RecapPeriod
   if (clusters.length > limit) selected[limit - 1] = selected[limit - 1].concat(...clusters.slice(limit));
   return selected.map((items, index) => {
     const name = clusters.length > limit && index === limit - 1 ? "Additional contributions" : clusterName(items);
-    const formats = ["perf", "manager", "cv", "standup", "changelog"] as RecapFormat[];
+    const formats = ["perf", "manager", "cv", "changelog"] as RecapFormat[];
     return {
       id: `theme:${index}:${items.map((item) => item.id).join("|")}`,
       name,
@@ -622,6 +620,84 @@ export const buildRecapThemes = (sources: RecapSourceItem[], period: RecapPeriod
     };
   });
 };
+
+const narrativeLead = (
+  themes: RecapTheme[],
+  interval: RecapInterval,
+  format: RecapNarrativeFormat
+) => {
+  const names = themes.slice(0, 3).map((theme) => theme.name);
+  const remaining = Math.max(0, themes.length - names.length);
+  const focus = names.length ? humanList(names) : "the work captured in Yesterlog";
+  const alongside = remaining ? `, alongside ${remaining} additional ${remaining === 1 ? "workstream" : "workstreams"}` : "";
+  const total = formatSourceDuration(themes.reduce((sum, theme) => sum + theme.hours * 3600, 0));
+  return format === "manager"
+    ? `My ${interval.period} centered on ${focus}${alongside}. The available history accounts for ${total} of recorded work across those priorities.`
+    : `Across this ${interval.period}, the available history shows sustained work across ${focus}${alongside}. Together, those contributions account for ${total} of recorded activity.`;
+};
+
+const buildNarrativeDocument = (
+  themes: RecapTheme[],
+  sources: RecapSourceItem[],
+  interval: RecapInterval,
+  format: RecapNarrativeFormat
+): RecapFormatCopy => ({
+  lead: narrativeLead(themes, interval, format),
+  paragraphs: themes.map((theme, index) => {
+    const themeSources = sources.filter((source) => theme.sourceIds.includes(source.id));
+    const total = formatSourceDuration(themeSources.reduce((sum, source) => sum + source.timeSpentSeconds, 0));
+    const titles = themeSources.slice(0, 4).map((source) => source.title);
+    const details = Array.from(new Set(themeSources.flatMap((source) =>
+      source.details ?? (source.detail ? [source.detail] : [])
+    ))).filter(Boolean).slice(0, 3);
+    const metrics = [
+      theme.ticketCount ? `${theme.ticketCount} Jira ${theme.ticketCount === 1 ? "item" : "items"}` : "",
+      theme.pullRequestCount ? `${theme.pullRequestCount} pull ${theme.pullRequestCount === 1 ? "request" : "requests"}` : ""
+    ].filter(Boolean);
+    const managerTransitions = [
+      `I also spent ${total} on ${theme.name}.`,
+      `Another ${total} supported ${theme.name}.`,
+      `The period included ${total} of work on ${theme.name}.`,
+      `Smaller supporting work added ${total} across ${theme.name}.`,
+      `The remaining record covers ${total} on ${theme.name}.`
+    ];
+    const performanceTransitions = [
+      `Alongside those priorities, ${theme.name} accounts for ${total}.`,
+      `The period also included ${total} of recorded work on ${theme.name}.`,
+      `Another contribution area was ${theme.name}, at ${total}.`,
+      `Smaller supporting work added ${total} across ${theme.name}.`,
+      `The remaining activity covered ${theme.name}, totaling ${total}.`
+    ];
+    const opening = format === "manager"
+      ? index === 0
+        ? `The largest share of my recorded time went to ${theme.name}, totaling ${total}.`
+        : index === 1
+          ? `A further ${total} went to ${theme.name}.`
+          : managerTransitions[(index - 2) % managerTransitions.length]
+      : index === 0
+        ? `The largest concentration of recorded work was ${theme.name}, at ${total}.`
+        : index === 1
+          ? `A second area of focus was ${theme.name}, with ${total} recorded.`
+          : performanceTransitions[(index - 2) % performanceTransitions.length];
+    const scope = titles.length
+      ? `${format === "manager" ? "That work covered" : "The scope covered"} ${humanList(titles)}${metrics.length ? ` across ${humanList(metrics)}` : ""}.`
+      : "";
+    const notes = details.length
+      ? `Supporting notes mention ${details.map((value) => `“${cleanFragment(value)}”`).join("; ")}.`
+      : "";
+    const caveat = index === themes.length - 1
+      ? format === "manager"
+        ? "These entries describe recorded activity and do not imply outcomes that were not captured."
+        : "This report describes recorded contribution and does not infer outcomes that were not captured."
+      : "";
+    return {
+      id: `report:${format}:${theme.id}`,
+      text: [opening, scope, notes, caveat].filter(Boolean).join(" "),
+      refs: refsFor(themeSources)
+    };
+  }).filter((paragraph) => paragraph.text),
+  lines: []
+});
 
 export const buildRecapCoverage = (input: RecapEvidenceInput, sources: RecapSourceItem[], now = new Date()): RecapCoverage => {
   const requestedWeekKeys = recapWeekKeys(input.interval);
@@ -661,23 +737,27 @@ export const buildRecapCoverage = (input: RecapEvidenceInput, sources: RecapSour
 
 export const buildDeterministicRecap = (input: RecapEvidenceInput, version = 1, now = new Date()): RecapDraftVersion => {
   const sources = buildRecapSources(input);
+  const themes = buildRecapThemes(sources, input.interval.period);
   return {
     schemaVersion: RECAP_SCHEMA_VERSION,
     version,
     generatedAt: now.toISOString(),
     generator: "deterministic",
     interval: input.interval,
-    themes: buildRecapThemes(sources, input.interval.period),
+    themes,
+    narratives: {
+      perf: buildNarrativeDocument(themes, sources, input.interval, "perf"),
+      manager: buildNarrativeDocument(themes, sources, input.interval, "manager")
+    },
     sources,
     coverage: buildRecapCoverage(input, sources, now)
   };
 };
 
 export const recapFormatMeta: Record<RecapFormat, { label: string; eyebrow: string; voice: string; sub: string }> = {
-  perf: { label: "Performance review", eyebrow: "PERFORMANCE REVIEW", voice: "Reflective · factual", sub: "A connected account of your workstreams, grounded in Jira, code activity and local notes." },
-  manager: { label: "Manager update", eyebrow: "MANAGER UPDATE", voice: "Plain · first-person", sub: "Readable workstream summaries that explain where your time and attention went." },
+  perf: { label: "Performance review", eyebrow: "PERFORMANCE REVIEW", voice: "Reflective · factual", sub: "One connected account of your contribution, grounded in Jira, code activity and local notes." },
+  manager: { label: "Manager update", eyebrow: "MANAGER UPDATE", voice: "Plain · first-person", sub: "A ready-to-share report explaining where your time and attention went." },
   cv: { label: "CV bullets", eyebrow: "RÉSUMÉ BULLETS", voice: "Action-led · evidence-first", sub: "Accomplishment candidates that stay honest when measurable impact is missing." },
-  standup: { label: "Standup digest", eyebrow: "STANDUP DIGEST", voice: "Brief · present tense", sub: "The short version of what moved during this interval." },
   changelog: { label: "Changelog", eyebrow: "CHANGELOG", voice: "Technical · third-person", sub: "Release-style notes grouped by focus area." }
 };
 
@@ -686,12 +766,10 @@ export const recapTitle = (format: RecapFormat, interval: RecapInterval, themes:
   const isPartial = coverage?.status && coverage.status !== "complete";
   if (isPartial && format === "cv") return "Accomplishment candidates from available history";
   if (isPartial && format === "manager") return "What the available history shows";
-  if (isPartial && format === "standup") return "Available work highlights";
   if (isPartial && format === "changelog") return `Partial release notes · ${interval.shortLabel}`;
   if (isPartial) return `A partial review of ${interval.shortLabel}`;
   if (format === "manager") return `Here’s where my ${noun} went.`;
   if (format === "cv") return "Selected accomplishment candidates";
-  if (format === "standup") return `Work highlights from this ${noun}`;
   if (format === "changelog") return `Release notes · ${interval.shortLabel}`;
   const focus = themes[0]?.name.toLowerCase();
   if (focus && noun === "week") return `A focused week on ${focus}.`;
@@ -702,6 +780,21 @@ export const recapTitle = (format: RecapFormat, interval: RecapInterval, themes:
 
 export const visibleRecapParagraphs = (copy: RecapFormatCopy, detail: RecapDetail) =>
   detail === "headline" ? [] : detail === "balanced" ? (copy.paragraphs ?? []).slice(0, 1) : copy.paragraphs ?? [];
+
+export const recapNarrativeCopy = (
+  draft: RecapDraftVersion,
+  format: RecapNarrativeFormat
+): RecapFormatCopy => draft.narratives?.[format] ?? {
+  lead: narrativeLead(draft.themes, draft.interval, format),
+  paragraphs: draft.themes.flatMap((theme) => theme.copy[format].paragraphs ?? []),
+  lines: []
+};
+
+export const visibleRecapNarrativeParagraphs = (copy: RecapFormatCopy, detail: RecapDetail) => {
+  if (detail === "headline") return [];
+  const paragraphs = copy.paragraphs ?? [];
+  return detail === "balanced" ? paragraphs.slice(0, 3) : paragraphs;
+};
 
 export const visibleRecapLines = (copy: RecapFormatCopy, detail: RecapDetail, format: RecapFormat) => {
   if (detail === "headline") return [];
@@ -724,6 +817,16 @@ export const recapCoverageNote = (draft: RecapDraftVersion) => {
 };
 
 export const recapToPlainText = (draft: RecapDraftVersion, format: RecapFormat, detail: RecapDetail) => {
+  if (format === "perf" || format === "manager") {
+    const copy = recapNarrativeCopy(draft, format);
+    return [
+      `${recapFormatMeta[format].label} · ${draft.interval.label}`,
+      recapTitle(format, draft.interval, draft.themes, draft.coverage),
+      recapCoverageNote(draft),
+      copy.lead,
+      ...visibleRecapNarrativeParagraphs(copy, detail).map((paragraph) => paragraph.text)
+    ].filter(Boolean).join("\n\n");
+  }
   const blocks = draft.themes.map((theme) => {
     const copy = theme.copy[format];
     const lead = format === "changelog" ? copy.version : copy.lead;
@@ -742,6 +845,16 @@ export const recapToPlainText = (draft: RecapDraftVersion, format: RecapFormat, 
 };
 
 export const recapToMarkdown = (draft: RecapDraftVersion, format: RecapFormat, detail: RecapDetail) => {
+  if (format === "perf" || format === "manager") {
+    const copy = recapNarrativeCopy(draft, format);
+    return [
+      `# ${recapTitle(format, draft.interval, draft.themes, draft.coverage)}`,
+      `_${recapFormatMeta[format].label} · ${draft.interval.label}_`,
+      recapCoverageNote(draft) ? `> ${recapCoverageNote(draft)}` : "",
+      copy.lead ? `**${copy.lead}**` : "",
+      ...visibleRecapNarrativeParagraphs(copy, detail).map((paragraph) => paragraph.text)
+    ].filter(Boolean).join("\n\n");
+  }
   const blocks = draft.themes.map((theme) => {
     const copy = theme.copy[format];
     const lead = format === "changelog" ? copy.version : copy.lead;

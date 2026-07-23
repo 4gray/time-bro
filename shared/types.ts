@@ -234,7 +234,8 @@ export interface WeekState {
 }
 
 export type RecapPeriod = "week" | "month" | "quarter";
-export type RecapFormat = "perf" | "manager" | "cv" | "standup" | "changelog";
+export type RecapFormat = "perf" | "manager" | "cv" | "changelog";
+export type RecapNarrativeFormat = "perf" | "manager";
 export type RecapDetail = "headline" | "balanced" | "detailed";
 export type RecapColorToken = "blue" | "purple" | "teal" | "amber" | "coral";
 export type RecapSourceKind = "ticket" | "pull-request" | "commit" | "meeting" | "local";
@@ -330,6 +331,8 @@ export interface RecapDraftVersion {
   generator: "deterministic" | "ai";
   interval: RecapInterval;
   themes: RecapTheme[];
+  /** Cohesive report-level prose. Themes remain internal evidence clusters. */
+  narratives?: Partial<Record<RecapNarrativeFormat, RecapFormatCopy>>;
   sources: RecapSourceItem[];
   coverage: RecapCoverage;
   editedAt?: string;

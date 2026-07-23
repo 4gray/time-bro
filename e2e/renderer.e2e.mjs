@@ -260,24 +260,25 @@ test("demo shell navigates every primary view", { timeout: 60_000 }, async () =>
 
 test("Recap edits, versions, saves, reopens, exports, and deep-links", { timeout: 60_000 }, async () => {
   await withDemoPage({ view: "recap", viewport: { width: 1440, height: 960 } }, async (page) => {
-    await page.locator(".recap-theme").first().waitFor();
+    await page.locator(".recap-report").waitFor();
     assert.match(await page.evaluate(() => location.hash), /^#\/recap\?/);
 
     await page.locator(".recap-segments").getByRole("button", { name: "week" }).click();
-    await page.locator(".recap-theme").first().waitFor();
+    await page.locator(".recap-report").waitFor();
     await page.locator(".recap-format-list").getByRole("button", { name: /Manager update/ }).click();
     await page.locator(".recap-detail-buttons").getByRole("button", { name: "Standard" }).click();
     await page.getByRole("button", { name: "Refresh activity" }).click();
     await page.getByRole("option", { name: "Version 2" }).waitFor({ state: "attached" });
 
-    const firstTheme = page.locator(".recap-theme").first();
-    await firstTheme.getByRole("button", { name: /^Edit / }).click();
-    await firstTheme.locator(".recap-edit-name").fill("Platform delivery & quality");
-    await firstTheme.getByRole("button", { name: "Apply edits" }).click();
-    assert.ok(await firstTheme.getByRole("heading", { name: "Platform delivery & quality" }).isVisible());
+    const report = page.locator(".recap-report");
+    await report.getByRole("button", { name: "Edit report" }).click();
+    await report.getByLabel("Report introduction").fill("Platform delivery and quality remained the main focus of the week.");
+    await report.getByRole("button", { name: "Apply edits" }).click();
+    assert.ok(await report.getByText("Platform delivery and quality remained the main focus of the week.").isVisible());
 
     await page.locator(".recap-format-list").getByRole("button", { name: /CV bullets/ }).click();
     await page.locator(".recap-detail-buttons").getByRole("button", { name: "Detailed" }).click();
+    const firstTheme = page.locator(".recap-theme").first();
     await firstTheme.getByRole("button", { name: "Add outcome" }).click();
     await firstTheme.getByLabel("What changed because of this work?").fill("Unblocked the release review for the platform team");
     await firstTheme.getByRole("button", { name: "Save outcome" }).click();
