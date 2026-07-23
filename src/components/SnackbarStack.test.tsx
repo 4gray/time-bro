@@ -10,7 +10,7 @@ describe("SnackbarStack", () => {
           {
             id: 1,
             kind: "info",
-            message: "TimeBro v1.1.0 is available.",
+            message: "Yesterlog v1.1.0 is available.",
             actionLabel: "Open releases",
             onAction: () => undefined,
             autoDismiss: false
@@ -20,7 +20,7 @@ describe("SnackbarStack", () => {
       />
     );
 
-    expect(markup).toContain("TimeBro v1.1.0 is available.");
+    expect(markup).toContain("Yesterlog v1.1.0 is available.");
     expect(markup).toContain("Open releases");
     expect(markup).toContain("snackbar-action");
   });
@@ -32,7 +32,7 @@ describe("SnackbarStack", () => {
           {
             id: 1,
             kind: "info",
-            message: "TimeBro v1.1.0 is available.",
+            message: "Yesterlog v1.1.0 is available.",
             actions: [
               { label: "Release notes", icon: "notes", onAction: () => undefined },
               { label: "Download", icon: "download", onAction: () => undefined }

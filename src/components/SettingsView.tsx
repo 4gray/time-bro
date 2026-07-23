@@ -185,7 +185,7 @@ const SECTIONS: SectionMeta[] = [
     label: "Appearance",
     hint: "Theme",
     title: "Appearance",
-    subtitle: "Choose how TimeBro looks.",
+    subtitle: "Choose how Yesterlog looks.",
     icon: SunMedium
   },
   {
@@ -193,7 +193,7 @@ const SECTIONS: SectionMeta[] = [
     label: "Data",
     hint: "Import & export",
     title: "Data",
-    subtitle: "Move worklogs and personal notes in and out of TimeBro.",
+    subtitle: "Move worklogs and personal notes in and out of Yesterlog.",
     icon: Database
   },
   {
@@ -266,7 +266,7 @@ const getUpdateStatus = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
     return `${formatReleaseVersion(updateInfo.latestVersion)} is available.`;
   }
 
-  return "TimeBro is up to date.";
+  return "Yesterlog is up to date.";
 };
 
 const getUpdateDetail = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdates: boolean) => {
@@ -275,17 +275,17 @@ const getUpdateDetail = (updateInfo: AppUpdateInfo | undefined, isCheckingUpdate
   }
 
   if (updateInfo?.autoUpdate?.phase === "downloaded") {
-    return "TimeBro will close and reopen after installing.";
+    return "Yesterlog will close and reopen after installing.";
   }
 
   if (updateInfo?.autoUpdate?.phase === "downloading") {
     return updateInfo.autoUpdate.progress?.total
       ? `${Math.round((updateInfo.autoUpdate.progress.transferred ?? 0) / 1024 / 1024)} MB downloaded.`
-      : "Keep TimeBro open while the update downloads.";
+      : "Keep Yesterlog open while the update downloads.";
   }
 
   if (updateInfo?.autoUpdate?.platform === "linux-snap") {
-    return updateInfo.autoUpdate.reason ?? "Snap refreshes TimeBro automatically.";
+    return updateInfo.autoUpdate.reason ?? "Snap refreshes Yesterlog automatically.";
   }
 
   if (updateInfo?.updateAvailable && updateInfo.autoUpdate?.supported) {
@@ -531,7 +531,7 @@ export const SettingsView = ({
           </button>
         </div>
         <small className="field-hint-text">
-          In Atlassian, choose Create token without scopes. Do not use the scoped token flow for TimeBro.
+          In Atlassian, choose Create token without scopes. Do not use the scoped token flow for Yesterlog.
         </small>
       </label>
 
@@ -567,7 +567,7 @@ export const SettingsView = ({
         <div>
           <strong>Optional review ledger</strong>
           <p>
-            Add a scoped Bitbucket token to surface PR review sessions. TimeBro only reads Bitbucket activity and
+            Add a scoped Bitbucket token to surface PR review sessions. Yesterlog only reads Bitbucket activity and
             never writes back to Bitbucket.
           </p>
         </div>
@@ -715,7 +715,7 @@ export const SettingsView = ({
     const cloudLogin = provider === "codex-cli" ? "Codex" : "Claude";
     const headTitle =
       provider === "codex-cli" ? "CODEX · CLI" : provider === "claude-cli" ? "CLAUDE · CLI" : "OLLAMA · ON-DEVICE";
-    const privacyBody = `TimeBro runs the ${cliName} CLI on your machine, but your commits, diffs and ticket text are sent to ${cloudVendor}'s cloud under your existing ${cloudLogin} login. Standard ${cloudVendor} terms and costs apply — TimeBro itself stores nothing extra.`;
+    const privacyBody = `Yesterlog runs the ${cliName} CLI on your machine, but your commits, diffs and ticket text are sent to ${cloudVendor}'s cloud under your existing ${cloudLogin} login. Standard ${cloudVendor} terms and costs apply — Yesterlog itself stores nothing extra.`;
     const cliPathHint =
       ollamaStatus?.message ?? `Leave this as “${cliName}” to resolve it on your PATH, or paste an absolute path.`;
     const cliModelHint =
@@ -726,7 +726,7 @@ export const SettingsView = ({
     const coreItems = [
       "Collects commits, PRs, reviews, CI runs & Jira changelog",
       "Estimates duration from commit & PR timestamps",
-      "Maps branch → ticket via TBRO-xxx keys",
+      "Maps branch → ticket via YLOG-xxx keys",
       "Places blocks on the timeline & flags gaps",
       "Rule-based auto-distribute & confidence scoring"
     ];
@@ -779,7 +779,7 @@ export const SettingsView = ({
             <div>
               <strong>Stays on your machine</strong>
               <p>
-                TimeBro talks to Ollama on <code>localhost</code> only. Your commits, diffs and ticket text are
+                Yesterlog talks to Ollama on <code>localhost</code> only. Your commits, diffs and ticket text are
                 summarised on-device — no cloud, no API key, no telemetry. Same privacy promise as the rest of the app.
               </p>
             </div>
@@ -1281,7 +1281,7 @@ export const SettingsView = ({
         </div>
 
         <p className="recurring-intro">
-          Regular rituals that never get a Jira ticket — daily, planning, refinement. Each working day TimeBro offers
+          Regular rituals that never get a Jira ticket — daily, planning, refinement. Each working day Yesterlog offers
           them as a soft suggestion you confirm, skip or adjust. Confirmed time counts as local tracked time only and
           is never synced to Jira.
         </p>
@@ -1373,7 +1373,7 @@ export const SettingsView = ({
 
         {recurringEvents.length === 0 ? (
           <div className="recurring-empty-list">
-            No recurring events yet. Add one to have TimeBro suggest it each working day.
+            No recurring events yet. Add one to have Yesterlog suggest it each working day.
           </div>
         ) : (
           <div className="recurring-list">

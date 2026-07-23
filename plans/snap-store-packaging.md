@@ -2,7 +2,7 @@
 
 ## Goal
 
-Ship TimeBro as a strictly confined `core24` Snap, build it in the release
+Ship Yesterlog as a strictly confined `core24` Snap, build it in the release
 workflow, and prepare controlled publication through the Snap Store.
 
 ## Decisions
@@ -22,9 +22,9 @@ workflow, and prepare controlled publication through the Snap Store.
 
 ## Work
 
-- [x] Register the public `timebro` name with the intended publisher.
+- [x] Register the public `yesterlog` name with the intended publisher.
 - [x] Add MIT licensing.
-- [x] Configure restricted Store credentials in GitHub Actions.
+- [ ] Configure new restricted Store credentials for `yesterlog`/`edge` in GitHub Actions.
 - [x] Add Snap build configuration and scripts.
 - [x] Add Snap-aware update behavior and tests.
 - [x] Add Snap build and `edge` publication to release CI.
@@ -32,12 +32,12 @@ workflow, and prepare controlled publication through the Snap Store.
 - [x] Verify tests, production build, workflow, and packaging config.
 - [x] Repair the hosted Ubuntu Snap build after the v2.7.1 LXD networking
   failure by using Canonical's supported GitHub build action.
-- [x] Verify the repaired tagged release uploads `timebro` to the Store's
+- [ ] Verify the `v3.0.0` tagged release uploads `yesterlog` to the Store's
   `edge` channel.
 
 ## External actions
 
-- [x] Complete Store listing metadata and media.
+- [ ] Complete Store listing metadata and media.
 - [ ] Test the Store revision on Ubuntu and promote it beyond `edge`.
 
 ## Verification
@@ -52,22 +52,10 @@ workflow, and prepare controlled publication through the Snap Store.
 - Release workflow YAML, Store media, and whitespace checks: passed.
 - Browser review of Settings → About: no clipping, overflow, console warnings,
   or console errors.
-- The first v2.7.1 hosted build reached Snapcraft, but GitHub runner forwarding
-  prevented LXD from downloading its Ubuntu 24.04 base image. The repair keeps
-  the real `.snap` build on Ubuntu 24.04 and delegates LXD/network setup to
-  Canonical's `snapcore/action-build` action.
-- Repair-branch run `29948870381` successfully packed
-  `timebro_2.7.1_amd64.snap`; its only failure was the redundant post-pack lint
-  command outside the action's LXD group session. Snapcraft already ran its
-  linters during the successful pack, so the duplicate workflow step was
-  removed.
-- Release run `29950292613` passed all jobs. Snapcraft created Store revision 1
-  for `timebro` version `2.7.2` (`amd64`) and released it to `latest/edge` on
-  2026-07-22. The public Store API reports the MIT license and
-  <https://snapcraft.io/timebro> listing URL.
-- The public listing shows the full description, Productivity category, MIT
-  license, icon, and five screenshots for Today, Week, Month, Reports, and
-  Settings.
+- The established workflow uses Canonical's `snapcore/action-build` so the real
+  `.snap` build runs on Ubuntu 24.04 with supported LXD/network setup.
+- The first Yesterlog Store revision and public listing remain pending the
+  `v3.0.0` release workflow.
 - `npm audit --omit=dev` reports one existing high-severity `js-yaml` advisory
   inherited through electron-updater/build tooling; no dependencies changed in
   this packaging task.

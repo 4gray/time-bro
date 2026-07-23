@@ -82,9 +82,9 @@ export const WelcomeView = ({
       <section className="welcome-copy">
         <div className="welcome-glow" />
         <div className="welcome-brand">
-          <div className="welcome-logo">tb</div>
+          <div className="welcome-logo">yl</div>
           <span>
-            Time<span>Bro</span>
+            Yester<span>log</span>
           </span>
         </div>
 
@@ -92,7 +92,7 @@ export const WelcomeView = ({
           <div className="welcome-kicker">Hey there</div>
           <h1>Let's get your hours sorted.</h1>
           <p>
-            TimeBro keeps an eye on your week and gives you a nudge when a day is looking a little light.
+            Yesterlog keeps an eye on your week and gives you a nudge when a day is looking a little light.
           </p>
         </div>
 
@@ -144,7 +144,7 @@ export const WelcomeView = ({
                 <Check size={30} />
               </div>
               <h2>You are all set!</h2>
-              <p>TimeBro is hooked up and ready to watch your hours.</p>
+              <p>Yesterlog is hooked up and ready to watch your hours.</p>
 
               <div className="welcome-linked">
                 <div className="welcome-linked-icon">
@@ -158,7 +158,7 @@ export const WelcomeView = ({
               </div>
 
               <button type="button" className="welcome-primary" onClick={onEnterApp}>
-                Enter TimeBro <ArrowRight size={17} />
+                Enter Yesterlog <ArrowRight size={17} />
               </button>
             </div>
           ) : (
@@ -166,7 +166,7 @@ export const WelcomeView = ({
               <div className="welcome-form-title">
                 <span>Connect Jira</span>
                 <h2>Hook up your Jira</h2>
-                <p>Pop in your details and TimeBro takes it from there. Everything stays on your device.</p>
+                <p>Pop in your details and Yesterlog takes it from there. Everything stays on your device.</p>
               </div>
 
               <label className="welcome-field">

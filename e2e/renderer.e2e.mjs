@@ -166,7 +166,7 @@ const assertHealthyPage = async (page, assertNoRuntimeErrors) => {
   }));
 
   assert.equal(health.hasViteOverlay, 0, "Vite error overlay should not render");
-  assert.equal(health.appShells, 1, "TimeBro app shell should render once");
+  assert.equal(health.appShells, 1, "Yesterlog app shell should render once");
   assert.ok(health.bodyTextLength > 80, `Expected useful rendered text, got ${health.bodyTextLength} chars`);
   assertNoRuntimeErrors();
 };
@@ -424,7 +424,7 @@ test("settings handles theme changes and update release notes", { timeout: 60_00
     assert.ok(await page.getByText("v1.3.0 is available.").isVisible());
     await page.getByRole("button", { name: "Current notes" }).click();
     await page.getByRole("dialog", { name: "Release notes" }).waitFor();
-    assert.ok(await page.getByRole("heading", { name: "TimeBro v1.0.0" }).isVisible());
+    assert.ok(await page.getByRole("heading", { name: "Yesterlog v1.0.0" }).isVisible());
     await page.locator(".release-notes-version-list").getByRole("button", { name: /v1.3.0/ }).click();
     assert.ok(await page.getByRole("heading", { name: "Highlights" }).isVisible());
     assert.ok(await page.locator(".release-notes-image").isVisible());

@@ -28,8 +28,8 @@ interface TicketPickerGroup {
   tickets: JiraTicket[];
 }
 
-const SORT_STORAGE_KEY = "timebro-ticket-picker-sort";
-const ASSIGNED_FILTER_STORAGE_KEY = "timebro-ticket-picker-assigned-only";
+const SORT_STORAGE_KEY = "yesterlog-ticket-picker-sort";
+const ASSIGNED_FILTER_STORAGE_KEY = "yesterlog-ticket-picker-assigned-only";
 const DEFAULT_SORT_MODE: TicketSortMode = "createdDesc";
 const INITIAL_VISIBLE_TICKETS = 12;
 const VISIBLE_TICKET_STEP = 12;

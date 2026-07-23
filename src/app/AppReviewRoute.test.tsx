@@ -77,7 +77,7 @@ const baseProps = (): AppReviewRouteProps => ({
   weekStartISO: "2026-06-15T00:00:00.000Z",
   settings,
   visibleBitbucketReviewResult: result,
-  issueUrlsByKey: { "TBRO-999": "https://example.atlassian.net/browse/TBRO-999" },
+  issueUrlsByKey: { "YLOG-999": "https://example.atlassian.net/browse/YLOG-999" },
   issueTypesByKey: {},
   isBitbucketReady: true,
   isSyncingReviews: false,
@@ -125,7 +125,7 @@ describe("AppReviewRoute", () => {
     expect(reviewViewProps[0]?.settings).toBe(settings);
     expect(reviewViewProps[0]?.result).toBe(result);
     expect(reviewViewProps[0]?.issueUrlsByKey).toEqual({
-      "TBRO-999": "https://example.atlassian.net/browse/TBRO-999"
+      "YLOG-999": "https://example.atlassian.net/browse/YLOG-999"
     });
   });
 

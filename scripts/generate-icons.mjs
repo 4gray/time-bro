@@ -91,8 +91,8 @@ await writeFile(
   new URL("../src/assets/site.webmanifest", import.meta.url),
   `${JSON.stringify(
     {
-      name: "TimeBro",
-      short_name: "TimeBro",
+      name: "Yesterlog",
+      short_name: "Yesterlog",
       description: "Local weekly Jira time tracking",
       icons: [
         {

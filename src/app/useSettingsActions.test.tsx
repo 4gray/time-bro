@@ -21,7 +21,7 @@ const settings: AppSettings = {
   jiraApiToken: "token",
   bitbucketEmail: "person@example.com",
   bitbucketApiToken: "bb-token",
-  bitbucketWorkspace: "timebro",
+  bitbucketWorkspace: "yesterlog",
   bitbucketRepositories: "app",
   bitbucketReviewBucketIssueKey: "REV-1",
   weeklyTargetHours: 40,
@@ -37,11 +37,11 @@ const settings: AppSettings = {
 
 const messySettings: AppSettings = {
   ...settings,
-  jiraBaseUrl: " timebro-demo/ ",
+  jiraBaseUrl: " yesterlog-demo/ ",
   jiraEmail: " person@example.com ",
   bitbucketEmail: " reviewer@example.com ",
   bitbucketApiToken: " bb-token ",
-  bitbucketWorkspace: " timebro ",
+  bitbucketWorkspace: " yesterlog ",
   bitbucketRepositories: " app\napp, api ",
   bitbucketReviewBucketIssueKey: " rev-77 ",
   weeklyTargetHours: 0,
@@ -153,11 +153,11 @@ describe("useSettingsActions", () => {
 
     const expectedSettings: AppSettings = {
       ...messySettings,
-      jiraBaseUrl: "https://timebro-demo.atlassian.net",
+      jiraBaseUrl: "https://yesterlog-demo.atlassian.net",
       jiraEmail: "person@example.com",
       bitbucketEmail: "reviewer@example.com",
       bitbucketApiToken: "bb-token",
-      bitbucketWorkspace: "timebro",
+      bitbucketWorkspace: "yesterlog",
       bitbucketRepositories: "app, api",
       bitbucketReviewBucketIssueKey: "REV-77",
       weeklyTargetHours: 40,
@@ -279,7 +279,7 @@ describe("useSettingsActions", () => {
 
     expect(testJiraConnection).toHaveBeenCalledWith(
       expect.objectContaining({
-        jiraBaseUrl: "https://timebro-demo.atlassian.net",
+        jiraBaseUrl: "https://yesterlog-demo.atlassian.net",
         jiraEmail: "person@example.com"
       })
     );
@@ -323,7 +323,7 @@ describe("useSettingsActions", () => {
       expect.objectContaining({
         bitbucketEmail: "reviewer@example.com",
         bitbucketApiToken: "bb-token",
-        bitbucketWorkspace: "timebro",
+        bitbucketWorkspace: "yesterlog",
         bitbucketRepositories: "app, api"
       })
     );

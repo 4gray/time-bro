@@ -69,7 +69,7 @@ describe("projectWorklogsForWeek", () => {
     expect(Object.keys(weeks[2].daySummaries)).toEqual(["2026-07-14"]);
   });
 
-  it("uses an explicit local preference and marks TimeBro-created allocation as exact", () => {
+  it("uses an explicit local preference and marks Yesterlog-created allocation as exact", () => {
     const preference: WorklogAllocationPreference = {
       preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", "bulk-1"]),
       jiraSite: "https://alpha.atlassian.net",
@@ -220,7 +220,7 @@ describe("projectWorklogsForWeek", () => {
     expect(result.daySummaries["2026-07-14"].worklogs[0]).not.toHaveProperty("allocation");
   });
 
-  it("honors an explicit TimeBro distribution choice below the imported bulk threshold", () => {
+  it("honors an explicit Yesterlog distribution choice below the imported bulk threshold", () => {
     const preference: WorklogAllocationPreference = {
       preferenceKey: JSON.stringify(["https://alpha.atlassian.net", "me", "explicit-overtime"]),
       jiraSite: "https://alpha.atlassian.net",

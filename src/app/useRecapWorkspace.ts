@@ -41,7 +41,7 @@ import {
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 import { useAiConnection } from "./useAiConnection";
 
-const PREF_KEY = "timebro-recap-preferences";
+const PREF_KEY = "yesterlog-recap-preferences";
 const FORMATS: RecapFormat[] = ["perf", "manager", "cv", "standup", "changelog"];
 const DETAILS: RecapDetail[] = ["headline", "balanced", "detailed"];
 const PERIODS: RecapPeriod[] = ["week", "month", "quarter"];

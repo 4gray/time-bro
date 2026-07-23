@@ -730,7 +730,7 @@ export const ReviewView = ({
           }
         >
           <p className="review-dialog-copy">
-            TimeBro will create Jira worklogs for the selected Bitbucket review sessions using the current target mode:
+            Yesterlog will create Jira worklogs for the selected Bitbucket review sessions using the current target mode:
             <strong> {targetModeCopy[targetMode]}</strong>.
           </p>
           <ReviewPreviewList

@@ -1,6 +1,6 @@
 <!-- Authored 2026-06-30. Verified against main via a multi-agent workflow (readers → design+plan → correctness/completeness/scope verifiers → synthesis). All file/symbol references spot-checked against the codebase. -->
 
-# TimeBro — "Yesterday" Standup Recap Card (Sketch 1) — Implementation-Ready Plan
+# Yesterlog — "Yesterday" Standup Recap Card (Sketch 1) — Implementation-Ready Plan
 
 ## 1. Overview & locked decisions
 

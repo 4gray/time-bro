@@ -1,12 +1,12 @@
 ---
 name: release
-description: Use when releasing, shipping, or cutting a new version of TimeBro — bumping the version, publishing a build, tagging a release, or cutting a hotfix for 4gray/time-bro. Triggers on "release", "ship a version", "cut a release", "publish a build", "hotfix".
+description: Use when releasing, shipping, or cutting a new version of Yesterlog — bumping the version, publishing a build, tagging a release, or cutting a hotfix for 4gray/yesterlog. Triggers on "release", "ship a version", "cut a release", "publish a build", "hotfix".
 argument-hint: "[patch|minor|major]"
 ---
 
-# Release TimeBro
+# Release Yesterlog
 
-End-to-end release flow for `4gray/time-bro` (private Electron + Vite + React app, npm package `timebro`). Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which tests, builds and code-signs/notarizes macOS plus builds Windows/Linux, and creates a **DRAFT** GitHub Release with the artifacts attached. You then curate the notes and hand the user the draft URL. **Do not publish unless the user explicitly asks.**
+End-to-end release flow for the public `4gray/yesterlog` Electron + Vite + React app (npm package and Snap name `yesterlog`). Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which tests, builds and code-signs/notarizes macOS, builds Windows/Linux, creates a **DRAFT** GitHub Release, and uploads the Snap to `edge`. You then verify every artifact, curate the notes, promote the verified Snap revision, and hand the user the draft URL. **Do not publish the GitHub Release unless the user explicitly asks.**
 
 The bump type comes from `$ARGUMENTS` (`$1`): `patch`, `minor`, or `major`. **Default to `patch`** when none is given.
 
@@ -14,6 +14,7 @@ The bump type comes from `$ARGUMENTS` (`$1`): `patch`, `minor`, or `major`. **De
 
 ### 1. Preconditions
 - Release from `main`. The `chore(release)` commits live on `main`; this project does not use release branches.
+- Confirm `git remote get-url origin` resolves to `4gray/yesterlog`, the Snap name is `yesterlog`, and Pages is configured as `main:/docs` at `https://4gray.github.io/yesterlog/`.
 - Confirm the bump type. Map `$1` → script: `patch`→`release:patch`, `minor`→`release:minor`, `major`→`release:major`. If `$1` is empty, use `patch`.
 - The working tree must be **clean** before bumping — `npm version` aborts on a dirty tree. So commit the actual fix/feature FIRST (step 2).
 - **The latest `main` CI run must be GREEN before you tag.** The release workflow re-runs the same `test` job (unit tests + renderer E2E + build), so a red pipeline on `main` fails the release too. If any commits are already on `main`, verify their CI passed before releasing:
@@ -27,13 +28,13 @@ The bump type comes from `$ARGUMENTS` (`$1`): `patch`, `minor`, or `major`. **De
   ```bash
   npm run release:dry-run
   ```
-  (= `npm run test && npm run e2e:renderer && npm run build`)
+  (= brand audit + `npm run test && npm run e2e:renderer && npm run build`)
 
 ### 2. Commit the change
-Commit the real fix/feature with a conventional-commit subject and a body explaining the why, ending with the trailer:
+Commit the real fix/feature with a conventional-commit subject and a body explaining the why:
 ```bash
 git add -A
-git commit -m "fix: <subject>" -m "<why this change>" -m "Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+git commit -m "fix: <subject>" -m "<why this change>"
 ```
 Verify the tree is now clean (must print nothing):
 ```bash
@@ -48,7 +49,7 @@ npm run screenshots -- --seed release --today 2026-06-17 --views today --out doc
 ```
 - **Screenshots are auto-compressed** to a palette PNG by `scripts/capture-screenshots.mjs` (a full-view 1440×1000 shot is ~30 KB instead of ~120 KB), so committing them to `docs/` stays cheap. Do not hand-optimize.
 - Commit the PNG(s) under `docs/screenshots/v<NEW>/`. If you refreshed the whole set, also bump the `screenshots/v…/` paths in `README.md` and `docs/index.html` so they don't point at the old version.
-- Reference the shot in the notes (step 7) via its public Pages URL — it renders inline: `https://4gray.github.io/time-bro/screenshots/v<NEW>/<theme>-<view>.png` (e.g. `.../v2.1.0/dark-today.png`). Confirm it's live with `curl -sI <url>` (expect `200`) once `main` is pushed.
+- Reference the shot in the notes (step 7) via its public Pages URL — it renders inline: `https://4gray.github.io/yesterlog/screenshots/v<NEW>/<theme>-<view>.png` (e.g. `.../v2.1.0/dark-today.png`). Confirm it's live with `curl -sI <url>` (expect `200`) once `main` is pushed.
 
 ### 3. Bump version + create the tag
 Run the project script for the chosen bump type (default `patch`):
@@ -89,10 +90,12 @@ Run that `gh run watch` command with `run_in_background: true`.
 Jobs run in order, all from the **tagged commit**:
 1. `test` (ubuntu-latest) — `npm ci`, `npm run test`, `npx playwright install --with-deps chromium`, `npm run e2e:renderer`, `npm run build`.
 2. `build` (`needs: test`, matrix, `fail-fast: false`) — three platforms in parallel:
-   - **macOS** (`macos-latest`, artifact `timebro-macos`): runs `npm run dist:mac -- -c.mac.forceCodeSigning=true` with code-signing + notarization (the `mac` build config has `notarize: true` and `hardenedRuntime: true`). Produces `release/*.dmg`, `release/*.zip`.
-   - **Windows** (`windows-latest`, artifact `timebro-windows`): `npm run dist:win`, unsigned. Produces `release/*.exe`, `release/*.zip`.
-   - **Linux** (`ubuntu-latest`, artifact `timebro-linux`): `npm run dist:linux`, unsigned. Produces `release/*.AppImage`, `release/*.deb`, `release/*.tar.gz`.
-3. `publish` (`needs: build`, ubuntu-latest, only when `startsWith(github.ref, 'refs/tags/v')`) — downloads all artifacts into `release-assets/`, then **creates the release if it doesn't exist, or `gh release upload --clobber` if it does**:
+   - **macOS** (`macos-latest`, artifact `yesterlog-macos`): runs `npm run dist:mac -- -c.mac.forceCodeSigning=true` with code-signing + notarization (the `mac` build config has `notarize: true` and `hardenedRuntime: true`). Produces `release/*.dmg`, `release/*.zip`.
+   - **Windows** (`windows-latest`, artifact `yesterlog-windows`): `npm run dist:win`, unsigned. Produces `release/*.exe`, `release/*.zip`.
+   - **Linux** (`ubuntu-latest`, artifact `yesterlog-linux`): `npm run dist:linux`, unsigned. Produces `release/*.AppImage`, `release/*.deb`, `release/*.tar.gz`.
+3. `snap` (`needs: test`, ubuntu-latest) — builds `yesterlog_<version>_amd64.snap` and uploads the workflow artifact `yesterlog-snap`.
+4. `publish_snap` (`needs: snap`, ubuntu-latest, release tags only) — uploads the exact Snap artifact to Snapcraft `edge` when `SNAP_STORE_PUBLISH_ENABLED` is enabled.
+5. `publish` (`needs: [build, snap]`, ubuntu-latest, only when `startsWith(github.ref, 'refs/tags/v')`) — downloads all artifacts into `release-assets/`, then **creates the release if it doesn't exist, or `gh release upload --clobber` if it does**:
    ```bash
    gh release create "$TAG_NAME" "${assets[@]}" \
      --draft \
@@ -118,19 +121,35 @@ Write `/tmp/notes.md` (group changes under headings like **Highlights**, **Fixes
 ### Highlights
 - ...
 
-![<view> view](https://4gray.github.io/time-bro/screenshots/vX.Y.Z/dark-<view>.png)
+![<view> view](https://4gray.github.io/yesterlog/screenshots/vX.Y.Z/dark-<view>.png)
 
 ### Fixes
 - ...
 
-**Full changelog:** https://github.com/4gray/time-bro/compare/vPREV...vX.Y.Z
+**Full changelog:** https://github.com/4gray/yesterlog/compare/vPREV...vX.Y.Z
 ```
 Apply the notes to the draft (this does not publish it):
 ```bash
 gh release edit "$TAG" --title "$TAG" --notes-file /tmp/notes.md
 ```
 
-### 8. Hand the URL to the user — leave it as a DRAFT
+### 8. Verify and promote the Snap revision
+On Ubuntu, install the exact `edge` revision produced by the workflow and verify startup, the clean first-run profile, Jira/network access, browser links, notifications, and desktop integration:
+```bash
+snap info yesterlog
+sudo snap install yesterlog --edge
+# If already installed:
+sudo snap refresh yesterlog --edge
+```
+After verification, promote that same revision without rebuilding it:
+```bash
+snapcraft promote yesterlog --from-channel=edge --to-channel=candidate
+snapcraft promote yesterlog --from-channel=candidate --to-channel=stable
+snap info yesterlog
+```
+Never release a different revision to `candidate` or `stable`. For the first Yesterlog release, confirm the public stable listing before making the legacy Snap private.
+
+### 9. Hand the URL to the user — leave it as a DRAFT
 Give the user the draft release URL and tell them it's ready for review:
 ```bash
 gh release view "$TAG" --json url -q .url
@@ -147,5 +166,6 @@ gh release edit "$TAG" --draft=false
 - **A local `npm run dist:mac` is UNSIGNED** (it runs with `--publish never` and no signing secrets) and is stamped with whatever `package.json` version exists at that moment. Use it only for quick personal testing — never as the release artifact. The signed/notarized macOS build only happens in CI via repo secrets (`MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`). If any macOS signing secret is missing, the macOS build job fails fast at the "Check macOS signing secrets" step; Windows and Linux need no signing.
 - **The tag pattern must be semver `vX.Y.Z`.** Only `v*.*.*` triggers the release on push. A manual `workflow_dispatch` run executes `test` + `build` but **skips `publish`** (gated on `startsWith(github.ref, 'refs/tags/v')`), so no release is created from a branch dispatch.
 - **The publish job is idempotent.** Re-running it when the release already exists uses `gh release upload --clobber` rather than recreating it, so re-runs overwrite assets instead of duplicating the release.
-- **Repo slug vs package name differ:** the GitHub repo is `4gray/time-bro` (used in all `gh` and compare-link URLs), but the npm package `name` is `timebro` and the electron-builder `productName` is `TimeBro`. Use `time-bro` in URLs.
-- **Validate before tagging** with `npm run release:dry-run` (= `npm run test && npm run e2e:renderer && npm run build`) to avoid pushing a tag that fails CI.
+- **Identity is consistent:** GitHub repo `4gray/yesterlog`, npm package `yesterlog`, Snap `yesterlog`, electron-builder `productName` `Yesterlog`, and Pages `https://4gray.github.io/yesterlog/`.
+- **Snap credentials are least-privilege.** `SNAPCRAFT_STORE_CREDENTIALS` must be restricted to Snap `yesterlog` and channel `edge`; promotion is a separate deliberate post-verification action.
+- **Validate before tagging** with `npm run release:dry-run` (= brand audit + `npm run test && npm run e2e:renderer && npm run build`) to avoid pushing a tag that fails CI.

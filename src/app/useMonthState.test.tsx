@@ -26,7 +26,7 @@ const settings: AppSettings = {
   jiraApiToken: "token",
   bitbucketEmail: "person@example.com",
   bitbucketApiToken: "token",
-  bitbucketWorkspace: "timebro",
+  bitbucketWorkspace: "yesterlog",
   bitbucketRepositories: "app",
   bitbucketReviewBucketIssueKey: "REV-1",
   weeklyTargetHours: 40,

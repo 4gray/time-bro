@@ -12,7 +12,7 @@ const ticket: JiraTicket = {
   key: "TB-42",
   summary: "Visual time range editing",
   projectKey: "TB",
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,

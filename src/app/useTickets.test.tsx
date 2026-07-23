@@ -31,7 +31,7 @@ const buildTicket = (key: string, overrides: Partial<JiraTicket> = {}): JiraTick
   key,
   summary: `${key} summary`,
   projectKey: key.split("-")[0],
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,

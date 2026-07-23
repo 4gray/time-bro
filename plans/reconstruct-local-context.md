@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make Day Reconstruction account for local-only time that TimeBro already knows about:
+Make Day Reconstruction account for local-only time that Yesterlog already knows about:
 private notes and confirmed recurring local events/meetings.
 
 ## Decisions

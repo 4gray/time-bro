@@ -482,7 +482,7 @@ const cvScopeTitle = (value: string) => {
     ""
   );
   if (!scope) return cleanFragment(value);
-  if (/^(Add Time|API|Bitbucket|Jira|Ops|Slack|TimeBro|UI|UX)\b/.test(scope)) return scope;
+  if (/^(Add Time|API|Bitbucket|Jira|Ops|Slack|Yesterlog|UI|UX)\b/.test(scope)) return scope;
   return `${scope[0].toLowerCase()}${scope.slice(1)}`;
 };
 

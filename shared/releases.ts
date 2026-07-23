@@ -1,5 +1,5 @@
 export const GITHUB_REPOSITORY_OWNER = "4gray";
-export const GITHUB_REPOSITORY_NAME = "time-bro";
+export const GITHUB_REPOSITORY_NAME = "yesterlog";
 export const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_REPOSITORY_OWNER}/${GITHUB_REPOSITORY_NAME}/releases`;
 export const GITHUB_LATEST_RELEASE_API_URL =
   `https://api.github.com/repos/${GITHUB_REPOSITORY_OWNER}/${GITHUB_REPOSITORY_NAME}/releases/latest`;

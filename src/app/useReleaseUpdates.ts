@@ -175,7 +175,7 @@ export const useReleaseUpdates = ({
     return {
       currentVersion,
       latestVersion: currentVersion,
-      releaseName: `TimeBro ${formatReleaseVersion(currentVersion)}`,
+      releaseName: `Yesterlog ${formatReleaseVersion(currentVersion)}`,
       releasePageUrl: GITHUB_RELEASES_URL,
       checkedAt: new Date().toISOString(),
       updateAvailable: false
@@ -337,7 +337,7 @@ export const useReleaseUpdates = ({
       updateSnackbarShownForRef.current = info.latestVersion;
       showSnackbar(
         "info",
-        `TimeBro ${formatReleaseVersion(info.latestVersion)} is available. Current version: ${formatReleaseVersion(
+        `Yesterlog ${formatReleaseVersion(info.latestVersion)} is available. Current version: ${formatReleaseVersion(
           info.currentVersion
         )}.`,
         {
@@ -395,7 +395,7 @@ export const useReleaseUpdates = ({
         if (demoUpdateInfo.updateAvailable) {
           showUpdateAvailable(demoUpdateInfo);
         } else if (options.notifyWhenCurrent) {
-          showSuccess("TimeBro is up to date.");
+          showSuccess("Yesterlog is up to date.");
         }
 
         return demoUpdateInfo;
@@ -423,7 +423,7 @@ export const useReleaseUpdates = ({
           if (result.error) {
             showError(result.error);
           } else {
-            showSuccess("TimeBro is up to date.");
+            showSuccess("Yesterlog is up to date.");
           }
         }
 

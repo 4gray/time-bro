@@ -7,7 +7,7 @@ import path from "node:path";
  * Shared helpers for the CLI-backed AI providers (`claude -p`, `codex exec`). These run
  * in the Electron **main** process because the renderer cannot spawn child processes.
  *
- * The load-bearing problem this file solves: when TimeBro is launched from the macOS
+ * The load-bearing problem this file solves: when Yesterlog is launched from the macOS
  * dock (or a Linux .desktop launcher) it inherits a minimal PATH — `/usr/bin:/bin:…` —
  * that does NOT include the user's shell PATH, so `claude` (`~/.local/bin`) and `codex`
  * (an nvm bin dir) are invisible. We recover the real PATH from a login shell once and

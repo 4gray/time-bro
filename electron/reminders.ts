@@ -61,7 +61,7 @@ const describeNotificationFailure = (error: unknown) => {
 
 const showReminderNotification = (payload: ReminderSchedulePayload) => {
   if (!notificationsSupported()) {
-    console.warn("TimeBro reminder notification skipped because desktop notifications are not supported.");
+    console.warn("Yesterlog reminder notification skipped because desktop notifications are not supported.");
     return;
   }
 
@@ -86,13 +86,13 @@ const showReminderNotification = (payload: ReminderSchedulePayload) => {
     notification.once("close", cleanup);
     notification.once("failed", (_event, error) => {
       console.warn(
-        `TimeBro reminder notification failed: ${error}. On macOS, Electron native notifications require a signed app and system notification permission.`
+        `Yesterlog reminder notification failed: ${error}. On macOS, Electron native notifications require a signed app and system notification permission.`
       );
       cleanup();
     });
     notification.show();
   } catch (error) {
-    console.warn(`TimeBro reminder notification failed: ${describeNotificationFailure(error)}`);
+    console.warn(`Yesterlog reminder notification failed: ${describeNotificationFailure(error)}`);
   }
 };
 

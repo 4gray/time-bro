@@ -7,7 +7,7 @@ const ticket: JiraTicket = {
   key: "TB-22",
   summary: "Wire immediate worklog refresh",
   projectKey: "TB",
-  projectName: "TimeBro",
+  projectName: "Yesterlog",
   statusName: "In Progress",
   statusCategory: "indeterminate",
   loggedSecondsTotal: 0,

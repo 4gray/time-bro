@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create a repeatable local workflow that renders TimeBro with realistic demo Jira data and captures release/blog screenshots for every primary view in light and dark themes.
+Create a repeatable local workflow that renders Yesterlog with realistic demo Jira data and captures release/blog screenshots for every primary view in light and dark themes.
 
 ## Recommended Approach
 

@@ -6,7 +6,7 @@ Keep Tickets focused on current assigned/favorite tickets, keep historical week 
 
 ## Decisions
 
-- Tickets is a current workload view: assigned/open, recently closed, local TimeBro favorites, and current-week logged hours.
+- Tickets is a current workload view: assigned/open, recently closed, local Yesterlog favorites, and current-week logged hours.
 - Week and Reports keep week navigation because those views are genuinely week-scoped.
 - `Command/Ctrl-K` is global and opens the existing Add Time dialog for today.
 - Jira ticket search stays inside the existing ticket picker in Add Time/Today instead of becoming a second Tickets-specific search surface.

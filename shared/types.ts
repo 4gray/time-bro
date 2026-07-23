@@ -13,7 +13,7 @@ export interface AppSettings {
   workingDays: WeekdayNumber[];
   /**
    * Local time used to frame 24-hour Today/Week timelines when they are opened.
-   * Optional so settings saved by older TimeBro versions migrate through defaults.
+   * Optional so settings saved by older Yesterlog versions migrate through defaults.
    */
   timelineFocusTime?: string;
   /** Center current-day timelines on the live time instead of the saved focus time. */
@@ -29,7 +29,7 @@ export interface AppSettings {
   aiEnabled: boolean;
   /**
    * Which backend powers the optional enhancement. Optional so settings saved by
-   * older TimeBro versions migrate through defaults to on-device Ollama.
+   * older Yesterlog versions migrate through defaults to on-device Ollama.
    */
   aiProvider?: AiProvider;
   /** Ollama HTTP endpoint, default `http://localhost:11434`. */
@@ -100,7 +100,7 @@ export interface JiraWorklogAllocation {
   direction: WorklogAllocationDirection;
   partIndex: number;
   partCount: number;
-  /** False when TimeBro captured an explicit direction while creating the worklog. */
+  /** False when Yesterlog captured an explicit direction while creating the worklog. */
   isApproximate: boolean;
 }
 

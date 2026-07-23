@@ -1,10 +1,10 @@
 # Plan: Day Reconstruction (with optional local AI)
 
-Implements the `Stint - Day Reconstruction` design handoff into TimeBro.
+Implements the `Stint - Day Reconstruction` design handoff into Yesterlog.
 
 ## Goal
 A new **Reconstruct** view that rebuilds one forgotten/untracked workday from the
-signals TimeBro already syncs (Bitbucket PR reviews + existing Jira worklogs), proposes
+signals Yesterlog already syncs (Bitbucket PR reviews + existing Jira worklogs), proposes
 worklog entries, and lets the user review and (future) send them. Plus a **Local AI ·
 Ollama** settings subpage.
 

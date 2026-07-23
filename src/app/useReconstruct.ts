@@ -93,7 +93,7 @@ const DURATION_STEP = 15;
 
 /**
  * Derives the Reconstruct view-model for the trailing ~2-week sync window. The
- * deterministic day is always produced from data TimeBro already holds (current week in
+ * deterministic day is always produced from data Yesterlog already holds (current week in
  * memory, earlier weeks loaded from local storage). The optional local model and the
  * rule-based auto-distribute only ever transform that core day — neither is required.
  */

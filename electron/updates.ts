@@ -198,7 +198,7 @@ export const getAutoUpdateCapability = (
     return {
       supported: false,
       phase: "unsupported",
-      reason: "Automatic installation is available in packaged TimeBro builds only."
+      reason: "Automatic installation is available in packaged Yesterlog builds only."
     };
   }
 
@@ -216,7 +216,7 @@ export const getAutoUpdateCapability = (
         supported: false,
         phase: "unsupported",
         platform: "linux-snap",
-        reason: "Snap installs updates automatically. Run `sudo snap refresh timebro` to check for an update now."
+        reason: "Snap installs updates automatically. Run `sudo snap refresh yesterlog` to check for an update now."
       };
     }
 
@@ -263,7 +263,7 @@ export const checkForAppUpdate = async (
     const response = await fetchImpl(GITHUB_LATEST_RELEASE_API_URL, {
       headers: {
         Accept: "application/vnd.github+json",
-        "User-Agent": "TimeBro"
+        "User-Agent": "Yesterlog"
       }
     });
 
@@ -329,7 +329,7 @@ export const fetchAppReleaseHistory = async (
     const response = await fetchImpl(GITHUB_RELEASES_API_URL, {
       headers: {
         Accept: "application/vnd.github+json",
-        "User-Agent": "TimeBro"
+        "User-Agent": "Yesterlog"
       }
     });
 
@@ -457,7 +457,7 @@ export const createAppAutoUpdater = (
         setState("not-available", { error: undefined, progress: undefined });
         return {
           ok: false,
-          message: "TimeBro is up to date.",
+          message: "Yesterlog is up to date.",
           state,
           updateInfo: lastUpdateInfo ? decorateUpdateInfo(lastUpdateInfo) : undefined
         };
@@ -481,7 +481,7 @@ export const createAppAutoUpdater = (
 
       return {
         ok: true,
-        message: "Update downloaded. Restart TimeBro to install it.",
+        message: "Update downloaded. Restart Yesterlog to install it.",
         state,
         updateInfo: lastUpdateInfo ? decorateUpdateInfo(lastUpdateInfo) : undefined
       };
@@ -516,7 +516,7 @@ export const createAppAutoUpdater = (
       updater.quitAndInstall(false, true);
       return {
         ok: true,
-        message: "Restarting TimeBro to install the update.",
+        message: "Restarting Yesterlog to install the update.",
         state,
         updateInfo: lastUpdateInfo ? decorateUpdateInfo(lastUpdateInfo) : undefined
       };

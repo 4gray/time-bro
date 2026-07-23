@@ -15,7 +15,7 @@ Add a timeline mode to Week that makes every day directly editable like Today, w
 
 ## Work
 
-- [x] Produce and inspect a TimeBro-aligned visual concept.
+- [x] Produce and inspect a Yesterlog-aligned visual concept.
 - [x] Implement the mode control and week timeline surface.
 - [x] Connect Add Time prefills and worklog move/resize actions through the Week route.
 - [x] Add component and route coverage for the new behavior.

@@ -1,6 +1,6 @@
 import type { AppUpdateInfo } from "../../shared/types";
 
-export const UPDATE_INFO_CACHE_KEY = "timebro-update-info";
+export const UPDATE_INFO_CACHE_KEY = "yesterlog-update-info";
 export const AUTO_UPDATE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 /**

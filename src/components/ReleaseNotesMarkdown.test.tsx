@@ -17,7 +17,7 @@ describe("ReleaseNotesMarkdown", () => {
           "![GitHub attachment](https://github.com/user-attachments/assets/abc123)",
           "![Tracking pixel](https://third-party.example/pixel.png)",
           "",
-          "[Release](https://github.com/4gray/time-bro/releases/tag/v1.4.0)",
+          "[Release](https://github.com/4gray/yesterlog/releases/tag/v1.4.0)",
           "[Unsafe](javascript:alert(1))",
           "<script>alert(1)</script>"
         ].join("\n")}
@@ -32,7 +32,7 @@ describe("ReleaseNotesMarkdown", () => {
     expect(markup).toContain('src="https://github.com/user-attachments/assets/abc123"');
     expect(markup).not.toContain('src="https://third-party.example/pixel.png"');
     expect(markup).toContain('href="https://third-party.example/pixel.png"');
-    expect(markup).toContain('href="https://github.com/4gray/time-bro/releases/tag/v1.4.0"');
+    expect(markup).toContain('href="https://github.com/4gray/yesterlog/releases/tag/v1.4.0"');
     expect(markup).not.toContain("javascript:alert");
     expect(markup).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
   });

@@ -12,7 +12,7 @@ import {
 const makeInfo = (over: Partial<AppUpdateInfo> = {}): AppUpdateInfo => ({
   currentVersion: "1.3.1",
   latestVersion: "1.3.1",
-  releasePageUrl: "https://github.com/4gray/time-bro/releases",
+  releasePageUrl: "https://github.com/4gray/yesterlog/releases",
   checkedAt: "2026-06-24T12:00:00.000Z",
   updateAvailable: false,
   ...over

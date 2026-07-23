@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ThemeMode } from "../components/Sidebar";
 
-export const THEME_STORAGE_KEY = "timebro-theme";
-export const LEGACY_THEME_STORAGE_KEY = "sprintf-theme";
+export const THEME_STORAGE_KEY = "yesterlog-theme";
 
 const LIGHT_MEDIA_QUERY = "(prefers-color-scheme: light)";
 
 const readStoredTheme = () => {
   try {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY) ?? localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
     return stored === "light" || stored === "dark" ? stored : null;
   } catch {
     return null;
@@ -54,7 +53,6 @@ export const useThemeMode = ({ initialTheme, persist = true }: UseThemeModeOptio
       if (persist) {
         try {
           localStorage.setItem(THEME_STORAGE_KEY, next);
-          localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
         } catch {
           /* ignore persistence failures */
         }

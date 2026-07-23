@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the current manual GitHub release download path with an in-app updater that can download a new release and restart TimeBro to install it where the packaged format supports that flow.
+Replace the current manual GitHub release download path with an in-app updater that can download a new release and restart Yesterlog to install it where the packaged format supports that flow.
 
 ## Decisions
 
@@ -15,7 +15,7 @@ Replace the current manual GitHub release download path with an in-app updater t
 
 ## Implementation
 
-- Add runtime `electron-updater` dependency and configure `electron-builder` `publish` metadata for `4gray/time-bro`.
+- Add runtime `electron-updater` dependency and configure `electron-builder` `publish` metadata for `4gray/yesterlog`.
 - Extend shared update contracts with updater capability/status, download progress, and install results.
 - In `electron/updates.ts`, keep GitHub release metadata fetching, add an `autoUpdater` controller, and report supported install modes.
 - In Electron IPC/preload/native API, add handlers for downloading an update and restarting to install.
