@@ -27,7 +27,7 @@ TimeBro is a calm little desktop app that turns your messy week into a tidy cock
 
 Your manager gets clean worklogs. You get your Friday back. 🎉
 
-> 🔒 **No backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB, and the only thing TimeBro ever phones is the Jira site *you* point it at.
+> 🔒 **No TimeBro backend. No telemetry. No "log in with your soul."** Your data lives on your machine in plain old IndexedDB. TimeBro connects directly to the services you choose: Jira, optional Bitbucket, and—only if you enable a cloud AI provider—Anthropic or OpenAI.
 
 <p align="center">
   <img src="./docs/screenshots/v2.4.0/dark-week.png" alt="TimeBro Week view: a weekly progress ring, Monday–Friday day columns with tracked vs. target hours, color-coded Jira worklog rows, vacation handling, and an Active Work dock of draggable tickets along the bottom." width="940" />
@@ -82,7 +82,7 @@ Connect Bitbucket Cloud and TimeBro estimates how long you spent reviewing each 
 
 Forgot to log a day? Open **Reconstruct** and TimeBro rebuilds it from the signals it already syncs — your Bitbucket **commits**, **PR reviews**, and the Jira time **already logged** — laid out on a 09:00→18:00 timeline. **Drag each signal onto the hour it belongs to** (or place them all at once), fine-tune any entry's duration, and watch the day add up. Step back through the last couple of weeks to catch the day you missed; today never offers hours that haven't happened yet.
 
-It works **completely without AI**. Optionally, point it at a **local [Ollama](https://ollama.com) model** and it polishes raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences — entirely **on your machine**: no cloud, no API key, no telemetry. Off by default; the deterministic reconstruction is always the floor.
+It works **completely without AI**. Optional AI can polish raw `fix npe` / `wip` commit noise into clean, send-ready worklog sentences: choose **[Ollama](https://ollama.com)** for fully local processing, **Anthropic via the Claude CLI**, or **OpenAI via the Codex CLI**. The cloud options use your existing CLI authentication and receive a best-effort-redacted version of the day’s signals. AI is off by default; the deterministic reconstruction is always the floor, and TimeBro still has no hosted backend or telemetry.
 
 ### 🏷️ Tickets — your workload, starred and sorted
 
@@ -132,15 +132,15 @@ Connect Jira (and optionally Bitbucket), set your weekly target and working days
 </details>
 
 <details>
-<summary><strong>Day Reconstruction</strong> <em>(optional local AI)</em></summary>
+<summary><strong>Day Reconstruction</strong> <em>(optional AI)</em></summary>
 
 - Rebuild a forgotten day from **Bitbucket commits + PR reviews + existing Jira worklogs**, deterministically — no model required.
 - **Drag-and-drop** signals onto a 09:00→18:00 timeline, or place them all at once; re-position entries or send them back to the rail.
 - **Editable durations** with a visible time span per entry; totals update live and are measured against elapsed time for today (no fabricating future hours).
 - Bounded **date stepper** over the recent worklog window; the back/forward arrows never run past the editable range or into the future.
 - Activity on **your own PRs** counts as work, not review; your commits are grouped by branch → ticket.
-- Optional **local [Ollama](https://ollama.com)** layer drafts clean worklog prose **on-device**, with a clear AI highlight and a **Stop** control. Endpoint and pulled models are detected automatically.
-- Fully local: placements, durations, and AI drafts are cached per day in IndexedDB; the model is reached only on `localhost`.
+- Optional AI drafts clean worklog prose, with a clear highlight and a **Stop** control. Choose **local [Ollama](https://ollama.com)**, **Anthropic through the Claude CLI**, or **OpenAI through the Codex CLI**.
+- Placements, durations, and AI drafts are cached per day in IndexedDB. Ollama stays on-device; Claude and Codex send best-effort-redacted prompts to their respective clouds using your existing CLI authentication.
 
 </details>
 
@@ -310,7 +310,7 @@ The **Review** nav item only appears once Bitbucket is configured, and the integ
 - Credentials are sent only to the Jira/Bitbucket sites you configure, and only when testing a connection or syncing.
 - **No backend server.** Sync results, skipped days, favorites, and personal notes stay on your machine.
 - API calls are made by the Electron main process over IPC.
-- **Local AI is on-device only.** When you enable Day Reconstruction's optional model, TimeBro talks to [Ollama](https://ollama.com) on `localhost` (default `:11434`) through the Electron main process — your commits, diffs, and ticket text are summarised locally. No cloud, no API key, no telemetry.
+- **AI is optional and off by default.** [Ollama](https://ollama.com) runs on-device (default `localhost:11434`) and sends nothing to a cloud. You can instead select Anthropic via the Claude CLI or OpenAI via the Codex CLI; those choices send a best-effort-redacted prompt to the selected provider under your existing CLI authentication and provider terms. TimeBro does not store those CLI credentials, operate an AI proxy, or add telemetry.
 
 **IndexedDB stores:** `settings`, `weekOverrides`, `syncResults`, `favorites`, `personalNotes`, `bitbucketReviewResults`, `recurringEvents`, `recurringOccurrences`, `reconstructDrafts`, `reconstructAiDrafts`.
 

@@ -16,8 +16,7 @@ long-term publisher.
 
 ## Description
 
-TimeBro is a private, local-first desktop companion for weekly Jira time
-tracking.
+TimeBro is a local-first desktop companion for weekly Jira time tracking.
 
 Connect your Jira Cloud account with a regular Atlassian API token, review the
 worklogs you have already recorded, and log new work without living in Jira's
@@ -27,9 +26,11 @@ notes together in one focused desktop workspace.
 
 Day Reconstruction can rebuild a forgotten workday from Jira worklogs and
 optional Bitbucket commits and pull-request review activity. Its deterministic
-core works offline. If you enable the optional AI layer, TimeBro talks only to
-your own Ollama server on `localhost`; no cloud model or TimeBro backend is
-involved.
+core works without AI. If you enable the optional AI layer, choose Ollama for
+fully local processing, Anthropic through the Claude CLI, or OpenAI through the
+Codex CLI. The cloud options use your existing CLI authentication and receive a
+best-effort-redacted version of the day's signals. TimeBro has no hosted backend
+or telemetry.
 
 Highlights:
 

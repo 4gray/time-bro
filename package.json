@@ -2,7 +2,7 @@
   "name": "timebro",
   "version": "2.7.2",
   "private": true,
-  "description": "TimeBro is a local Electron assistant for weekly Jira time tracking.",
+  "description": "Local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.",
   "license": "MIT",
   "author": "fourgray <fourgray@proton.me>",
   "repository": {
@@ -112,7 +112,7 @@
       "icon": "build/icons/512x512.png",
       "category": "Office",
       "synopsis": "Local weekly Jira time tracking",
-      "description": "TimeBro is a local desktop companion for weekly Jira time tracking. Sync and review your Jira worklogs, reconstruct forgotten days from Jira and Bitbucket signals, and optionally polish drafts with a local Ollama model. Credentials and synced data stay on your device; there is no TimeBro backend or telemetry.",
+      "description": "TimeBro is a local-first desktop companion for weekly Jira time tracking. Sync and review Jira worklogs, reconstruct forgotten days without AI, or optionally polish drafts with local Ollama, Anthropic via the Claude CLI, or OpenAI via the Codex CLI. Cloud AI is opt-in and uses your existing CLI authentication. There is no TimeBro backend or telemetry.",
       "syncDesktopName": true,
       "target": [
         "AppImage",

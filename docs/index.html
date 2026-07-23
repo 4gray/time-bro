@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TimeBro — Your whole week, every gap, in one window</title>
-<meta name="description" content="TimeBro is a local-first desktop time tracker for Jira developers who log their own time. Two-click logging, drag-and-drop, day reconstruction, no telemetry.">
+<meta name="description" content="TimeBro is a local-first desktop time tracker for Jira developers. Reconstruct days without AI, or optionally use local Ollama, Anthropic, or OpenAI. No TimeBro backend or telemetry.">
 <link rel="icon" href="app-icon.png" type="image/png">
 <meta property="og:title" content="TimeBro — Your whole week in one window">
-<meta property="og:description" content="A local-first desktop time tracker for Jira developers. Get your Friday back.">
+<meta property="og:description" content="Local-first Jira time tracking with optional Ollama, Anthropic, or OpenAI assistance.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -385,11 +385,11 @@
         <div>
           <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; border:1px solid #3a3731; border-radius:100px; margin-bottom:22px;">
             <span style="font-size:14px;">🧩</span>
-            <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; letter-spacing:.12em; color:#bda6f5; text-transform:uppercase;">Reconstruct · optional local AI</span>
+            <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:10.5px; letter-spacing:.12em; color:#bda6f5; text-transform:uppercase;">Reconstruct · optional AI</span>
           </div>
           <h3 style="margin:0; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(30px,3.4vw,46px); line-height:1.08; letter-spacing:-.01em; color:#f5f3f0;">Rebuild a forgotten day from your commits and PR reviews in about 90 seconds — <span style="font-style:italic; color:var(--accent);">no AI required.</span></h3>
           <p style="margin:24px 0 0; font-size:16.5px; line-height:1.65; color:#9d9b95; max-width:52ch;">TimeBro reconstructs a forgotten day from the signals it already syncs — your Bitbucket commits, PR reviews, and the Jira time already logged — laid out on a 09:00→18:00 timeline. Drag each signal onto the hour it belongs to, fine‑tune any duration, and watch the day add up.</p>
-          <p style="margin:18px 0 0; font-size:15px; line-height:1.65; color:#75726c; max-width:52ch;">It works <span style="color:#cfccc6;">completely without AI.</span> Optionally point it at a local Ollama model and it polishes raw <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; color:#bda6f5;">fix npe</span> / <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; color:#bda6f5;">wip</span> commit noise into clean, send‑ready worklog sentences — entirely on your machine. No cloud, no API key, no telemetry.</p>
+          <p style="margin:18px 0 0; font-size:15px; line-height:1.65; color:#75726c; max-width:52ch;">It works <span style="color:#cfccc6;">completely without AI.</span> For optional polish, choose Ollama for fully local processing, Anthropic through the Claude CLI, or OpenAI through the Codex CLI. Cloud providers use your existing CLI login and receive best‑effort‑redacted day signals. AI is off by default; TimeBro has no hosted backend or telemetry.</p>
         </div>
 
         <!-- mini timeline illustration -->
@@ -419,21 +419,21 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3ecf8e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
         <span style="font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace; font-size:11.5px; letter-spacing:.16em; color:#67645e; text-transform:uppercase;">Local-first · no telemetry</span>
       </div>
-      <h2 style="margin:0 auto; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(38px,4.9vw,64px); line-height:1.06; letter-spacing:-.01em; color:#f5f3f0; max-width:18ch;">The only server TimeBro ever calls is <span style="font-style:italic; color:var(--accent);">the Jira site you typed in.</span></h2>
-      <p style="margin:30px auto 0; font-size:18px; line-height:1.6; color:#9d9b95; max-width:58ch;">Your data lives on your machine in plain old IndexedDB, and the only thing TimeBro ever phones is the Jira site you point it at.</p>
+      <h2 style="margin:0 auto; font-family:'Instrument Serif',Georgia,serif; font-weight:400; font-size:clamp(38px,4.9vw,64px); line-height:1.06; letter-spacing:-.01em; color:#f5f3f0; max-width:18ch;">TimeBro has no server of its own. <span style="font-style:italic; color:var(--accent);">You choose every connection.</span></h2>
+      <p style="margin:30px auto 0; font-size:18px; line-height:1.6; color:#9d9b95; max-width:58ch;">Your data lives on your machine in IndexedDB. TimeBro connects directly to Jira, optional Bitbucket, and—only when you enable one—your selected AI provider.</p>
 
       <div class="tb-grid3" style="display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:54px; text-align:left;">
         <div style="border:1px solid #262320; border-radius:14px; padding:26px 24px; background:#1a1813;">
-          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">No server, anywhere</div>
-          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Sync results, skipped days, favorites and personal notes stay on your laptop. There's nothing to breach.</div>
+          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">No TimeBro backend</div>
+          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Sync results, skipped days, favorites and personal notes stay on your laptop. TimeBro runs no hosted account service or AI proxy.</div>
         </div>
         <div style="border:1px solid #262320; border-radius:14px; padding:26px 24px; background:#1a1813;">
-          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">Your token, your rules</div>
-          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Credentials live only in local IndexedDB and are sent only to the Jira and Bitbucket sites you configure.</div>
+          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">Your credentials, your rules</div>
+          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Jira and Bitbucket credentials live in local IndexedDB. Claude and Codex authentication stays with the CLI you installed.</div>
         </div>
         <div style="border:1px solid #262320; border-radius:14px; padding:26px 24px; background:#1a1813;">
-          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">AI stays on‑device</div>
-          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">The optional model runs through Ollama on localhost. Your commits and diffs are summarised locally — no cloud, no key.</div>
+          <div style="font-weight:700; font-size:16px; color:#f5f3f0; margin-bottom:8px;">Local or cloud—your choice</div>
+          <div style="font-size:14px; line-height:1.55; color:#9d9b95;">Ollama stays fully on-device. Anthropic and OpenAI are explicit opt-in cloud choices, with best-effort redaction before prompts leave your machine.</div>
         </div>
       </div>
     </div>

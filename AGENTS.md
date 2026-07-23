@@ -21,14 +21,14 @@ This project is TimeBro, a local Electron + React desktop app for personal Jira 
 - Jira network calls: Electron main process over IPC, not directly from renderer components.
 - Jira time entries are treated as Jira work log items. Preserve work log item IDs, issue keys, started timestamps, durations, and work log comments across API, IPC, storage, and UI summaries.
 
-## Day Reconstruction & local AI
+## Day Reconstruction & optional AI
 
 - **Day Reconstruction** rebuilds one forgotten workday from signals TimeBro already syncs (Bitbucket commits + PR reviews) plus the Jira worklogs already logged, on a 09:00–18:00 timeline.
-- **Two cleanly separated layers.** The deterministic core is the product and must work with **no model and no network**: `src/domain/reconstruct.ts` (pure engine: signals, placement, gaps, totals, confidence, day-kind, auto-distribute). The **optional** local-AI layer (`src/domain/enhancePrompt.ts` pure prompt/parse + `src/api/ollama.ts` + `electron/ollama.ts` IPC) only polishes drafts and is **off by default**; on any failure it returns empty drafts so the core is preserved. Never make the view require Ollama.
-- Local AI talks to **Ollama on `localhost`** through the Electron **main** process only. No cloud, no API key, no telemetry — same promise as the rest of the app.
+- **Two cleanly separated layers.** The deterministic core is the product and must work with **no model and no network**: `src/domain/reconstruct.ts` (pure engine: signals, placement, gaps, totals, confidence, day-kind, auto-distribute). The **optional** AI layer (`src/domain/enhancePrompt.ts` pure prompt/parse + `src/api/ollama.ts` + `electron/aiProvider.ts` IPC) only polishes drafts and is **off by default**; on any failure it returns empty drafts so the core is preserved. Never make the view require an AI provider.
+- AI calls go through the Electron **main** process only. Ollama runs fully on-device. The Claude and Codex CLI providers send best-effort-redacted prompts to Anthropic or OpenAI using the user's existing CLI authentication; never describe those providers as local or private. TimeBro has no hosted AI proxy or telemetry.
 - The view is a **review surface**: placements (drag/drop), duration overrides, and AI drafts are per-day drafts cached in IndexedDB (`reconstructDrafts`, `reconstructAiDrafts`). It does **not** bulk-write to Jira — "Log entries" opens the existing Add Time write flow. A real batch worklog write is a write-surface change that needs explicit sign-off (see the read-only rule below).
 - Today never reconstructs future hours: the engine takes an hour-bucketed `nowMinutes` and measures the gap against elapsed working time.
-- Key files: `src/components/ReconstructView.tsx`, `src/app/useReconstruct.ts`, `src/app/AppReconRoute.tsx`, `src/styles/reconstruct.css`; settings live in the `reconstruct` (Local AI) section of `SettingsView.tsx`. Keep the pure domain logic unit-tested.
+- Key files: `src/components/ReconstructView.tsx`, `src/app/useReconstruct.ts`, `src/app/AppReconRoute.tsx`, `src/styles/reconstruct.css`; provider dispatch lives in `electron/aiProvider.ts`, `electron/ollama.ts`, `electron/claude.ts`, and `electron/codex.ts`; cloud prompt redaction lives in `src/domain/redaction.ts`; settings live in the `reconstruct` (AI) section of `SettingsView.tsx`. Keep the pure domain logic unit-tested.
 
 ## Development Rules
 
