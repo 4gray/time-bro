@@ -23,7 +23,7 @@ const draft = buildDeterministicRecap({
 
 const methods = () => ({
   setPeriod: vi.fn(), setFormat: vi.fn(), setDetail: vi.fn(), stepInterval: vi.fn(), refreshActivity: vi.fn(), rewriteWithAi: vi.fn(),
-  updateTheme: vi.fn(), setActiveVersion: vi.fn(), saveCurrent: vi.fn(), duplicateSaved: vi.fn(),
+  updateTheme: vi.fn(), updateNarrative: vi.fn(), setActiveVersion: vi.fn(), saveCurrent: vi.fn(), duplicateSaved: vi.fn(),
   selectSaved: vi.fn(), closeSaved: vi.fn()
 });
 
@@ -58,24 +58,27 @@ afterEach(() => {
 });
 
 describe("RecapView", () => {
-  it("mirrors detail controls, opens a keyboard-dismissable source drawer, and persists inline edits", () => {
+  it("renders one narrative report, opens a keyboard-dismissable evidence drawer, and persists report edits", () => {
     const ws = workspace();
     render(ws);
 
     const range = container.querySelector<HTMLInputElement>('input[type="range"]')!;
     expect(range.value).toBe("2");
-    expect(container.querySelectorAll(".recap-narrative p").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".recap-report")).toHaveLength(1);
+    expect(container.querySelectorAll(".recap-theme")).toHaveLength(0);
+    expect(container.querySelectorAll(".recap-report-body p").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toContain("Standup digest");
     click(button("Standard"));
     expect(ws.setDetail).toHaveBeenCalledWith("balanced");
-    click(button("Sources"));
+    click(button("Review sources"));
     expect(container.querySelector('[role="dialog"]')).not.toBeNull();
     act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
     expect(container.querySelector('[role="dialog"]')).toBeNull();
 
-    click(container.querySelector('button[aria-label^="Edit"]') ?? undefined);
-    expect(container.querySelector(".recap-edit-name")).not.toBeNull();
+    click(container.querySelector('button[aria-label="Edit report"]') ?? undefined);
+    expect(container.querySelector(".recap-report-lede-input")).not.toBeNull();
     click(button("Apply edits"));
-    expect(ws.updateTheme).toHaveBeenCalledOnce();
+    expect(ws.updateNarrative).toHaveBeenCalledOnce();
   });
 
   it("saves live drafts and keeps saved snapshots read-only with duplication", () => {
@@ -92,6 +95,24 @@ describe("RecapView", () => {
     expect(readOnly.duplicateSaved).toHaveBeenCalledOnce();
   });
 
+  it("renders an older saved narrative as one report even before report-level copy existed", () => {
+    const legacy = structuredClone(draft);
+    delete legacy.narratives;
+    const snapshot: SavedRecap = {
+      id: "legacy-saved",
+      savedAt: "2026-06-18T12:00:00Z",
+      format: "perf",
+      detail: "detailed",
+      version: legacy
+    };
+
+    render(workspace(snapshot));
+
+    expect(container.querySelectorAll(".recap-report")).toHaveLength(1);
+    expect(container.querySelectorAll(".recap-theme")).toHaveLength(0);
+    expect(container.querySelector(".recap-report-body")?.textContent).toContain("Architecture review");
+  });
+
   it("keeps refresh and AI rewrite as separate actions", () => {
     const ws = workspace();
     render(ws);
@@ -106,6 +127,9 @@ describe("RecapView", () => {
   it("collects a user-provided CV outcome through the guided editor", () => {
     const ws = workspace(undefined, "cv");
     render(ws);
+    click(button("Sources"));
+    expect(container.querySelector('[role="dialog"]')?.getAttribute("aria-label")).toBe("Meetings & collaboration evidence");
+    click(container.querySelector('button[aria-label="Close sources"]') ?? undefined);
     click(button("Add outcome"));
 
     const editor = container.querySelector<HTMLTextAreaElement>(".recap-impact-editor textarea")!;

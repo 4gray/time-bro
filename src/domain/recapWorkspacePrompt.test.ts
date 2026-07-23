@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecapDetail, RecapFormat } from "../../shared/types";
-import { buildDeterministicRecap, recapIntervalForDate, type RecapEvidenceInput } from "./recapWorkspace";
+import { buildDeterministicRecap, buildRecapThemes, recapIntervalForDate, type RecapEvidenceInput } from "./recapWorkspace";
 import { buildRecapWorkspacePrompt, parseRecapWorkspaceDraft } from "./recapWorkspacePrompt";
 
 const fallback = () => {
@@ -16,15 +16,22 @@ const responseFor = (
   draft: ReturnType<typeof fallback>,
   format: RecapFormat,
   mutate?: (copy: Record<string, unknown>) => void
-) => JSON.stringify({
-  format,
-  themes: draft.themes.map((theme) => {
-    const copy: Record<string, unknown> = {
+) => {
+  if (format === "perf" || format === "manager") {
+    const document: Record<string, unknown> = {
+      lead: "Grounded update.",
+      paragraphs: [{ id: `${format}-paragraph`, text: "The available history records grounded work from the cited evidence.", refs: ["note:fact"] }]
+    };
+    mutate?.(document);
+    return JSON.stringify({ format, document });
+  }
+  return JSON.stringify({
+    format,
+    themes: draft.themes.map((theme) => {
+      const copy: Record<string, unknown> = {
       lead: "Grounded update.",
       version: format === "changelog" ? "Grounded release." : undefined,
-      paragraphs: format === "perf" || format === "manager"
-        ? [{ id: `${format}-paragraph`, text: "The available history records grounded work from the cited evidence.", refs: ["note:fact"] }]
-        : [],
+      paragraphs: [],
       lines: [{
         id: `${format}-line`,
         short: "Completed grounded work.",
@@ -36,7 +43,8 @@ const responseFor = (
     mutate?.(copy);
     return { id: theme.id, name: theme.name, copy };
   })
-});
+  });
+};
 
 describe("Recap AI grounding", () => {
   it("prompts for one audience and includes rich source and coverage context", () => {
@@ -46,16 +54,47 @@ describe("Recap AI grounding", () => {
     expect(prompt).toContain("note:fact");
     expect(prompt).toContain('"coverage"');
     expect(prompt).toContain('"notes":["Reviewed the flow"]');
+    expect(prompt).toContain("one cohesive report");
+    expect(prompt).toContain("Return {format,document:");
+  });
+
+  it("accepts a cohesive narrative paragraph grounded across separate evidence clusters", () => {
+    const draft = fallback();
+    draft.sources.push({
+      ...draft.sources[0],
+      id: "note:release",
+      title: "Release support",
+      clusterKey: "local:operations"
+    });
+    draft.themes = buildRecapThemes(draft.sources, "week");
+    const raw = JSON.stringify({
+      format: "manager",
+      document: {
+        lead: "Grounded update.",
+        paragraphs: [{
+          id: "connected-report",
+          text: "The available history connects design review with release support.",
+          refs: ["note:fact", "note:release"]
+        }]
+      }
+    });
+
+    const parsed = parseRecapWorkspaceDraft(raw, draft, "manager", "detailed");
+    expect(parsed?.narratives?.manager?.paragraphs?.[0].refs).toEqual(["note:fact", "note:release"]);
   });
 
   it.each<[RecapFormat, RecapDetail]>([
-    ["perf", "detailed"], ["manager", "balanced"], ["cv", "detailed"], ["standup", "headline"], ["changelog", "balanced"]
+    ["perf", "detailed"], ["manager", "balanced"], ["cv", "detailed"], ["changelog", "balanced"]
   ])("accepts grounded %s copy without changing other format drafts", (format, detail) => {
     const draft = fallback();
     const parsed = parseRecapWorkspaceDraft(responseFor(draft, format), draft, format, detail);
     expect(parsed?.generator).toBe("ai");
     expect(parsed?.aiFormats).toContain(format);
-    expect(parsed?.themes[0].copy[format].lines[0].refs).toEqual(["note:fact"]);
+    if (format === "perf" || format === "manager") {
+      expect(parsed?.narratives?.[format]?.paragraphs?.[0].refs).toEqual(["note:fact"]);
+    } else {
+      expect(parsed?.themes[0].copy[format].lines[0].refs).toEqual(["note:fact"]);
+    }
   });
 
   it("rejects unknown references, unsupported numbers, unexpected paragraphs, and invalid tags", () => {
@@ -64,7 +103,7 @@ describe("Recap AI grounding", () => {
       (copy.paragraphs as Array<Record<string, unknown>>)[0].refs = ["unknown"];
     }), draft, "perf", "detailed")).toBeUndefined();
     expect(parseRecapWorkspaceDraft(responseFor(draft, "manager", (copy) => {
-      (copy.lines as Array<Record<string, unknown>>)[0].long = "Improved output by 99 percent.";
+      (copy.paragraphs as Array<Record<string, unknown>>)[0].text = "Improved output by 99 percent.";
     }), draft, "manager", "detailed")).toBeUndefined();
     expect(parseRecapWorkspaceDraft(responseFor(draft, "cv", (copy) => {
       copy.paragraphs = [{ text: "Unexpected narrative.", refs: ["note:fact"] }];
@@ -118,23 +157,23 @@ describe("Recap AI grounding", () => {
     expect(parseRecapWorkspaceDraft(responseFor(draft, "cv", (copy) => {
       copy.lines = [];
     }), draft, "cv", "detailed")).toBeUndefined();
-    expect(parseRecapWorkspaceDraft(responseFor(draft, "standup", (copy) => {
+    expect(parseRecapWorkspaceDraft(responseFor(draft, "manager", (copy) => {
       copy.lead = undefined;
-      copy.lines = [];
-    }), draft, "standup", "headline")).toBeUndefined();
+      copy.paragraphs = [];
+    }), draft, "manager", "headline")).toBeUndefined();
   });
 
   it("preserves richer fallback content when applying a headline rewrite", () => {
     const draft = fallback();
-    const original = structuredClone(draft.themes[0].copy.perf);
+    const original = structuredClone(draft.narratives!.perf!);
     const parsed = parseRecapWorkspaceDraft(responseFor(draft, "perf", (copy) => {
       copy.lead = "AI brief.";
       copy.paragraphs = [];
       copy.lines = [];
     }), draft, "perf", "headline");
 
-    expect(parsed?.themes[0].copy.perf.lead).toBe("AI brief.");
-    expect(parsed?.themes[0].copy.perf.paragraphs).toEqual(original.paragraphs);
-    expect(parsed?.themes[0].copy.perf.lines).toEqual(original.lines);
+    expect(parsed?.narratives?.perf?.lead).toBe("AI brief.");
+    expect(parsed?.narratives?.perf?.paragraphs).toEqual(original.paragraphs);
+    expect(parsed?.narratives?.perf?.lines).toEqual(original.lines);
   });
 });

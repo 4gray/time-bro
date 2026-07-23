@@ -91,17 +91,12 @@ const workspaceDraft = () => {
   return buildDeterministicRecap(input);
 };
 
-const workspaceResponse = (draft: ReturnType<typeof workspaceDraft>, sourceRef: string, themeId = draft.themes[0].id) => JSON.stringify({
+const workspaceResponse = (_draft: ReturnType<typeof workspaceDraft>, sourceRef: string) => JSON.stringify({
   format: "perf",
-  themes: [{
-    id: themeId,
-    name: "Design review",
-    copy: {
-      lead: "Grounded update.",
-      paragraphs: [{ id: "perf-paragraph", text: "The available history records grounded work from the cited evidence.", refs: [sourceRef] }],
-      lines: [{ id: "perf-line", short: "Completed grounded work.", long: "Completed grounded work from the cited evidence.", refs: [sourceRef] }]
-    }
-  }]
+  document: {
+    lead: "Grounded update.",
+    paragraphs: [{ id: "perf-paragraph", text: "The available history records grounded work from the cited evidence.", refs: [sourceRef] }]
+  }
 });
 
 describe("enhanceRecapWorkspace", () => {
@@ -110,7 +105,7 @@ describe("enhanceRecapWorkspace", () => {
     let sentPrompt = "";
     vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
       sentPrompt = request.prompt;
-      return { ok: true, response: workspaceResponse(draft, "ID-1", draft.themes[0].id.replace("note:fact", "ID-1")) };
+      return { ok: true, response: workspaceResponse(draft, "ID-1") };
     });
 
     const result = await enhanceRecapWorkspace(draft, {
@@ -121,7 +116,7 @@ describe("enhanceRecapWorkspace", () => {
     expect(sentPrompt).toContain("ID-1");
     expect(result.generator).toBe("ai");
     expect(result.aiFormats).toContain("perf");
-    expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["note:fact"]);
+    expect(result.narratives?.perf?.paragraphs?.[0].refs).toEqual(["note:fact"]);
   });
 
   it("restores repository-qualified refs after cloud redaction", async () => {
@@ -138,12 +133,13 @@ describe("enhanceRecapWorkspace", () => {
       for (const paragraph of copy.paragraphs ?? []) paragraph.refs = ["repo-a#42"];
       for (const line of copy.lines) line.refs = ["repo-a#42"];
     }
+    for (const paragraph of draft.narratives?.perf?.paragraphs ?? []) paragraph.refs = ["repo-a#42"];
     let sentPrompt = "";
     vi.spyOn(nativeApi, "generateWithAi").mockImplementation(async (request) => {
       sentPrompt = request.prompt;
       return {
         ok: true,
-        response: workspaceResponse(draft, "ID-2", draft.themes[0].id.replace(source.id, "ID-1"))
+        response: workspaceResponse(draft, "ID-2")
       };
     });
 
@@ -154,7 +150,7 @@ describe("enhanceRecapWorkspace", () => {
     expect(sentPrompt).not.toContain("repo-a");
     expect(sentPrompt).toContain('"ref":"ID-2"');
     expect(result.generator).toBe("ai");
-    expect(result.themes[0].copy.perf.lines[0].refs).toEqual(["repo-a#42"]);
+    expect(result.narratives?.perf?.paragraphs?.[0].refs).toEqual(["repo-a#42"]);
   });
 
   it("keeps the deterministic draft when the provider fails or returns invalid copy", async () => {

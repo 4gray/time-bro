@@ -2,9 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bookmark, Check, ChevronLeft, ChevronRight, Copy, Download, ExternalLink, FileDown,
   Link2, Loader2, Pencil, Printer, RefreshCw, Save, Sparkles, Target, MessageSquare,
-  FileText, Zap, Tag, X
+  FileText, Tag, X
 } from "lucide-react";
-import type { RecapDetail, RecapFormat, RecapPeriod, RecapSourceItem, RecapTheme } from "../../shared/types";
+import type {
+  RecapDetail,
+  RecapDraftVersion,
+  RecapFormat,
+  RecapFormatCopy,
+  RecapNarrativeFormat,
+  RecapPeriod,
+  RecapTheme
+} from "../../shared/types";
 import type { useRecapWorkspace } from "../app/useRecapWorkspace";
 import appIcon from "../assets/app-icon.png";
 import { formatReconDuration } from "../domain/reconstruct";
@@ -12,12 +20,12 @@ import {
   recapCoverageNote,
   recapFormatMeta,
   recapLineText,
-  recapSourceRef,
+  recapNarrativeCopy,
   recapTitle,
   recapToMarkdown,
   recapToPlainText,
   visibleRecapLines,
-  visibleRecapParagraphs
+  visibleRecapNarrativeParagraphs
 } from "../domain/recapWorkspace";
 
 type Workspace = ReturnType<typeof useRecapWorkspace>;
@@ -25,7 +33,7 @@ interface RecapViewProps { workspace: Workspace; onOpenCalendar: () => void; }
 
 const FORMATS: Array<{ id: RecapFormat; Icon: typeof Target }> = [
   { id: "perf", Icon: Target }, { id: "manager", Icon: MessageSquare }, { id: "cv", Icon: FileText },
-  { id: "standup", Icon: Zap }, { id: "changelog", Icon: Tag }
+  { id: "changelog", Icon: Tag }
 ];
 const DETAILS: RecapDetail[] = ["headline", "balanced", "detailed"];
 const DETAIL_LABELS: Record<RecapDetail, string> = { headline: "Brief", balanced: "Standard", detailed: "Detailed" };
@@ -36,9 +44,9 @@ const EmphasizedText = ({ text, emphasis }: { text: string; emphasis?: string })
   return <>{text.slice(0, index)}<strong>{emphasis}</strong>{text.slice(index + emphasis.length)}</>;
 };
 
-const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, onUpdate }: {
+const StructuredBlock = ({ theme, format, detail, readOnly, onSources, onUpdate }: {
   theme: RecapTheme; format: RecapFormat; detail: RecapDetail; readOnly: boolean;
-  sourceRefs: string[]; onSources: () => void; onUpdate: (theme: RecapTheme) => void;
+  onSources: () => void; onUpdate: (theme: RecapTheme) => void;
 }) => {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(theme);
@@ -46,7 +54,6 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
   const [impactDraft, setImpactDraft] = useState("");
   useEffect(() => { setDraft(theme); setImpactLineId(undefined); }, [theme]);
   const copy = editing ? draft.copy[format] : theme.copy[format];
-  const paragraphs = visibleRecapParagraphs(copy, detail);
   const visible = visibleRecapLines(copy, detail, format);
   const saveEdit = () => { onUpdate(draft); setEditing(false); };
   const updateLead = (value: string) => setDraft((current) => ({ ...current, copy: { ...current.copy,
@@ -54,9 +61,6 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
   const updateLine = (id: string, value: string) => setDraft((current) => ({ ...current, copy: { ...current.copy,
     [format]: { ...current.copy[format], lines: current.copy[format].lines.map((line) => line.id === id
       ? { ...line, [detail === "detailed" ? "long" : "short"]: value } : line) } } }));
-  const updateParagraph = (id: string, value: string) => setDraft((current) => ({ ...current, copy: { ...current.copy,
-    [format]: { ...current.copy[format], paragraphs: (current.copy[format].paragraphs ?? []).map((paragraph) => paragraph.id === id
-      ? { ...paragraph, text: value } : paragraph) } } }));
   const openImpact = (lineId: string, value?: string) => { setImpactLineId(lineId); setImpactDraft(value ?? ""); };
   const saveImpact = (lineId: string) => {
     const userImpact = impactDraft.trim();
@@ -88,16 +92,12 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
       {(copy.lead || copy.version) && (editing
         ? <textarea className="recap-edit-lead" value={copy.version ?? copy.lead ?? ""} onChange={(event) => updateLead(event.target.value)} />
         : format === "changelog" ? <span className="recap-version-tag">{copy.version}</span> : <strong className="recap-theme-lead">{copy.lead}</strong>)}
-      {paragraphs.length > 0 && <div className="recap-narrative">{paragraphs.map((paragraph) => editing
-        ? <textarea key={paragraph.id} value={paragraph.text} onChange={(event) => updateParagraph(paragraph.id, event.target.value)} />
-        : <p key={paragraph.id}>{paragraph.text}</p>)}</div>}
-      {(format === "perf" || format === "manager") && visible.length > 0 && <div className="recap-evidence-label">Evidence highlights</div>}
       <div className="recap-lines">
         {visible.map((line) => <div className="recap-line-wrap" key={line.id}><div className="recap-line">
           {format === "changelog" && line.tag ? <span className={`recap-change-tag is-${line.tag.toLowerCase()}`}>{line.tag}</span>
             : <span className="recap-line-dot" />}
           {editing ? <textarea value={detail === "detailed" ? line.long : line.short} onChange={(event) => updateLine(line.id, event.target.value)} />
-            : <p><EmphasizedText text={recapLineText(line, detail, format)} emphasis={line.emphasis} /> {detail === "detailed" && format !== "cv" && format !== "standup" && line.refs.map((ref) => <code key={ref}>{ref}</code>)}
+            : <p><EmphasizedText text={recapLineText(line, detail, format)} emphasis={line.emphasis} /> {detail === "detailed" && format !== "cv" && line.refs.map((ref) => <code key={ref}>{ref}</code>)}
               {format === "cv" && !readOnly && <button type="button" className={`recap-impact-needed ${line.userImpact ? "is-complete" : ""}`} aria-expanded={impactLineId === line.id}
                 onClick={() => openImpact(line.id, line.userImpact)}>{line.userImpact ? "Edit outcome" : "Add outcome"}</button>}
               {format === "cv" && readOnly && line.needsImpact && <span className="recap-impact-needed">Outcome needed</span>}</p>}
@@ -109,13 +109,62 @@ const ThemeBlock = ({ theme, format, detail, readOnly, sourceRefs, onSources, on
           <div>{line.userImpact && <button type="button" onClick={() => removeImpact(line.id)}>Remove outcome</button>}<button type="button" onClick={() => setImpactLineId(undefined)}>Cancel</button><button type="submit" className="is-primary" disabled={!impactDraft.trim()}><Check size={13} /> Save outcome</button></div>
         </form>}</div>)}
       </div>
-      {format === "perf" && detail === "detailed" && <footer className="recap-theme-sources"><span>SOURCES</span>{sourceRefs.slice(0, 3).map((ref) => <code key={ref}>{ref}</code>)}</footer>}
       {editing && <div className="recap-edit-actions"><button type="button" onClick={() => setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={saveEdit}><Check size={13} /> Apply edits</button></div>}
     </div>
   </article>;
 };
 
-const SourceDrawer = ({ theme, sources, onClose, onOpenCalendar }: { theme: RecapTheme; sources: RecapSourceItem[]; onClose: () => void; onOpenCalendar: () => void }) => {
+const NarrativeReport = ({ draft, format, detail, readOnly, onSources, onUpdate }: {
+  draft: RecapDraftVersion;
+  format: RecapNarrativeFormat;
+  detail: RecapDetail;
+  readOnly: boolean;
+  onSources: () => void;
+  onUpdate: (copy: RecapFormatCopy) => void;
+}) => {
+  const source = recapNarrativeCopy(draft, format);
+  const [editing, setEditing] = useState(false);
+  const [workingCopy, setWorkingCopy] = useState(source);
+  useEffect(() => {
+    setWorkingCopy(source);
+    setEditing(false);
+  }, [draft, format]);
+  const copy = editing ? workingCopy : source;
+  const paragraphs = visibleRecapNarrativeParagraphs(copy, detail);
+  const updateParagraph = (id: string, text: string) => setWorkingCopy((current) => ({
+    ...current,
+    paragraphs: (current.paragraphs ?? []).map((paragraph) => paragraph.id === id ? { ...paragraph, text } : paragraph)
+  }));
+  return <article className="recap-report">
+    <header className="recap-report-tools">
+      <div><strong>Continuous report</strong><span>{draft.themes.length} grounded {draft.themes.length === 1 ? "workstream" : "workstreams"} woven into one document</span></div>
+      <button type="button" className="recap-source-btn" onClick={onSources}><Link2 size={12} /> Review sources</button>
+      {!readOnly && <button type="button" className="recap-source-btn" aria-label={editing ? "Cancel report editing" : "Edit report"} onClick={() => {
+        setWorkingCopy(source);
+        setEditing((value) => !value);
+      }}>{editing ? <X size={13} /> : <Pencil size={13} />} {editing ? "Cancel" : "Edit report"}</button>}
+    </header>
+    <div className="recap-report-prose">
+      {editing
+        ? <textarea className="recap-report-lede-input" aria-label="Report introduction" value={copy.lead ?? ""} onChange={(event) => setWorkingCopy({ ...workingCopy, lead: event.target.value })} />
+        : copy.lead && <p className="recap-report-lede">{copy.lead}</p>}
+      {paragraphs.length > 0 && <div className="recap-report-body">{paragraphs.map((paragraph) => editing
+        ? <textarea key={paragraph.id} aria-label="Report paragraph" value={paragraph.text} onChange={(event) => updateParagraph(paragraph.id, event.target.value)} />
+        : <p key={paragraph.id}>{paragraph.text}</p>)}</div>}
+      {editing && <div className="recap-edit-actions"><button type="button" onClick={() => setEditing(false)}>Cancel</button><button type="button" className="is-primary" onClick={() => {
+        onUpdate(workingCopy);
+        setEditing(false);
+      }}><Check size={13} /> Apply edits</button></div>}
+    </div>
+  </article>;
+};
+
+const SourceDrawer = ({ draft, themeId, onClose, onOpenCalendar }: {
+  draft: RecapDraftVersion;
+  themeId?: string;
+  onClose: () => void;
+  onOpenCalendar: () => void;
+}) => {
   const drawerRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -134,34 +183,36 @@ const SourceDrawer = ({ theme, sources, onClose, onOpenCalendar }: { theme: Reca
     window.addEventListener("keydown", key);
     return () => { window.removeEventListener("keydown", key); previous?.focus(); };
   }, [onClose]);
-  const groups = [
-    ["Tickets", sources.filter((item) => item.kind === "ticket")],
-    ["Pull requests & commits", sources.filter((item) => item.kind === "pull-request" || item.kind === "commit")],
-    ["Meetings & local work", sources.filter((item) => item.kind === "meeting" || item.kind === "local")]
-  ] as const;
+  const scopedTheme = themeId ? draft.themes.find((theme) => theme.id === themeId) : undefined;
+  const scopedThemes = scopedTheme ? [scopedTheme] : draft.themes;
+  const totalHours = scopedThemes.reduce((sum, theme) => sum + theme.hours, 0);
+  const groups = scopedThemes.map((theme) => ({
+    theme,
+    sources: draft.sources.filter((source) => theme.sourceIds.includes(source.id))
+  }));
+  const title = scopedTheme ? `${scopedTheme.name} evidence` : "Report evidence";
   return <><button className="recap-scrim" aria-label="Close sources" onClick={onClose} />
-    <aside ref={drawerRef} className="recap-source-drawer" role="dialog" aria-modal="true" aria-label={`${theme.name} sources`}>
-      <header><span className={`recap-theme-chip is-${theme.colorToken}`} /><h2>{theme.name}</h2><button className="recap-icon-btn" onClick={onClose} aria-label="Close sources"><X size={16} /></button>
-        <div className="recap-source-summary"><strong>{formatReconDuration(theme.hours * 60)}</strong><span>time reconstructed</span><p>Every line is grounded in the items below. Nothing is invented.</p></div>
+    <aside ref={drawerRef} className="recap-source-drawer" role="dialog" aria-modal="true" aria-label={title}>
+      <header><Link2 size={15} /><h2>{title}</h2><button className="recap-icon-btn" onClick={onClose} aria-label="Close sources"><X size={16} /></button>
+        <div className="recap-source-summary"><strong>{formatReconDuration(totalHours * 60)}</strong><span>time reconstructed</span><p>{scopedTheme ? "This workstream is grounded in the items below." : "The report is grounded in the items below. Nothing is invented."}</p></div>
         <button type="button" className="recap-calendar-link" onClick={onOpenCalendar}>Open interval in the calendar →</button>
       </header>
-      <div className="recap-source-list">{groups.map(([label, items]) => items.length ? <section key={label}><h3>{label} <span>{items.length}</span></h3>{items.map((item) => {
+      <div className="recap-source-list">{groups.map(({ theme, sources }) => sources.length ? <section key={theme.id}><h3>{theme.name} <span>{sources.length}</span></h3>{sources.map((item) => {
         const url = item.issueUrl ?? item.pullRequestUrl;
         const row = <><span className="recap-source-key">{item.issueKey ?? (item.pullRequestId ? `#${item.pullRequestId}` : item.kind)}</span><span className="recap-source-title">{item.title}</span>{item.repository && <small>{item.repository}</small>}{item.role && <small>{item.role}</small>}<strong>{formatReconDuration(item.timeSpentSeconds / 60)}</strong>{url && <ExternalLink size={13} />}</>;
         return url ? <a href={url} target="_blank" rel="noreferrer" className="recap-source-row" key={item.id}>{row}</a> : <div className="recap-source-row" key={item.id}>{row}</div>;
       })}</section> : null)}</div>
-      <footer>These feed the “{theme.name}” section of your recap.</footer>
+      <footer>{scopedTheme ? "Only evidence assigned to this workstream is shown." : "Workstreams organize evidence here. They do not define the report’s reading structure."}</footer>
     </aside></>;
 };
 
 export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => {
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [sourceThemeId, setSourceThemeId] = useState<string>();
   const [exportOpen, setExportOpen] = useState(false);
   const [historyOnly, setHistoryOnly] = useState(false);
   const [bragOpen, setBragOpen] = useState(false);
   const draft = ws.displayedDraft;
-  const sourceTheme = draft?.themes.find((theme) => theme.id === sourceThemeId);
-  const sourceItems = sourceTheme ? draft?.sources.filter((source) => sourceTheme.sourceIds.includes(source.id)) ?? [] : [];
   const meta = recapFormatMeta[ws.format];
   const exportText = (markdown: boolean) => draft ? (markdown ? recapToMarkdown(draft, ws.format, ws.detail) : recapToPlainText(draft, ws.format, ws.detail)) : "";
   const copy = async () => { await navigator.clipboard.writeText(exportText(false)); setExportOpen(false); };
@@ -197,7 +248,15 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
             {!ws.selectedSaved && ws.record && <select aria-label="Draft version" value={ws.record.activeVersion} onChange={(event) => ws.setActiveVersion(Number(event.target.value))}>{ws.record.versions.map((version) => <option key={version.version} value={version.version}>Version {version.version}</option>)}</select>}
             <span>{ws.selectedSaved ? `Saved ${new Date(ws.selectedSaved.savedAt).toLocaleDateString()}` : ws.isRefreshing ? "Rebuilding from cached activity" : ws.isRewriting ? "Creating a separate AI version" : `${currentFormatEnhanced ? "AI-assisted" : "Local"} ${meta.label.toLowerCase()} · ${draft.editedAt ? "edited" : "not yet saved"}`}</span>
           </div>
-          {draft.themes.map((theme) => <ThemeBlock key={theme.id} theme={theme} format={ws.format} detail={ws.detail} readOnly={Boolean(ws.selectedSaved)} sourceRefs={draft.sources.filter((source) => theme.sourceIds.includes(source.id)).map(recapSourceRef)} onSources={() => setSourceThemeId(theme.id)} onUpdate={(next) => ws.updateTheme(theme.id, () => next)} />)}
+          {ws.format === "perf" || ws.format === "manager"
+            ? <NarrativeReport draft={draft} format={ws.format} detail={ws.detail} readOnly={Boolean(ws.selectedSaved)} onSources={() => {
+                setSourceThemeId(undefined);
+                setSourcesOpen(true);
+              }} onUpdate={(next) => ws.updateNarrative(ws.format as RecapNarrativeFormat, () => next)} />
+            : draft.themes.map((theme) => <StructuredBlock key={theme.id} theme={theme} format={ws.format} detail={ws.detail} readOnly={Boolean(ws.selectedSaved)} onSources={() => {
+                setSourceThemeId(theme.id);
+                setSourcesOpen(true);
+              }} onUpdate={(next) => ws.updateTheme(theme.id, () => next)} />)}
         </>}
       </main>
       {bragOpen && <button type="button" className="recap-brag-scrim" aria-label="Close brag doc" onClick={() => setBragOpen(false)} />}
@@ -206,6 +265,6 @@ export const RecapView = ({ workspace: ws, onOpenCalendar }: RecapViewProps) => 
         {ws.saved.length ? ws.saved.map((item) => <button key={item.id} className={`recap-saved-card ${ws.selectedSaved?.id === item.id ? "active" : ""}`} onClick={() => { ws.selectSaved(item.id); setBragOpen(false); }}><div><code>{item.version.interval.shortLabel}</code><strong>{recapFormatMeta[item.format].label}</strong><time>{new Date(item.savedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time></div><p><i className="recap-saved-dots">{item.version.themes.map((theme) => <b key={theme.id} className={`is-${theme.colorToken}`} />)}</i>{item.version.themes.length} focus areas · v{item.version.version}</p></button>) : <div className="recap-brag-empty">Saved recaps will collect here.</div>}
       </div><footer><span>{ws.saved.length ? `${ws.saved.length} local recaps` : "Nothing saved yet"}</span><button onClick={() => setHistoryOnly((value) => !value)}>{historyOnly ? "Back to draft" : "View all →"}</button></footer></aside>
     </div>
-    {sourceTheme && <SourceDrawer theme={sourceTheme} sources={sourceItems} onClose={() => setSourceThemeId(undefined)} onOpenCalendar={onOpenCalendar} />}
+    {sourcesOpen && draft && <SourceDrawer draft={draft} themeId={sourceThemeId} onClose={() => setSourcesOpen(false)} onOpenCalendar={onOpenCalendar} />}
   </div>;
 };

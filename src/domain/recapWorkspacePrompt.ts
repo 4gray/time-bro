@@ -6,7 +6,7 @@ import type {
   RecapFormat,
   RecapTheme
 } from "../../shared/types";
-import { recapSourceRef } from "./recapWorkspace";
+import { recapNarrativeCopy, recapSourceRef } from "./recapWorkspace";
 
 export const RECAP_WORKSPACE_SYSTEM_PROMPT = [
   "You are an evidence editor for a developer's private work journal.",
@@ -14,30 +14,25 @@ export const RECAP_WORKSPACE_SYSTEM_PROMPT = [
   "Do not say shipped, delivered, fixed, improved, led, or owned unless the supplied evidence explicitly supports that claim.",
   "Separate recorded work from business outcomes. If an outcome is missing, say so through needsImpact instead of making one up.",
   "Treat USER CLAIMS as trusted personal evidence. Preserve them exactly as separate userImpact data and never invent or weaken them.",
-  "Preserve every supplied theme id and cite only allowed refs. Return JSON only."
+  "When returning theme blocks, preserve every supplied theme id. Cite only allowed refs. Return JSON only."
 ].join(" ");
 
 const FORMAT_INSTRUCTIONS: Record<RecapFormat, string[]> = {
   perf: [
-    "Write a performance-review narrative for the person doing the work.",
-    "Use a concrete workstream name, a factual lead, and connected paragraphs rather than a ticket-by-ticket list.",
+    "Write one performance-review document for the person doing the work.",
+    "Use a factual lead and connected paragraphs rather than workstream headings or a ticket-by-ticket list.",
     "Explain scope, contribution, collaboration, and recorded outcomes only when evidence supports them.",
     "Lines are optional evidence highlights, not the main document."
   ],
   manager: [
     "Write a plain first-person manager update.",
-    "Use connected paragraphs that explain where time and attention went.",
-    "Do not turn every source into a bullet. Lines are optional supporting highlights."
+    "Write one connected report that explains where time and attention went.",
+    "The report must read naturally without Jira epic headings or a source-by-source list."
   ],
   cv: [
     "Write accomplishment candidates for a CV or professional profile.",
     "Combine related sources into one or two action-oriented bullets per workstream and omit internal Jira keys from the prose.",
     "Set needsImpact to true whenever the evidence does not contain a measurable or explicit outcome. Never fabricate one.",
-    "Return no paragraphs."
-  ],
-  standup: [
-    "Write a terse standup digest.",
-    "Use one short factual bullet per meaningful thread and avoid review-style prose.",
     "Return no paragraphs."
   ],
   changelog: [
@@ -49,24 +44,32 @@ const FORMAT_INSTRUCTIONS: Record<RecapFormat, string[]> = {
 
 const DETAIL_INSTRUCTIONS: Record<RecapDetail, string> = {
   headline: "Headline mode: return a useful non-empty lead (or version for changelog). Keep paragraphs and lines empty because richer local detail is preserved by the app.",
-  balanced: "Standard mode: for narrative formats write one paragraph of 2 to 4 sentences; for list formats keep only the strongest items.",
-  detailed: "Detailed mode: for narrative formats write 2 or 3 paragraphs of 2 to 4 complete sentences each, then up to 4 evidence highlights; for list formats add useful context without repeating source metadata."
+  balanced: "Standard mode: for narrative formats write 2 to 4 connected paragraphs of 2 to 4 sentences each; for list formats keep only the strongest items.",
+  detailed: "Detailed mode: for narrative formats write 3 to 6 connected paragraphs of 2 to 4 complete sentences each, proportionate to the evidence and without padding; for list formats add useful context without repeating source metadata."
 };
 
 export const buildRecapWorkspacePrompt = (
   draft: RecapDraftVersion,
   format: RecapFormat,
   detail: RecapDetail
-) => [
+) => {
+  const isNarrative = format === "perf" || format === "manager";
+  return [
   `Write only the ${format} format at ${detail} detail.`,
   ...FORMAT_INSTRUCTIONS[format],
   DETAIL_INSTRUCTIONS[detail],
-  "You may rename a theme to a clearer product, module, or workstream name using supplied context, but do not change theme ids or move refs between themes.",
   "When coverage is partial or sparse, qualify period-wide statements and describe only the available history.",
-  "Return {format,themes:[{id,name,copy:{lead?,version?,paragraphs?,lines}}]}.",
-  "Every paragraph is {id,text,refs}. Every line is {id,short,long,refs,tag?,emphasis?,needsImpact?}.",
+  ...(isNarrative ? [
+    "Themes are evidence clusters, not document sections. Synthesize across them into one cohesive report and do not expose their boundaries as headings.",
+    "Return {format,document:{lead,paragraphs}}. Every paragraph is {id,text,refs} and may cite allowed refs from any supplied theme.",
+    "Return no themes and no bullet lines for this narrative format."
+  ] : [
+    "You may rename a theme to a clearer product, module, or workstream name using supplied context, but do not change theme ids or move refs between themes.",
+    "Return {format,themes:[{id,name,copy:{lead?,version?,paragraphs:[],lines}}]}.",
+    "Every line is {id,short,long,refs,tag?,emphasis?,needsImpact?}."
+  ]),
   "USER CLAIMS are stored separately by the app. Use them to understand the evidence, but do not repeat their text in short or long.",
-  "Every paragraph and line must cite one or more allowed refs from its theme. Return paragraphs as [] for cv, standup, and changelog.",
+  ...(isNarrative ? [] : ["Every line must cite one or more allowed refs from its theme. Return paragraphs as [] for cv and changelog."]),
   "FACTS:",
   JSON.stringify({
     interval: draft.interval,
@@ -98,6 +101,7 @@ export const buildRecapWorkspacePrompt = (
     }))
   })
 ].join("\n");
+};
 
 const TAGS = new Set(["Added", "Changed", "Fixed"]);
 const numericTokens = (value: string) => value.match(/\b\d+(?:\.\d+)?\b/g) ?? [];
@@ -133,6 +137,24 @@ const allowedNumbersForTheme = (theme: RecapTheme, fallback: RecapDraftVersion) 
   }
   for (const line of theme.copy.cv.lines) values.push(line.userImpact ?? "");
   return new Set(values.flatMap(numericTokens));
+};
+
+const allowedNumbersForDocument = (fallback: RecapDraftVersion) => {
+  const allowed = new Set(
+    fallback.themes.flatMap((theme) => [...allowedNumbersForTheme(theme, fallback)])
+  );
+  const totalHours = fallback.themes.reduce((sum, theme) => sum + theme.hours, 0);
+  const totalMinutes = Math.round(totalHours * 60);
+  for (const value of [
+    String(totalHours),
+    String(Math.round(totalHours * 10) / 10),
+    String(Math.round(totalHours)),
+    String(totalMinutes),
+    String(fallback.themes.length)
+  ]) {
+    for (const token of numericTokens(value)) allowed.add(token);
+  }
+  return allowed;
 };
 
 const validateNumbers = (values: Array<string | undefined>, allowed: Set<string>) => {
@@ -248,8 +270,44 @@ export const parseRecapWorkspaceDraft = (
   detail: RecapDetail
 ): RecapDraftVersion | undefined => {
   try {
-    const parsed = JSON.parse(raw) as { format?: string; themes?: Array<Record<string, unknown>> };
-    if (parsed.format !== format || !Array.isArray(parsed.themes)) return undefined;
+    const parsed = JSON.parse(raw) as {
+      format?: string;
+      document?: Record<string, unknown>;
+      themes?: Array<Record<string, unknown>>;
+    };
+    if (parsed.format !== format) return undefined;
+    const isNarrative = format === "perf" || format === "manager";
+    if (isNarrative) {
+      if (!parsed.document || typeof parsed.document !== "object") return undefined;
+      const allowed = new Set(fallback.sources.map(recapSourceRef));
+      const allowedNumbers = allowedNumbersForDocument(fallback);
+      const lead = String(parsed.document.lead ?? "").trim();
+      if (!lead) throw new Error("missing report lead");
+      validateNumbers([lead], allowedNumbers);
+      const paragraphs = parseParagraphs(
+        parsed.document.paragraphs,
+        allowed,
+        allowedNumbers,
+        "report",
+        format
+      );
+      if (detail !== "headline" && !paragraphs.length) throw new Error("missing report narrative");
+      const fallbackCopy = recapNarrativeCopy(fallback, format);
+      return {
+        ...fallback,
+        generator: "ai",
+        aiFormats: Array.from(new Set([...(fallback.aiFormats ?? []), format])),
+        narratives: {
+          ...fallback.narratives,
+          [format]: {
+            lead,
+            paragraphs: mergeParagraphsForDetail(paragraphs, fallbackCopy.paragraphs, detail),
+            lines: []
+          }
+        }
+      };
+    }
+    if (!Array.isArray(parsed.themes)) return undefined;
     const byId = new Map(parsed.themes.map((theme) => [String(theme.id ?? ""), theme]));
     const themes: RecapTheme[] = fallback.themes.map((base) => {
       const incoming = byId.get(base.id);
@@ -268,12 +326,10 @@ export const parseRecapWorkspaceDraft = (
       validateNumbers([lead, version], allowedNumbers);
       const paragraphs = parseParagraphs(block.paragraphs, allowed, allowedNumbers, base.id, format);
       const lines = parseLines(block.lines, allowed, allowedNumbers, base.id, format, base.copy[format].lines);
-      const isNarrative = format === "perf" || format === "manager";
       const headline = format === "changelog" ? version : lead;
       if (detail === "headline" && !headline) throw new Error("missing headline copy");
-      if (isNarrative && detail !== "headline" && !paragraphs.length) throw new Error("missing narrative");
-      if (!isNarrative && detail !== "headline" && !lines.length) throw new Error("missing lines");
-      if (format !== "perf" && format !== "manager" && paragraphs.length) throw new Error("unexpected narrative");
+      if (detail !== "headline" && !lines.length) throw new Error("missing lines");
+      if (paragraphs.length) throw new Error("unexpected narrative");
       const fallbackCopy = base.copy[format];
       const copy = {
         ...base.copy,
