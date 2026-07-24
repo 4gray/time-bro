@@ -34,6 +34,9 @@ export const DEFAULT_TICKET_FILTERS: TicketFilters = {
   sortMode: "updatedDesc"
 };
 
+const jiraIdentityKey = (settings: AppSettings) =>
+  `${settings.jiraBaseUrl.trim().toLowerCase()}|${settings.jiraEmail.trim().toLowerCase()}`;
+
 const filterTicketsForView = (
   source: TicketsResult,
   filters: TicketFilters,
@@ -77,6 +80,10 @@ export const useTickets = ({
   const [favoriteKeys, setFavoriteKeys] = useState<string[]>(() => demoScenario?.favoriteKeys ?? []);
   const [selectedTicket, setSelectedTicket] = useState<JiraTicket | undefined>(() => demoScenario?.selectedTicket);
   const ticketFiltersRef = useRef(ticketFilters);
+  const ticketsRequestIdRef = useRef(0);
+  const ticketsIdentityRef = useRef(
+    demoScenario ? "demo" : jiraIdentityKey(settings)
+  );
   const allAccessibleRequestIdRef = useRef(0);
 
   const ticketOptions = useMemo(() => {
@@ -120,14 +127,15 @@ export const useTickets = ({
 
   const loadAllAccessibleTickets = useCallback(
     async (settingsForLoad: AppSettings = settings) => {
+      const requestId = allAccessibleRequestIdRef.current + 1;
+      allAccessibleRequestIdRef.current = requestId;
       if (!isJiraConfigured(settingsForLoad)) {
         setAllAccessibleTickets(undefined);
         setAllAccessibleTicketsError(undefined);
+        setAllAccessibleTicketsLoading(false);
         return undefined;
       }
 
-      const requestId = allAccessibleRequestIdRef.current + 1;
-      allAccessibleRequestIdRef.current = requestId;
       setAllAccessibleTicketsLoading(true);
       setAllAccessibleTicketsError(undefined);
 
@@ -153,10 +161,27 @@ export const useTickets = ({
 
   const loadTickets = useCallback(
     async (settingsForLoad: AppSettings = settings) => {
-      if (!isJiraConfigured(settingsForLoad)) {
+      const requestId = ticketsRequestIdRef.current + 1;
+      ticketsRequestIdRef.current = requestId;
+      const nextIdentity = jiraIdentityKey(settingsForLoad);
+      const identityChanged = ticketsIdentityRef.current !== nextIdentity;
+      ticketsIdentityRef.current = nextIdentity;
+      if (identityChanged) {
         allAccessibleRequestIdRef.current += 1;
         setTickets(undefined);
+        setSelectedTicket(undefined);
+        setAllAccessibleTickets(undefined);
+        setAllAccessibleTicketsError(undefined);
+        setAllAccessibleTicketsLoading(false);
+      }
+
+      if (!isJiraConfigured(settingsForLoad)) {
+        if (!identityChanged) {
+          allAccessibleRequestIdRef.current += 1;
+        }
+        setTickets(undefined);
         setTicketsError(undefined);
+        setTicketsLoading(false);
         setAllAccessibleTickets(undefined);
         setAllAccessibleTicketsError(undefined);
         setAllAccessibleTicketsLoading(false);
@@ -168,6 +193,9 @@ export const useTickets = ({
 
       try {
         const result = await client.fetchAssignedTickets({ settings: settingsForLoad });
+        if (ticketsRequestIdRef.current !== requestId) {
+          return undefined;
+        }
         setTickets(result);
         setAllAccessibleTickets(undefined);
         if (!ticketFiltersRef.current.assignedOnly) {
@@ -175,10 +203,14 @@ export const useTickets = ({
         }
         return result;
       } catch (error) {
-        setTicketsError(error instanceof Error ? error.message : "Unable to load tickets.");
+        if (ticketsRequestIdRef.current === requestId) {
+          setTicketsError(error instanceof Error ? error.message : "Unable to load tickets.");
+        }
         return undefined;
       } finally {
-        setTicketsLoading(false);
+        if (ticketsRequestIdRef.current === requestId) {
+          setTicketsLoading(false);
+        }
       }
     },
     [client, loadAllAccessibleTickets, settings]

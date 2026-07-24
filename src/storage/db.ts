@@ -14,15 +14,17 @@ import type {
 } from "../../shared/types";
 import { normalizeWorkingDays } from "../../shared/weekdays";
 import { DEFAULT_SETTINGS } from "../domain/week";
-import type {
-  NoteNotebook,
-  NoteTicketActivity,
-  WorkspaceNoteBucket
+import {
+  isGlobalWorkspaceNoteContainerId,
+  type NoteNotebook,
+  type NoteTicketActivity,
+  type WorkspaceNoteBucket,
+  type WorkspaceNoteJiraScope
 } from "../domain/ticketNotes";
 import { addDays, fromLocalDateKey, toLocalDateKey } from "../utils/date";
 
 const DB_NAME = "jira-week-tracker";
-const DB_VERSION = 14;
+const DB_VERSION = 15;
 const SETTINGS_KEY = "default";
 const JIRA_CONTEXT_KEY = "jira-context";
 const FAVORITES_KEY = "default";
@@ -64,6 +66,75 @@ interface ActiveJiraContext {
   jiraEmail: string;
   syncedAt: string;
 }
+
+interface StoredWorkspaceNoteBucket
+  extends Omit<WorkspaceNoteBucket, "containerId"> {
+  /** IndexedDB key. Jira buckets encode site + account + logical Jira key. */
+  containerId: string;
+  logicalContainerId?: string;
+  jiraSite?: string;
+  authorAccountId?: string;
+}
+
+const workspaceNoteJiraOrigin = (value?: string) => {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+};
+
+const normalizeWorkspaceNoteScope = (
+  scope?: WorkspaceNoteJiraScope
+): WorkspaceNoteJiraScope | undefined => {
+  const jiraSite = workspaceNoteJiraOrigin(scope?.jiraSite);
+  const authorAccountId = scope?.authorAccountId.trim();
+  return jiraSite && authorAccountId
+    ? { jiraSite, authorAccountId }
+    : undefined;
+};
+
+const workspaceNoteStorageKey = (
+  scope: WorkspaceNoteJiraScope,
+  logicalContainerId: string
+) =>
+  JSON.stringify([
+    "jira",
+    scope.jiraSite,
+    scope.authorAccountId,
+    logicalContainerId.trim().toUpperCase()
+  ]);
+
+const logicalWorkspaceNoteContainerId = (
+  bucket: StoredWorkspaceNoteBucket
+) => bucket.logicalContainerId ?? bucket.containerId;
+
+const isLegacyJiraWorkspaceNoteBucket = (
+  bucket: StoredWorkspaceNoteBucket
+) =>
+  !bucket.logicalContainerId &&
+  !isGlobalWorkspaceNoteContainerId(bucket.containerId);
+
+const mergeWorkspaceNoteBuckets = (
+  logicalContainerId: string,
+  buckets: StoredWorkspaceNoteBucket[]
+): WorkspaceNoteBucket => {
+  const notesById = new Map<string, WorkspaceNoteBucket["notes"][number]>();
+  for (const bucket of buckets) {
+    for (const note of bucket.notes) {
+      notesById.set(note.id, note);
+    }
+  }
+  const preferred = buckets[buckets.length - 1];
+  return {
+    containerId: logicalContainerId,
+    jira: preferred.jira,
+    notes: [...notesById.values()]
+  };
+};
 
 let jiraWorklogCachePromise: Promise<CachedJiraWorklog[]> | undefined;
 
@@ -160,6 +231,117 @@ const openDatabase = () => {
 
       if (!db.objectStoreNames.contains("noteNotebooks")) {
         db.createObjectStore("noteNotebooks", { keyPath: "id" });
+      }
+
+      // Version 14 stored Jira note buckets by issue key alone. Rewrite any
+      // bucket that can be safely tied to the last authenticated Jira context;
+      // unmatched legacy buckets remain quarantined instead of being exposed
+      // to a different Jira identity.
+      if (
+        event.oldVersion > 0 &&
+        event.oldVersion < 15 &&
+        db.objectStoreNames.contains("settings") &&
+        db.objectStoreNames.contains("workspaceNotes")
+      ) {
+        const transaction = request.transaction;
+        if (transaction) {
+          const settingsStore = transaction.objectStore("settings");
+          const notesStore = transaction.objectStore("workspaceNotes");
+          const contextRequest = settingsStore.get(JIRA_CONTEXT_KEY);
+          const settingsRequest = settingsStore.get(SETTINGS_KEY);
+          let contextLoaded = false;
+          let settingsLoaded = false;
+          let migrationStarted = false;
+          const migrateLegacyBuckets = () => {
+            if (
+              migrationStarted ||
+              !contextLoaded ||
+              !settingsLoaded
+            ) {
+              return;
+            }
+            migrationStarted = true;
+            const context = contextRequest.result as
+              | ActiveJiraContext
+              | undefined;
+            const settings = settingsRequest.result as
+              | ({ id: typeof SETTINGS_KEY } & AppSettings)
+              | undefined;
+            const scope = normalizeWorkspaceNoteScope(
+              context
+                ? {
+                    jiraSite: context.jiraSite,
+                    authorAccountId: context.authorAccountId
+                  }
+                : undefined
+            );
+            const configuredSite = settings
+              ? jiraSiteFromSettings(settings.jiraBaseUrl)
+              : undefined;
+            const configuredEmail = settings
+              ? normalizedJiraEmail(settings.jiraEmail)
+              : undefined;
+            if (
+              !scope ||
+              configuredSite !== scope.jiraSite ||
+              configuredEmail !== normalizedJiraEmail(context?.jiraEmail ?? "")
+            ) {
+              return;
+            }
+
+            const cursorRequest = notesStore.openCursor();
+            cursorRequest.onsuccess = () => {
+              const cursor = cursorRequest.result;
+              if (!cursor) {
+                return;
+              }
+              const legacy = cursor.value as StoredWorkspaceNoteBucket;
+              const legacySite = workspaceNoteJiraOrigin(legacy.jira?.url);
+              if (
+                !isLegacyJiraWorkspaceNoteBucket(legacy) ||
+                (legacySite && legacySite !== scope.jiraSite)
+              ) {
+                cursor.continue();
+                return;
+              }
+
+              const logicalContainerId = legacy.containerId
+                .trim()
+                .toUpperCase();
+              const targetKey = workspaceNoteStorageKey(
+                scope,
+                logicalContainerId
+              );
+              const existingRequest = notesStore.get(targetKey);
+              existingRequest.onsuccess = () => {
+                const existing = existingRequest.result as
+                  | StoredWorkspaceNoteBucket
+                  | undefined;
+                const merged = mergeWorkspaceNoteBuckets(
+                  logicalContainerId,
+                  existing ? [legacy, existing] : [legacy]
+                );
+                notesStore.put({
+                  ...merged,
+                  containerId: targetKey,
+                  logicalContainerId,
+                  jiraSite: scope.jiraSite,
+                  authorAccountId: scope.authorAccountId
+                } satisfies StoredWorkspaceNoteBucket);
+                cursor.delete();
+                cursor.continue();
+              };
+            };
+          };
+          contextRequest.onsuccess = () => {
+            contextLoaded = true;
+            migrateLegacyBuckets();
+          };
+          settingsRequest.onsuccess = () => {
+            settingsLoaded = true;
+            migrateLegacyBuckets();
+          };
+        }
       }
     };
 
@@ -270,16 +452,7 @@ const rawCachedWorklog = (worklog: JiraWorklog): JiraWorklog => {
   return raw;
 };
 
-const jiraSiteFromUrl = (issueUrl?: string) => {
-  if (!issueUrl) {
-    return undefined;
-  }
-  try {
-    return new URL(issueUrl).origin;
-  } catch {
-    return undefined;
-  }
-};
+const jiraSiteFromUrl = workspaceNoteJiraOrigin;
 
 const jiraSiteFromWorklog = (worklog?: JiraWorklog) => jiraSiteFromUrl(worklog?.issueUrl);
 
@@ -319,12 +492,37 @@ const getConfiguredJiraContext = async () => {
   ]);
   const jiraSite = jiraSiteFromSettings(settings.jiraBaseUrl);
   const jiraEmail = normalizedJiraEmail(settings.jiraEmail);
+  const storedJiraSite = workspaceNoteJiraOrigin(storedContext?.jiraSite);
   const activeContext =
-    storedContext && storedContext.jiraSite === jiraSite && storedContext.jiraEmail === jiraEmail
-      ? storedContext
+    storedContext &&
+    storedJiraSite &&
+    storedJiraSite === jiraSite &&
+    normalizedJiraEmail(storedContext.jiraEmail) === jiraEmail
+      ? { ...storedContext, jiraSite: storedJiraSite }
       : undefined;
   return { jiraSite, jiraEmail, activeContext, hasStoredContext: Boolean(storedContext) };
 };
+
+export const getWorkspaceNoteJiraScope = async (): Promise<
+  WorkspaceNoteJiraScope | undefined
+> => {
+  const { activeContext } = await getConfiguredJiraContext();
+  return normalizeWorkspaceNoteScope(
+    activeContext
+      ? {
+          jiraSite: activeContext.jiraSite,
+          authorAccountId: activeContext.authorAccountId
+        }
+      : undefined
+  );
+};
+
+const resolveWorkspaceNoteJiraScope = (
+  scope?: WorkspaceNoteJiraScope | null
+) =>
+  scope === undefined
+    ? getWorkspaceNoteJiraScope()
+    : Promise.resolve(scope ? normalizeWorkspaceNoteScope(scope) : undefined);
 
 const saveActiveJiraContext = async (result: SyncResult) => {
   const jiraSite = jiraSiteForResult(result);
@@ -648,18 +846,98 @@ export const savePersonalNotes = (weekKey: string, notes: PersonalNote[]) => {
   return writeStore("personalNotes", { weekKey, notes });
 };
 
-export const getWorkspaceNoteBuckets = () =>
-  readAllStore<WorkspaceNoteBucket>("workspaceNotes");
+const encodeWorkspaceNoteBucket = (
+  bucket: WorkspaceNoteBucket,
+  scope?: WorkspaceNoteJiraScope
+): StoredWorkspaceNoteBucket => {
+  if (isGlobalWorkspaceNoteContainerId(bucket.containerId)) {
+    return { ...bucket };
+  }
+  if (!scope) {
+    throw new Error(
+      "Sync Jira once before saving ticket notes for this account."
+    );
+  }
+  const logicalContainerId = bucket.containerId.trim().toUpperCase();
+  return {
+    ...bucket,
+    containerId: workspaceNoteStorageKey(scope, logicalContainerId),
+    logicalContainerId,
+    jiraSite: scope.jiraSite,
+    authorAccountId: scope.authorAccountId
+  };
+};
 
-export const saveWorkspaceNoteBucket = (bucket: WorkspaceNoteBucket) =>
-  writeStore("workspaceNotes", bucket);
+const decodeWorkspaceNoteBucket = (
+  bucket: StoredWorkspaceNoteBucket
+): WorkspaceNoteBucket => ({
+  containerId: logicalWorkspaceNoteContainerId(bucket),
+  jira: bucket.jira,
+  notes: bucket.notes
+});
 
-export const saveWorkspaceNoteBuckets = async (buckets: WorkspaceNoteBucket[]) => {
+export const getWorkspaceNoteBuckets = async (
+  scope?: WorkspaceNoteJiraScope | null
+): Promise<WorkspaceNoteBucket[]> => {
+  const [storedBuckets, resolvedScope] = await Promise.all([
+    readAllStore<StoredWorkspaceNoteBucket>("workspaceNotes"),
+    resolveWorkspaceNoteJiraScope(scope)
+  ]);
+  const globalBuckets = storedBuckets
+    .filter(
+      (bucket) =>
+        !bucket.logicalContainerId &&
+        isGlobalWorkspaceNoteContainerId(bucket.containerId)
+    )
+    .map(decodeWorkspaceNoteBucket);
+
+  if (!resolvedScope) {
+    return globalBuckets;
+  }
+
+  const scopedBuckets = storedBuckets
+    .filter(
+      (bucket) =>
+        Boolean(bucket.logicalContainerId) &&
+        bucket.jiraSite === resolvedScope.jiraSite &&
+        bucket.authorAccountId === resolvedScope.authorAccountId
+    )
+    .map(decodeWorkspaceNoteBucket);
+
+  return [...globalBuckets, ...scopedBuckets];
+};
+
+export const saveWorkspaceNoteBucket = async (
+  bucket: WorkspaceNoteBucket,
+  scope?: WorkspaceNoteJiraScope | null
+) => {
+  const resolvedScope = isGlobalWorkspaceNoteContainerId(bucket.containerId)
+    ? undefined
+    : await resolveWorkspaceNoteJiraScope(scope);
+  return writeStore(
+    "workspaceNotes",
+    encodeWorkspaceNoteBucket(bucket, resolvedScope)
+  );
+};
+
+export const saveWorkspaceNoteBuckets = async (
+  buckets: WorkspaceNoteBucket[],
+  scope?: WorkspaceNoteJiraScope | null
+) => {
+  const needsJiraScope = buckets.some(
+    (bucket) => !isGlobalWorkspaceNoteContainerId(bucket.containerId)
+  );
+  const resolvedScope = needsJiraScope
+    ? await resolveWorkspaceNoteJiraScope(scope)
+    : undefined;
+  const encodedBuckets = buckets.map((bucket) =>
+    encodeWorkspaceNoteBucket(bucket, resolvedScope)
+  );
   const db = await openDatabase();
   return new Promise<void>((resolve, reject) => {
     const transaction = db.transaction("workspaceNotes", "readwrite");
     const store = transaction.objectStore("workspaceNotes");
-    for (const bucket of buckets) {
+    for (const bucket of encodedBuckets) {
       store.put(bucket);
     }
     transaction.onerror = () =>
@@ -668,8 +946,24 @@ export const saveWorkspaceNoteBuckets = async (buckets: WorkspaceNoteBucket[]) =
   });
 };
 
-export const deleteWorkspaceNoteBucket = (containerId: string) =>
-  deleteStore("workspaceNotes", containerId);
+export const deleteWorkspaceNoteBucket = async (
+  containerId: string,
+  scope?: WorkspaceNoteJiraScope | null
+) => {
+  if (isGlobalWorkspaceNoteContainerId(containerId)) {
+    return deleteStore("workspaceNotes", containerId);
+  }
+  const resolvedScope = await resolveWorkspaceNoteJiraScope(scope);
+  if (!resolvedScope) {
+    throw new Error(
+      "Sync Jira once before deleting ticket notes for this account."
+    );
+  }
+  return deleteStore(
+    "workspaceNotes",
+    workspaceNoteStorageKey(resolvedScope, containerId)
+  );
+};
 
 export const getNoteNotebooks = async (): Promise<NoteNotebook[]> => {
   const stored = await readStore<{ id: string; notebooks: NoteNotebook[] }>(
@@ -687,9 +981,11 @@ export const saveNoteNotebooks = (notebooks: NoteNotebook[]) =>
  * site/account-scoped local Jira ledger. Only issue metadata and worklog totals
  * leave this storage layer; settings and credentials never do.
  */
-export const getNoteTicketActivity = async (): Promise<NoteTicketActivity[]> => {
-  const { activeContext } = await getConfiguredJiraContext();
-  if (!activeContext) {
+export const getNoteTicketActivity = async (
+  scope?: WorkspaceNoteJiraScope | null
+): Promise<NoteTicketActivity[]> => {
+  const resolvedScope = await resolveWorkspaceNoteJiraScope(scope);
+  if (!resolvedScope) {
     return [];
   }
 
@@ -701,8 +997,8 @@ export const getNoteTicketActivity = async (): Promise<NoteTicketActivity[]> => 
 
   for (const entry of cachedEntries) {
     if (
-      entry.jiraSite !== activeContext.jiraSite ||
-      entry.authorAccountId !== activeContext.authorAccountId
+      entry.jiraSite !== resolvedScope.jiraSite ||
+      entry.authorAccountId !== resolvedScope.authorAccountId
     ) {
       continue;
     }

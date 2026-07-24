@@ -2,7 +2,11 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
 import type { JiraWorklog, RecapDraftRecord, SavedRecap, SyncResult, WorklogAllocationPreference } from "../../shared/types";
-import type { NoteNotebook, WorkspaceNoteBucket } from "../domain/ticketNotes";
+import type {
+  NoteNotebook,
+  WorkspaceNoteBucket,
+  WorkspaceNoteJiraScope
+} from "../domain/ticketNotes";
 import { DEFAULT_SETTINGS } from "../domain/week";
 import {
   deleteWorkspaceNoteBucket,
@@ -10,6 +14,7 @@ import {
   getNoteNotebooks,
   getNoteTicketActivity,
   getSyncResult,
+  getWorkspaceNoteJiraScope,
   getWorkspaceNoteBuckets,
   getWorklogAllocationPreferences,
   getRecapDraft,
@@ -39,17 +44,114 @@ const source = (id: string, jiraSite: string, started: string): JiraWorklog => (
 });
 
 describe("notes workspace schema migration", () => {
-  it("additively upgrades a version 13 database with workspace note stores", async () => {
+  it("upgrades matching version 14 Jira buckets into site/account-scoped records", async () => {
+    const jiraSite = "https://migration-notes.atlassian.net";
+    const authorAccountId = "migration-account";
+    const jiraEmail = "migration@example.com";
+    const logicalContainerId = "NOTES-MIGRATE";
+    const storageKey = JSON.stringify([
+      "jira",
+      jiraSite,
+      authorAccountId,
+      logicalContainerId
+    ]);
+
     await new Promise<void>((resolve, reject) => {
-      const request = indexedDB.open("jira-week-tracker", 13);
+      const request = indexedDB.open("jira-week-tracker", 14);
       request.onerror = () => reject(request.error);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        const settingsStore = db.createObjectStore("settings", {
+          keyPath: "id"
+        });
+        const notesStore = db.createObjectStore("workspaceNotes", {
+          keyPath: "containerId"
+        });
+        settingsStore.put({
+          id: "default",
+          ...DEFAULT_SETTINGS,
+          jiraBaseUrl: jiraSite,
+          jiraEmail
+        });
+        settingsStore.put({
+          id: "jira-context",
+          jiraSite,
+          authorAccountId,
+          jiraEmail,
+          syncedAt: "2026-07-24T09:00:00.000Z"
+        });
+        notesStore.put({
+          containerId: "GENERAL",
+          notes: []
+        });
+        notesStore.put({
+          containerId: logicalContainerId,
+          jira: {
+            key: logicalContainerId,
+            summary: "Legacy matching note",
+            url: `${jiraSite}/browse/${logicalContainerId}`
+          },
+          notes: [
+            {
+              id: "legacy-note",
+              type: "text",
+              done: false,
+              text: "Migrate me",
+              createdAt: "2026-07-24T09:00:00.000Z",
+              updatedAt: "2026-07-24T09:00:00.000Z"
+            }
+          ]
+        });
+        notesStore.put({
+          containerId: storageKey,
+          logicalContainerId,
+          jiraSite,
+          authorAccountId,
+          jira: {
+            key: logicalContainerId,
+            summary: "Existing scoped note",
+            url: `${jiraSite}/browse/${logicalContainerId}`
+          },
+          notes: [
+            {
+              id: "scoped-note",
+              type: "todo",
+              done: false,
+              text: "Keep me too",
+              createdAt: "2026-07-24T09:01:00.000Z",
+              updatedAt: "2026-07-24T09:01:00.000Z"
+            }
+          ]
+        });
+        notesStore.put({
+          containerId: "NOTES-FOREIGN",
+          jira: {
+            key: "NOTES-FOREIGN",
+            summary: "Foreign site note",
+            url: "https://foreign-notes.atlassian.net/browse/NOTES-FOREIGN"
+          },
+          notes: []
+        });
+      };
       request.onsuccess = () => {
         request.result.close();
         resolve();
       };
     });
 
-    expect(await getWorkspaceNoteBuckets()).toEqual([]);
+    const scope = await getWorkspaceNoteJiraScope();
+    expect(scope).toEqual({ jiraSite, authorAccountId });
+    const migrated = await getWorkspaceNoteBuckets(scope);
+    expect(migrated.map((bucket) => bucket.containerId)).toEqual([
+      "GENERAL",
+      logicalContainerId
+    ]);
+    expect(
+      migrated.find((bucket) => bucket.containerId === logicalContainerId)?.notes
+    ).toEqual([
+      expect.objectContaining({ id: "legacy-note" }),
+      expect.objectContaining({ id: "scoped-note" })
+    ]);
     expect(await getNoteNotebooks()).toEqual([]);
 
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -58,10 +160,35 @@ describe("notes workspace schema migration", () => {
       request.onsuccess = () => resolve(request.result);
     });
 
-    expect(db.version).toBe(14);
+    expect(db.version).toBe(15);
     expect([...db.objectStoreNames]).toContain("workspaceNotes");
     expect([...db.objectStoreNames]).toContain("noteNotebooks");
     expect([...db.objectStoreNames]).toContain("personalNotes");
+    const rawBuckets = await new Promise<Array<{ containerId: string }>>(
+      (resolve, reject) => {
+        const transaction = db.transaction("workspaceNotes", "readonly");
+        const request = transaction.objectStore("workspaceNotes").getAll();
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+      }
+    );
+    expect(rawBuckets.map((bucket) => bucket.containerId)).toContain(storageKey);
+    expect(rawBuckets.map((bucket) => bucket.containerId)).not.toContain(
+      logicalContainerId
+    );
+    expect(rawBuckets.map((bucket) => bucket.containerId)).toContain(
+      "NOTES-FOREIGN"
+    );
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(
+        ["settings", "workspaceNotes"],
+        "readwrite"
+      );
+      transaction.objectStore("settings").clear();
+      transaction.objectStore("workspaceNotes").clear();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve();
+    });
     db.close();
   });
 });
@@ -108,6 +235,11 @@ describe("Recap persistence", () => {
 });
 
 describe("Notes workspace persistence", () => {
+  const notesScope: WorkspaceNoteJiraScope = {
+    jiraSite: "https://notes-storage.atlassian.net",
+    authorAccountId: "notes-account"
+  };
+
   const bucket: WorkspaceNoteBucket = {
     containerId: "NOTES-900",
     jira: {
@@ -140,13 +272,13 @@ describe("Notes workspace persistence", () => {
   ];
 
   it("stores note buckets independently by flat container id", async () => {
-    await saveWorkspaceNoteBucket(bucket);
+    await saveWorkspaceNoteBucket(bucket, notesScope);
     await saveWorkspaceNoteBucket({
       containerId: "GENERAL",
       notes: [{ ...bucket.notes[0], id: "workspace-note-general" }]
     });
 
-    const stored = await getWorkspaceNoteBuckets();
+    const stored = await getWorkspaceNoteBuckets(notesScope);
     expect(stored.find((item) => item.containerId === bucket.containerId)).toEqual(
       bucket
     );
@@ -154,9 +286,9 @@ describe("Notes workspace persistence", () => {
       "workspace-note-general"
     );
 
-    await deleteWorkspaceNoteBucket(bucket.containerId);
+    await deleteWorkspaceNoteBucket(bucket.containerId, notesScope);
     expect(
-      (await getWorkspaceNoteBuckets()).find(
+      (await getWorkspaceNoteBuckets(notesScope)).find(
         (item) => item.containerId === bucket.containerId
       )
     ).toBeUndefined();
@@ -173,9 +305,9 @@ describe("Notes workspace persistence", () => {
       notes: [{ ...bucket.notes[0], id: "workspace-note-moved" }]
     };
 
-    await saveWorkspaceNoteBuckets([source, target]);
+    await saveWorkspaceNoteBuckets([source, target], notesScope);
 
-    const stored = await getWorkspaceNoteBuckets();
+    const stored = await getWorkspaceNoteBuckets(notesScope);
     expect(
       stored.find((item) => item.containerId === source.containerId)?.notes
     ).toEqual([]);
@@ -191,6 +323,115 @@ describe("Notes workspace persistence", () => {
     const renamed = [{ ...notebooks[0], title: "Weekly 1:1" }];
     await saveNoteNotebooks(renamed);
     expect(await getNoteNotebooks()).toEqual(renamed);
+  });
+
+  it("isolates equal Jira keys by site and account while sharing General", async () => {
+    const scopes: WorkspaceNoteJiraScope[] = [
+      {
+        jiraSite: "https://notes-isolation-a.atlassian.net",
+        authorAccountId: "account-a"
+      },
+      {
+        jiraSite: "https://notes-isolation-b.atlassian.net",
+        authorAccountId: "account-a"
+      },
+      {
+        jiraSite: "https://notes-isolation-a.atlassian.net",
+        authorAccountId: "account-b"
+      }
+    ];
+    const containerId = "NOTES-ISOLATED";
+    for (const [index, scope] of scopes.entries()) {
+      await saveWorkspaceNoteBucket(
+        {
+          containerId,
+          jira: {
+            key: containerId,
+            summary: `Scoped ticket ${index}`,
+            url: `${scope.jiraSite}/browse/${containerId}`
+          },
+          notes: [
+            {
+              ...bucket.notes[0],
+              id: `isolated-note-${index}`,
+              text: `Scope ${index}`
+            }
+          ]
+        },
+        scope
+      );
+    }
+    await saveWorkspaceNoteBucket({
+      containerId: "GENERAL",
+      notes: [
+        {
+          ...bucket.notes[0],
+          id: "shared-general-note",
+          text: "Shared General"
+        }
+      ]
+    });
+
+    for (const [index, scope] of scopes.entries()) {
+      const stored = await getWorkspaceNoteBuckets(scope);
+      expect(
+        stored.find((item) => item.containerId === containerId)?.notes
+      ).toEqual([expect.objectContaining({ id: `isolated-note-${index}` })]);
+      expect(
+        stored.find((item) => item.containerId === "GENERAL")?.notes
+      ).toEqual([expect.objectContaining({ id: "shared-general-note" })]);
+    }
+
+    await deleteWorkspaceNoteBucket(containerId, scopes[0]);
+    expect(
+      (await getWorkspaceNoteBuckets(scopes[0])).find(
+        (item) => item.containerId === containerId
+      )
+    ).toBeUndefined();
+    expect(
+      (await getWorkspaceNoteBuckets(scopes[1])).find(
+        (item) => item.containerId === containerId
+      )?.notes[0].id
+    ).toBe("isolated-note-1");
+  });
+
+  it("keeps Jira writes atomic when no explicit account scope is available", async () => {
+    const originalGeneral: WorkspaceNoteBucket = {
+      containerId: "GENERAL",
+      notes: [
+        {
+          ...bucket.notes[0],
+          id: "atomic-general-original",
+          text: "Original General"
+        }
+      ]
+    };
+    await saveWorkspaceNoteBucket(originalGeneral);
+
+    await expect(saveWorkspaceNoteBucket(bucket, null)).rejects.toThrow(
+      "Sync Jira once"
+    );
+    await expect(
+      saveWorkspaceNoteBuckets(
+        [
+          bucket,
+          {
+            ...originalGeneral,
+            notes: [
+              {
+                ...bucket.notes[0],
+                id: "atomic-general-overwrite",
+                text: "Must not be stored"
+              }
+            ]
+          }
+        ],
+        null
+      )
+    ).rejects.toThrow("Sync Jira once");
+
+    const globalsOnly = await getWorkspaceNoteBuckets(null);
+    expect(globalsOnly).toEqual([originalGeneral]);
   });
 });
 

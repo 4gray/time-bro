@@ -6,25 +6,41 @@ import type {
   AppSettings,
   BitbucketPullRequestDetailsResult,
   BitbucketReviewSyncResult,
-  JiraTicket
+  JiraTicket,
+  SyncResult
 } from "../../shared/types";
 import * as aiApi from "../api/ollama";
 import { nativeApi } from "../api/native";
 import type {
   NoteTicketActivity,
-  WorkspaceNoteBucket
+  WorkspaceNoteBucket,
+  WorkspaceNoteJiraScope
 } from "../domain/ticketNotes";
 import { NotesWorkspace, type NotesWorkspaceProps } from "./NotesWorkspace";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const storageMocks = vi.hoisted(() => ({
-  getWorkspaceNoteBuckets: vi.fn<() => Promise<WorkspaceNoteBucket[]>>(),
+  getWorkspaceNoteJiraScope:
+    vi.fn<() => Promise<WorkspaceNoteJiraScope | undefined>>(),
+  getWorkspaceNoteBuckets:
+    vi.fn<(_scope?: WorkspaceNoteJiraScope | null) => Promise<WorkspaceNoteBucket[]>>(),
   getNoteNotebooks: vi.fn<() => Promise<never[]>>(),
-  getNoteTicketActivity: vi.fn<() => Promise<NoteTicketActivity[]>>(),
+  getNoteTicketActivity:
+    vi.fn<(_scope?: WorkspaceNoteJiraScope | null) => Promise<NoteTicketActivity[]>>(),
   getBitbucketReviewResults: vi.fn<() => Promise<BitbucketReviewSyncResult[]>>(),
-  saveWorkspaceNoteBucket: vi.fn(async (_bucket: WorkspaceNoteBucket) => undefined),
-  saveWorkspaceNoteBuckets: vi.fn(async (_buckets: WorkspaceNoteBucket[]) => undefined),
+  saveWorkspaceNoteBucket: vi.fn(
+    async (
+      _bucket: WorkspaceNoteBucket,
+      _scope?: WorkspaceNoteJiraScope | null
+    ) => undefined
+  ),
+  saveWorkspaceNoteBuckets: vi.fn(
+    async (
+      _buckets: WorkspaceNoteBucket[],
+      _scope?: WorkspaceNoteJiraScope | null
+    ) => undefined
+  ),
   saveNoteNotebooks: vi.fn(async (_notebooks: unknown[]) => undefined)
 }));
 
@@ -63,6 +79,26 @@ const ticket: JiraTicket = {
 
 const currentDate = new Date(2026, 5, 17, 12);
 const currentStarted = new Date(2026, 5, 17, 10).toISOString();
+const noteScope: WorkspaceNoteJiraScope = {
+  jiraSite: "https://example.atlassian.net",
+  authorAccountId: "account-1"
+};
+const syncResultForScope = (
+  scope: WorkspaceNoteJiraScope,
+  syncedAt: string
+): SyncResult => ({
+  weekKey: "2026-06-15",
+  weekStartISO: "2026-06-15T00:00:00.000Z",
+  weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+  syncedAt,
+  accountId: scope.authorAccountId,
+  jiraSite: scope.jiraSite,
+  trackedSeconds: 0,
+  issueCount: 0,
+  worklogCount: 0,
+  daySummaries: {},
+  sourceWorklogs: []
+});
 
 const reviewResultFor = (
   pullRequestId: number,
@@ -123,7 +159,12 @@ const baseProps = (
   currentDate,
   isDemo: false,
   ticketOptions: [ticket],
-  tickets: undefined,
+  tickets: {
+    fetchedAt: currentStarted,
+    accountId: noteScope.authorAccountId,
+    inProgress: [ticket],
+    recentlyClosed: []
+  },
   syncResult: undefined,
   reviewResult: undefined,
   searchTickets: vi.fn(async () => []),
@@ -158,6 +199,9 @@ let container: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
+  storageMocks.getWorkspaceNoteJiraScope
+    .mockReset()
+    .mockResolvedValue(noteScope);
   storageMocks.getWorkspaceNoteBuckets.mockReset().mockResolvedValue([]);
   storageMocks.getNoteNotebooks.mockReset().mockResolvedValue([]);
   storageMocks.getNoteTicketActivity.mockReset().mockResolvedValue([]);
@@ -206,8 +250,11 @@ describe("NotesWorkspace", () => {
             text: "Benchmark session reads"
           })
         ]
-      })
+      }),
+      noteScope
     );
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledWith(noteScope);
+    expect(storageMocks.getNoteTicketActivity).toHaveBeenCalledWith(noteScope);
   });
 
   it("keeps readable local notes available when optional activity history fails", async () => {
@@ -356,11 +403,440 @@ describe("NotesWorkspace", () => {
         notes: [
           expect.objectContaining({ text: "Remember the failover owner" })
         ]
-      })
+      }),
+      noteScope
     );
     expect(container.querySelector("h1")?.textContent).toBe(
       "Migrate session storage to Redis"
     );
+  });
+
+  it("does not expose Jira attach targets without an authenticated Jira scope", async () => {
+    storageMocks.getWorkspaceNoteJiraScope.mockResolvedValue(undefined);
+
+    await act(async () => {
+      root.render(<NotesWorkspace {...baseProps()} />);
+    });
+    await flush();
+
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="New note"]')
+        ?.click()
+    );
+    const textInput = container.querySelector<HTMLInputElement>(
+      'input[placeholder^="Write a note"]'
+    )!;
+    setInput(textInput, "Keep this draft local");
+
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledWith(null);
+    expect(storageMocks.getNoteTicketActivity).toHaveBeenCalledWith(null);
+    expect(buttonWithText(container, "TB-352 — Migrate session")).toBeUndefined();
+    expect(storageMocks.saveWorkspaceNoteBucket).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="dialog"]')).toBeTruthy();
+    expect(textInput.value).toBe("Keep this draft local");
+  });
+
+  it("activates Jira notes when a later same-identity sync establishes scope", async () => {
+    storageMocks.getWorkspaceNoteJiraScope
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValue(noteScope);
+    const initialSync = syncResultForScope(
+      noteScope,
+      "2026-06-17T09:00:00.000Z"
+    );
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace {...baseProps({ syncResult: initialSync })} />
+      );
+    });
+    await flush();
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledWith(null);
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            syncResult: {
+              ...initialSync,
+              syncedAt: "2026-06-17T10:00:00.000Z"
+            }
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+    await flush();
+
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledWith(noteScope);
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="New note"]')
+        ?.click()
+    );
+    expect(buttonWithText(container, "TB-352 — Migrate session")).toBeTruthy();
+  });
+
+  it("preserves a composer draft across a routine same-account sync", async () => {
+    const initialSync = syncResultForScope(
+      noteScope,
+      "2026-06-17T09:00:00.000Z"
+    );
+    await act(async () => {
+      root.render(
+        <NotesWorkspace {...baseProps({ syncResult: initialSync })} />
+      );
+    });
+    await flush();
+    await flush();
+
+    const composer = container.querySelector<HTMLInputElement>(
+      'input[placeholder^="Add a note to General"]'
+    )!;
+    setInput(composer, "Unsaved same-account draft");
+    const bucketReadCount =
+      storageMocks.getWorkspaceNoteBuckets.mock.calls.length;
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            syncResult: {
+              ...initialSync,
+              syncedAt: "2026-06-17T10:00:00.000Z"
+            }
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+
+    expect(
+      container.querySelector<HTMLInputElement>(
+        'input[placeholder^="Add a note to General"]'
+      )?.value
+    ).toBe("Unsaved same-account draft");
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledTimes(
+      bucketReadCount
+    );
+  });
+
+  it("replaces Jira notes when the configured Jira identity changes", async () => {
+    const otherScope: WorkspaceNoteJiraScope = {
+      jiraSite: "https://other-example.atlassian.net",
+      authorAccountId: "account-2"
+    };
+    const bucketFor = (
+      scope: WorkspaceNoteJiraScope,
+      suffix: string
+    ): WorkspaceNoteBucket => ({
+      containerId: `CTX-${suffix}`,
+      jira: {
+        key: `CTX-${suffix}`,
+        summary: `Context ${suffix}`,
+        url: `${scope.jiraSite}/browse/CTX-${suffix}`
+      },
+      notes: [
+        {
+          id: `context-note-${suffix}`,
+          type: "text",
+          done: false,
+          text: `Private note ${suffix}`,
+          createdAt: currentStarted,
+          updatedAt: currentStarted
+        }
+      ]
+    });
+    const activityFor = (
+      scope: WorkspaceNoteJiraScope,
+      suffix: string
+    ): NoteTicketActivity => ({
+      key: `CTX-${suffix}`,
+      summary: `Context ${suffix}`,
+      url: `${scope.jiraSite}/browse/CTX-${suffix}`,
+      lastWorkedAt: currentStarted,
+      loggedSeconds: 1800
+    });
+
+    storageMocks.getWorkspaceNoteJiraScope
+      .mockResolvedValueOnce(noteScope)
+      .mockResolvedValueOnce(otherScope);
+    storageMocks.getWorkspaceNoteBuckets.mockImplementation(async (scope) =>
+      scope?.authorAccountId === otherScope.authorAccountId
+        ? [bucketFor(otherScope, "B")]
+        : [bucketFor(noteScope, "A")]
+    );
+    storageMocks.getNoteTicketActivity.mockImplementation(async (scope) =>
+      scope?.authorAccountId === otherScope.authorAccountId
+        ? [activityFor(otherScope, "B")]
+        : [activityFor(noteScope, "A")]
+    );
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace {...baseProps({ ticketOptions: [] })} />
+      );
+    });
+    await flush();
+    expect(container.textContent).toContain("Private note A");
+    act(() =>
+      container
+        .querySelector<HTMLButtonElement>('button[aria-label="New note"]')
+        ?.click()
+    );
+    const draftInput = container.querySelector<HTMLInputElement>(
+      'input[placeholder^="Write a note"]'
+    )!;
+    setInput(draftInput, "Account A draft");
+    act(() => buttonWithText(container, "TB-352 — Migrate session")?.click());
+    expect(container.querySelector('[role="dialog"]')).toBeTruthy();
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            settings: {
+              ...settings,
+              jiraBaseUrl: otherScope.jiraSite,
+              jiraEmail: "other@example.com"
+            },
+            ticketOptions: []
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+
+    expect(storageMocks.getWorkspaceNoteBuckets).toHaveBeenCalledWith(
+      otherScope
+    );
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(container.textContent).toContain("Private note B");
+    expect(container.textContent).not.toContain("Private note A");
+  });
+
+  it("drops an in-flight AI briefing when the Jira identity changes", async () => {
+    const otherScope: WorkspaceNoteJiraScope = {
+      jiraSite: "https://ai-other.atlassian.net",
+      authorAccountId: "ai-account-2"
+    };
+    const ticketFor = (
+      scope: WorkspaceNoteJiraScope,
+      summary: string
+    ): JiraTicket => ({
+      ...ticket,
+      summary,
+      url: `${scope.jiraSite}/browse/${ticket.key}`
+    });
+    const activityFor = (
+      scope: WorkspaceNoteJiraScope,
+      summary: string
+    ): NoteTicketActivity => ({
+      key: ticket.key,
+      summary,
+      url: `${scope.jiraSite}/browse/${ticket.key}`,
+      lastWorkedAt: currentStarted,
+      loggedSeconds: 1800
+    });
+    let resolveOldDetails!: (details: Awaited<ReturnType<
+      typeof nativeApi.fetchJiraIssueDetails
+    >>) => void;
+    const oldDetails = new Promise<
+      Awaited<ReturnType<typeof nativeApi.fetchJiraIssueDetails>>
+    >((resolve) => {
+      resolveOldDetails = resolve;
+    });
+    storageMocks.getWorkspaceNoteJiraScope
+      .mockResolvedValueOnce(noteScope)
+      .mockResolvedValueOnce(otherScope);
+    storageMocks.getNoteTicketActivity.mockImplementation(async (scope) =>
+      scope?.authorAccountId === otherScope.authorAccountId
+        ? [activityFor(otherScope, "Account B ticket")]
+        : [activityFor(noteScope, "Account A ticket")]
+    );
+    vi.spyOn(nativeApi, "fetchJiraIssueDetails").mockReturnValue(oldDetails);
+    const compute = vi
+      .spyOn(aiApi, "computeNotesBriefing")
+      .mockResolvedValue([]);
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            settings: { ...settings, aiEnabled: true }
+          })}
+        />
+      );
+    });
+    await flush();
+    act(() => buttonWithText(container, "AI briefing")?.click());
+    await flush();
+
+    const otherTicket = ticketFor(otherScope, "Account B ticket");
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            settings: {
+              ...settings,
+              jiraBaseUrl: otherScope.jiraSite,
+              jiraEmail: "ai-other@example.com",
+              aiEnabled: true
+            },
+            ticketOptions: [otherTicket],
+            tickets: {
+              fetchedAt: currentStarted,
+              accountId: otherScope.authorAccountId,
+              inProgress: [otherTicket],
+              recentlyClosed: []
+            }
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+
+    await act(async () => {
+      resolveOldDetails({
+        ...ticketFor(noteScope, "Account A ticket"),
+        description: "Account A private description",
+        comments: [],
+        myLoggedSecondsTotal: 1800,
+        myWorklogCount: 1
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(compute).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("Account B ticket");
+    expect(container.textContent).not.toContain(
+      "Account A private description"
+    );
+  });
+
+  it("ignores a stale activity refresh after the Jira identity changes", async () => {
+    const otherScope: WorkspaceNoteJiraScope = {
+      jiraSite: "https://refresh-example.atlassian.net",
+      authorAccountId: "refresh-account"
+    };
+    const activityFor = (
+      scope: WorkspaceNoteJiraScope,
+      suffix: string
+    ): NoteTicketActivity => ({
+      key: `REFRESH-${suffix}`,
+      summary: `Refresh context ${suffix}`,
+      url: `${scope.jiraSite}/browse/REFRESH-${suffix}`,
+      lastWorkedAt: currentStarted,
+      loggedSeconds: 1800
+    });
+    let resolveStaleRefresh!: (activity: NoteTicketActivity[]) => void;
+    const staleRefresh = new Promise<NoteTicketActivity[]>((resolve) => {
+      resolveStaleRefresh = resolve;
+    });
+    let firstScopeReads = 0;
+
+    storageMocks.getWorkspaceNoteJiraScope
+      .mockResolvedValueOnce(noteScope)
+      .mockResolvedValueOnce(otherScope);
+    storageMocks.getNoteTicketActivity.mockImplementation(async (scope) => {
+      if (scope?.authorAccountId === noteScope.authorAccountId) {
+        firstScopeReads += 1;
+        if (firstScopeReads > 1) return staleRefresh;
+        return [activityFor(noteScope, "A")];
+      }
+      return [activityFor(otherScope, "B")];
+    });
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            syncResult: syncResultForScope(
+              noteScope,
+              "2026-06-17T10:00:00.000Z"
+            ),
+            ticketOptions: []
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+    expect(firstScopeReads).toBeGreaterThan(1);
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace
+          {...baseProps({
+            settings: {
+              ...settings,
+              jiraBaseUrl: otherScope.jiraSite,
+              jiraEmail: "refresh@example.com"
+            },
+            syncResult: syncResultForScope(
+              otherScope,
+              "2026-06-17T11:00:00.000Z"
+            ),
+            ticketOptions: []
+          })}
+        />
+      );
+    });
+    await flush();
+    await flush();
+    expect(container.textContent).toContain("Refresh context B");
+
+    await act(async () => {
+      resolveStaleRefresh([activityFor(noteScope, "STALE-A")]);
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).toContain("Refresh context B");
+    expect(container.textContent).not.toContain("Refresh context STALE-A");
+  });
+
+  it("does not merge current worklogs from a different Jira account", async () => {
+    const foreignSite = "https://foreign-example.atlassian.net";
+    const foreignSync: SyncResult = {
+      weekKey: "2026-06-15",
+      weekStartISO: "2026-06-15T00:00:00.000Z",
+      weekEndExclusiveISO: "2026-06-22T00:00:00.000Z",
+      syncedAt: currentStarted,
+      accountId: "foreign-account",
+      jiraSite: foreignSite,
+      trackedSeconds: 1800,
+      issueCount: 1,
+      worklogCount: 1,
+      daySummaries: {},
+      sourceWorklogs: [
+        {
+          id: "foreign-worklog",
+          issueId: "foreign-issue",
+          issueKey: "FOREIGN-1",
+          issueSummary: "Foreign private ticket",
+          issueUrl: `${foreignSite}/browse/FOREIGN-1`,
+          authorAccountId: "foreign-account",
+          started: currentStarted,
+          timeSpentSeconds: 1800
+        }
+      ]
+    };
+
+    await act(async () => {
+      root.render(
+        <NotesWorkspace {...baseProps({ syncResult: foreignSync })} />
+      );
+    });
+    await flush();
+
+    expect(container.textContent).not.toContain("Foreign private ticket");
+    expect(container.textContent).not.toContain("FOREIGN-1");
   });
 
   it("resolves live Bitbucket tasks and copies comments only through + to-do", async () => {
@@ -478,7 +954,8 @@ describe("NotesWorkspace", () => {
             text: "Anna on PR: Import the TTL constant."
           })
         ]
-      })
+      }),
+      noteScope
     );
   });
 
@@ -713,7 +1190,8 @@ describe("NotesWorkspace", () => {
             text: "Verify the remote fallback path."
           })
         ])
-      })
+      }),
+      noteScope
     );
   });
 });

@@ -157,6 +157,60 @@ describe("useTickets", () => {
     expect(getApi().ticketsError).toBeUndefined();
   });
 
+  it("ignores an assigned-ticket response from a previous Jira identity", async () => {
+    let resolveFirst!: (result: TicketsResult) => void;
+    let resolveSecond!: (result: TicketsResult) => void;
+    fetchAssignedTickets
+      .mockReturnValueOnce(
+        new Promise<TicketsResult>((resolve) => {
+          resolveFirst = resolve;
+        })
+      )
+      .mockReturnValueOnce(
+        new Promise<TicketsResult>((resolve) => {
+          resolveSecond = resolve;
+        })
+      );
+    const otherSettings: AppSettings = {
+      ...settings,
+      jiraBaseUrl: "https://other.atlassian.net",
+      jiraEmail: "other@example.com"
+    };
+    const first = makeTicketsResult({
+      accountId: "account-1",
+      inProgress: [buildTicket("FIRST-1")]
+    });
+    const second = makeTicketsResult({
+      accountId: "account-2",
+      inProgress: [
+        buildTicket("SECOND-1", {
+          url: "https://other.atlassian.net/browse/SECOND-1"
+        })
+      ]
+    });
+
+    renderHarness({ isBooting: false });
+    await flushAsyncUpdates();
+    renderHarness({ currentSettings: otherSettings, isBooting: false });
+    await flushAsyncUpdates();
+
+    expect(fetchAssignedTickets).toHaveBeenCalledTimes(2);
+    expect(getApi().tickets).toBeUndefined();
+    expect(getApi().ticketOptions).toEqual([]);
+
+    await act(async () => {
+      resolveSecond(second);
+      await Promise.resolve();
+    });
+    expect(getApi().tickets?.inProgress[0].key).toBe("SECOND-1");
+
+    await act(async () => {
+      resolveFirst(first);
+      await Promise.resolve();
+    });
+    expect(getApi().tickets?.inProgress[0].key).toBe("SECOND-1");
+  });
+
   it("filters the Tickets view by multiple Jira status categories without re-fetching", async () => {
     const loaded = makeTicketsResult({
       inProgress: [
@@ -242,6 +296,56 @@ describe("useTickets", () => {
     expect(fetchAssignedTickets).toHaveBeenNthCalledWith(2, { settings, assignedOnly: false });
     expect(getApi().ticketViewTickets?.inProgress.map((ticket) => ticket.key)).toEqual(["TEAM-1"]);
     expect(getApi().tickets?.inProgress.map((ticket) => ticket.key)).toEqual(["MINE-1"]);
+  });
+
+  it("lets an in-flight all-assignee request finish when an assigned refresh fails", async () => {
+    const assigned = makeTicketsResult({
+      inProgress: [buildTicket("MINE-REFRESH")]
+    });
+    const accessible = makeTicketsResult({
+      inProgress: [
+        buildTicket("TEAM-REFRESH", {
+          assigneeDisplayName: "Someone Else"
+        })
+      ],
+      recentlyClosed: []
+    });
+    let resolveAccessible!: (result: TicketsResult) => void;
+    fetchAssignedTickets
+      .mockResolvedValueOnce(assigned)
+      .mockReturnValueOnce(
+        new Promise<TicketsResult>((resolve) => {
+          resolveAccessible = resolve;
+        })
+      )
+      .mockRejectedValueOnce(new Error("Assigned refresh failed"));
+
+    renderHarness({ isBooting: false });
+    await flushAsyncUpdates();
+    act(() => {
+      getApi().setTicketFilters({
+        assignedOnly: false,
+        statusCategories: ["new", "indeterminate", "done"],
+        query: "",
+        sortMode: "updatedDesc"
+      });
+    });
+    await flushAsyncUpdates();
+
+    await act(async () => {
+      await getApi().loadTickets();
+    });
+    expect(getApi().ticketsLoading).toBe(true);
+
+    await act(async () => {
+      resolveAccessible(accessible);
+      await Promise.resolve();
+    });
+
+    expect(getApi().ticketsLoading).toBe(false);
+    expect(getApi().ticketViewTickets?.inProgress[0].key).toBe(
+      "TEAM-REFRESH"
+    );
   });
 
   it("reports load errors without throwing", async () => {

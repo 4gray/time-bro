@@ -52,6 +52,7 @@ import {
   getVisibleWorkspaceNotes,
   getWorkspaceNoteCounts,
   getWorkspaceNoteProgress,
+  isGlobalWorkspaceNoteContainerId,
   isNotebookContainerId,
   markAllWorkspaceTodosDone,
   moveWorkspaceNote,
@@ -67,12 +68,14 @@ import {
   type WorkspaceNote,
   type WorkspaceNoteBucket,
   type WorkspaceNoteFilter,
+  type WorkspaceNoteJiraScope,
   type WorkspaceNoteType
 } from "../domain/ticketNotes";
 import {
   getBitbucketReviewResults,
   getNoteNotebooks,
   getNoteTicketActivity,
+  getWorkspaceNoteJiraScope,
   getWorkspaceNoteBuckets,
   saveNoteNotebooks,
   saveWorkspaceNoteBucket,
@@ -143,6 +146,15 @@ const pullRequestTargetId = (
   target: Pick<LinkedPullRequest, "workspace" | "repositorySlug" | "pullRequestId">
 ) =>
   `${target.workspace.trim().toLowerCase()}/${target.repositorySlug.trim().toLowerCase()}/${target.pullRequestId}`;
+
+const jiraOrigin = (value?: string) => {
+  if (!value) return undefined;
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+};
 
 const TICKET_COLORS = [
   "#4f7cff",
@@ -417,6 +429,8 @@ export const NotesWorkspace = ({
   const [notebooks, setNotebooks] = useState<NoteNotebook[]>([]);
   const [storedActivity, setStoredActivity] = useState<NoteTicketActivity[]>([]);
   const [reviewHistory, setReviewHistory] = useState<BitbucketReviewSyncResult[]>([]);
+  const [jiraNoteScope, setJiraNoteScope] = useState<WorkspaceNoteJiraScope>();
+  const [loadedNotesContextKey, setLoadedNotesContextKey] = useState<string>();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -448,11 +462,21 @@ export const NotesWorkspace = ({
   const bucketsRef = useRef<BucketMap>({});
   const notebooksRef = useRef<NoteNotebook[]>([]);
   const mutationQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const jiraContextGenerationRef = useRef(0);
   const jiraDetailsPromisesRef = useRef(new Map<string, Promise<JiraIssueDetails | undefined>>());
   const prRequestTargetsRef = useRef(new Map<string, string>());
   const currentDateRef = useRef(currentDate);
   const onErrorRef = useRef(onError);
   const aiConnection = useAiConnection(settings);
+  const notesContextKey = [
+    settings.jiraBaseUrl.trim().toLowerCase(),
+    settings.jiraEmail.trim().toLowerCase(),
+    syncResult?.jiraSite ?? "",
+    syncResult?.accountId ?? ""
+  ].join("\u0000");
+  const workspaceContextReady =
+    isDemo ||
+    (loadedNotesContextKey === notesContextKey && !isLoading && !loadError);
   currentDateRef.current = currentDate;
   onErrorRef.current = onError;
 
@@ -477,6 +501,42 @@ export const NotesWorkspace = ({
 
     const load = async () => {
       try {
+        jiraContextGenerationRef.current += 1;
+        setIsLoading(true);
+        setLoadError(undefined);
+        setBucketState({});
+        setStoredActivity([]);
+        setReviewHistory([]);
+        setJiraNoteScope(undefined);
+        setLoadedNotesContextKey(undefined);
+        setSelectedContainer(GENERAL_NOTES_CONTAINER_ID);
+        setTypeFilter("all");
+        setShowArchive(false);
+        setComposerText("");
+        setComposerTodo(false);
+        setEditingNoteId(undefined);
+        setEditingText("");
+        setNewNoteOpen(false);
+        setNewNoteText("");
+        setNewNoteTodo(false);
+        setNewNoteTarget(GENERAL_NOTES_CONTAINER_ID);
+        setNewNoteTargetOption(undefined);
+        setNewNoteSearch("");
+        setSearchResults([]);
+        setSearchLoading(false);
+        setPrCache({});
+        setPrOpen({});
+        setPendingPrTasks(new Set());
+        setBriefingCache({});
+        setBriefingOpen({});
+        jiraDetailsPromisesRef.current.clear();
+        prRequestTargetsRef.current.clear();
+
+        if (!isDemo) {
+          await mutationQueueRef.current;
+          if (cancelled) return;
+        }
+
         if (isDemo) {
           const demo = makeDemoData(currentDateRef.current);
           if (cancelled) return;
@@ -500,11 +560,15 @@ export const NotesWorkspace = ({
           return;
         }
 
+        const loadedJiraScope = await getWorkspaceNoteJiraScope();
+        if (cancelled) return;
+        setJiraNoteScope(loadedJiraScope);
+        const explicitJiraScope = loadedJiraScope ?? null;
         const [savedBuckets, savedNotebooks, activity, savedReviewHistory] =
           await Promise.allSettled([
-            getWorkspaceNoteBuckets(),
+            getWorkspaceNoteBuckets(explicitJiraScope),
             getNoteNotebooks(),
-            getNoteTicketActivity(),
+            getNoteTicketActivity(explicitJiraScope),
             getBitbucketReviewResults()
           ]);
         if (cancelled) return;
@@ -537,6 +601,7 @@ export const NotesWorkspace = ({
         }
 
         setLoadError(undefined);
+        setLoadedNotesContextKey(notesContextKey);
         const nextActivity = activity.status === "fulfilled" ? activity.value : [];
         setStoredActivity(nextActivity);
         setReviewHistory(
@@ -564,47 +629,146 @@ export const NotesWorkspace = ({
     return () => {
       cancelled = true;
     };
-  }, [isDemo, loadAttempt, setBucketState]);
+  }, [
+    isDemo,
+    loadAttempt,
+    setBucketState,
+    notesContextKey
+  ]);
+
+  const lastScopeRefreshRef = useRef(syncResult?.syncedAt);
+  useEffect(() => {
+    const syncedAt = syncResult?.syncedAt;
+    if (
+      isDemo ||
+      !syncedAt ||
+      lastScopeRefreshRef.current === syncedAt
+    ) {
+      return;
+    }
+    lastScopeRefreshRef.current = syncedAt;
+    if (loadedNotesContextKey !== notesContextKey) {
+      return;
+    }
+
+    let cancelled = false;
+    void getWorkspaceNoteJiraScope()
+      .then((nextScope) => {
+        if (cancelled) return;
+        const scopeChanged =
+          nextScope?.jiraSite !== jiraNoteScope?.jiraSite ||
+          nextScope?.authorAccountId !== jiraNoteScope?.authorAccountId;
+        if (scopeChanged) {
+          setLoadAttempt((current) => current + 1);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          onError(
+            error instanceof Error
+              ? error.message
+              : "Could not refresh the Jira notes account."
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isDemo,
+    jiraNoteScope,
+    loadedNotesContextKey,
+    notesContextKey,
+    onError,
+    syncResult?.syncedAt
+  ]);
 
   const lastActivityRefreshRef = useRef<string>();
   useEffect(() => {
     const syncedAt = syncResult?.syncedAt;
-    if (!syncedAt || isDemo || lastActivityRefreshRef.current === syncedAt) return;
-    lastActivityRefreshRef.current = syncedAt;
-    void getNoteTicketActivity()
-      .then(setStoredActivity)
+    if (
+      !syncedAt ||
+      isDemo ||
+      !jiraNoteScope ||
+      !workspaceContextReady
+    ) {
+      return;
+    }
+    const refreshKey = `${jiraNoteScope.jiraSite}|${jiraNoteScope.authorAccountId}|${syncedAt}`;
+    if (lastActivityRefreshRef.current === refreshKey) return;
+    lastActivityRefreshRef.current = refreshKey;
+    let cancelled = false;
+    void getNoteTicketActivity(jiraNoteScope)
+      .then((nextActivity) => {
+        if (!cancelled) setStoredActivity(nextActivity);
+      })
       .catch((error) => {
-        onError(error instanceof Error ? error.message : "Could not refresh ticket activity.");
+        if (!cancelled) {
+          onError(error instanceof Error ? error.message : "Could not refresh ticket activity.");
+        }
       });
-  }, [isDemo, onError, syncResult?.syncedAt]);
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isDemo,
+    jiraNoteScope,
+    onError,
+    syncResult?.syncedAt,
+    workspaceContextReady
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     if (window.matchMedia("(max-width: 760px)").matches) setSidebarOpen(false);
   }, []);
 
+  const scopedTicketOptions = useMemo(
+    () =>
+      isDemo
+        ? ticketOptions
+        : workspaceContextReady &&
+            jiraNoteScope &&
+            tickets?.accountId === jiraNoteScope.authorAccountId
+          ? [
+              ...(tickets.inProgress ?? []),
+              ...(tickets.recentlyClosed ?? [])
+            ].filter(
+              (ticket) => jiraOrigin(ticket.url) === jiraNoteScope.jiraSite
+            )
+          : [],
+    [isDemo, jiraNoteScope, ticketOptions, tickets, workspaceContextReady]
+  );
+
   const allTicketMetadata = useMemo(() => {
     const map = new Map<string, NoteJiraSnapshot>();
     for (const bucket of Object.values(buckets)) {
       if (bucket.jira) map.set(bucket.jira.key.toUpperCase(), bucket.jira);
     }
-    for (const ticket of [
-      ...ticketOptions,
-      ...(tickets?.inProgress ?? []),
-      ...(tickets?.recentlyClosed ?? [])
-    ]) {
+    for (const ticket of scopedTicketOptions) {
       map.set(ticket.key.toUpperCase(), jiraSnapshotFromTicket(ticket));
     }
     return map;
-  }, [buckets, ticketOptions, tickets]);
+  }, [buckets, scopedTicketOptions]);
 
   const activity = useMemo(() => {
     const map = new Map<string, NoteTicketActivity>(
       storedActivity.map((item) => [item.key.toUpperCase(), { ...item }])
     );
     const currentWorklogs = new Map<string, NoteTicketActivity>();
+    const syncJiraSite =
+      jiraOrigin(syncResult?.jiraSite) ??
+      syncResult?.sourceWorklogs
+        ?.map((worklog) => jiraOrigin(worklog.issueUrl))
+        .find((site): site is string => Boolean(site));
+    const sourceWorklogs =
+      jiraNoteScope &&
+      syncResult?.accountId === jiraNoteScope.authorAccountId &&
+      syncJiraSite === jiraNoteScope.jiraSite
+        ? syncResult.sourceWorklogs ?? []
+        : [];
 
-    for (const worklog of syncResult?.sourceWorklogs ?? []) {
+    for (const worklog of sourceWorklogs) {
       const key = worklog.issueKey.trim().toUpperCase();
       const current = currentWorklogs.get(key);
       const startedTime = Date.parse(worklog.started);
@@ -645,7 +809,7 @@ export const NotesWorkspace = ({
       if (fresh) map.set(key, { ...item, ...fresh, lastWorkedAt: item.lastWorkedAt, loggedSeconds: item.loggedSeconds });
     }
     return [...map.values()];
-  }, [allTicketMetadata, storedActivity, syncResult]);
+  }, [allTicketMetadata, jiraNoteScope, storedActivity, syncResult]);
 
   const scopedTickets = useMemo(
     () => getScopedNoteTicketActivity(activity, scope, currentDate),
@@ -771,16 +935,31 @@ export const NotesWorkspace = ({
         jira,
         notes: []
       };
+      if (
+        !isDemo &&
+        !isGlobalWorkspaceNoteContainerId(containerId) &&
+        !jiraNoteScope
+      ) {
+        onErrorRef.current(
+          "Sync Jira once before saving ticket notes for this account."
+        );
+        return undefined;
+      }
       const nextBucket = mutation({
         ...current,
         jira: jira ?? current.jira
       });
       const next = { ...bucketsRef.current, [containerId]: nextBucket };
       setBucketState(next);
-      if (!isDemo) enqueueMutation(() => saveWorkspaceNoteBucket(nextBucket));
+      if (!isDemo) {
+        const capturedScope = jiraNoteScope ?? null;
+        enqueueMutation(() =>
+          saveWorkspaceNoteBucket(nextBucket, capturedScope)
+        );
+      }
       return nextBucket;
     },
-    [enqueueMutation, isDemo, setBucketState]
+    [enqueueMutation, isDemo, jiraNoteScope, setBucketState]
   );
 
   const addNoteToContainer = useCallback(
@@ -801,8 +980,11 @@ export const NotesWorkspace = ({
         createdAt: timestamp,
         updatedAt: timestamp
       };
-      mutateBucket(containerId, jira, (bucket) => addWorkspaceNote(bucket, note));
-      return true;
+      return Boolean(
+        mutateBucket(containerId, jira, (bucket) =>
+          addWorkspaceNote(bucket, note)
+        )
+      );
     },
     [mutateBucket]
   );
@@ -844,7 +1026,7 @@ export const NotesWorkspace = ({
     setNewNoteTarget(GENERAL_NOTES_CONTAINER_ID);
     setNewNoteTargetOption(undefined);
     setNewNoteSearch("");
-    setSearchResults(ticketOptions.slice(0, 4));
+    setSearchResults(scopedTicketOptions.slice(0, 4));
     setNewNoteOpen(true);
   };
 
@@ -854,7 +1036,7 @@ export const NotesWorkspace = ({
     if (query.length < 2) {
       const normalized = query.toLowerCase();
       setSearchResults(
-        ticketOptions
+        scopedTicketOptions
           .filter((ticket) =>
             !normalized
               ? true
@@ -888,7 +1070,7 @@ export const NotesWorkspace = ({
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [newNoteOpen, newNoteSearch, onError, searchTickets, ticketOptions]);
+  }, [newNoteOpen, newNoteSearch, onError, scopedTicketOptions, searchTickets]);
 
   const targetOptions = useMemo<TargetOption[]>(() => {
     const query = newNoteSearch.trim().toLowerCase();
@@ -900,13 +1082,20 @@ export const NotesWorkspace = ({
         typeLabel: "NOTEBOOK",
         color: "#9d9b95"
       }));
-    const jiraTargets = searchResults.map((ticket) => ({
-      containerId: ticket.key.toUpperCase(),
-      label: `${ticket.key.toUpperCase()} — ${ticket.summary}`,
-      typeLabel: issueTypeLabel(jiraSnapshotFromTicket(ticket)),
-      color: accentForKey(ticket.key),
-      jira: jiraSnapshotFromTicket(ticket)
-    }));
+    const jiraTargets = searchResults
+      .filter(
+        (ticket) =>
+          isDemo ||
+          (jiraNoteScope &&
+            jiraOrigin(ticket.url) === jiraNoteScope.jiraSite)
+      )
+      .map((ticket) => ({
+        containerId: ticket.key.toUpperCase(),
+        label: `${ticket.key.toUpperCase()} — ${ticket.summary}`,
+        typeLabel: issueTypeLabel(jiraSnapshotFromTicket(ticket)),
+        color: accentForKey(ticket.key),
+        jira: jiraSnapshotFromTicket(ticket)
+      }));
     const seen = new Set<string>();
     return [...notebookTargets, ...jiraTargets]
       .filter((target) => {
@@ -915,7 +1104,14 @@ export const NotesWorkspace = ({
         return true;
       })
       .slice(0, 4);
-  }, [newNoteSearch, newNoteTarget, notebooks, searchResults]);
+  }, [
+    isDemo,
+    jiraNoteScope,
+    newNoteSearch,
+    newNoteTarget,
+    notebooks,
+    searchResults
+  ]);
 
   const selectedTarget = useMemo<TargetOption>(() => {
     if (
@@ -1037,12 +1233,13 @@ export const NotesWorkspace = ({
 
   useEffect(() => {
     const key = selectedMeta.jira?.key.toUpperCase();
-    if (!key || isDemo) return;
+    if (!key || isDemo || !workspaceContextReady) return;
     if (!linkedPullRequest) {
       prRequestTargetsRef.current.delete(key);
       return;
     }
     const targetId = pullRequestTargetId(linkedPullRequest);
+    const contextGeneration = jiraContextGenerationRef.current;
     prRequestTargetsRef.current.set(key, targetId);
     if (prCache[key]?.targetId === targetId) return;
     setPrCache((current) => ({
@@ -1057,6 +1254,7 @@ export const NotesWorkspace = ({
         pullRequestId: linkedPullRequest.pullRequestId
       })
       .then((details) => {
+        if (jiraContextGenerationRef.current !== contextGeneration) return;
         setPrCache((current) =>
           current[key]?.targetId === targetId
             ? {
@@ -1067,6 +1265,7 @@ export const NotesWorkspace = ({
         );
       })
       .catch((error) => {
+        if (jiraContextGenerationRef.current !== contextGeneration) return;
         setPrCache((current) =>
           current[key]?.targetId === targetId
             ? {
@@ -1083,7 +1282,15 @@ export const NotesWorkspace = ({
           );
         }
       });
-  }, [isDemo, linkedPullRequest, onError, prCache, selectedMeta.jira, settings]);
+  }, [
+    isDemo,
+    linkedPullRequest,
+    onError,
+    prCache,
+    selectedMeta.jira,
+    settings,
+    workspaceContextReady
+  ]);
 
   const selectedJiraKey = selectedMeta.jira?.key.toUpperCase();
   const selectedPrTargetId = linkedPullRequest
@@ -1137,6 +1344,7 @@ export const NotesWorkspace = ({
 
   const togglePrTask = async (taskId: number) => {
     if (!selectedPr || !selectedJiraKey) return;
+    const contextGeneration = jiraContextGenerationRef.current;
     const task = selectedPr.tasks.find((candidate) => candidate.id === taskId);
     if (!task) return;
     const targetId = pullRequestTargetId(selectedPr);
@@ -1178,6 +1386,7 @@ export const NotesWorkspace = ({
           content: task.content,
           resolved: nextResolved
         });
+        if (jiraContextGenerationRef.current !== contextGeneration) return;
         setPrCache((current) => {
           const entry = current[selectedJiraKey];
           const details = entry?.targetId === targetId ? entry.details : undefined;
@@ -1199,6 +1408,7 @@ export const NotesWorkspace = ({
         });
       }
     } catch (error) {
+      if (jiraContextGenerationRef.current !== contextGeneration) return;
       setPrCache((current) => {
         const entry = current[selectedJiraKey];
         const details = entry?.targetId === targetId ? entry.details : undefined;
@@ -1219,11 +1429,13 @@ export const NotesWorkspace = ({
       });
       onError(error instanceof Error ? error.message : "Could not update Bitbucket task.");
     } finally {
-      setPendingPrTasks((current) => {
-        const next = new Set(current);
-        next.delete(pendingKey);
-        return next;
-      });
+      if (jiraContextGenerationRef.current === contextGeneration) {
+        setPendingPrTasks((current) => {
+          const next = new Set(current);
+          next.delete(pendingKey);
+          return next;
+        });
+      }
     }
   };
 
@@ -1238,6 +1450,7 @@ export const NotesWorkspace = ({
 
   const openBriefing = async () => {
     if (!selectedMeta.jira || !selectedJiraKey) return;
+    const contextGeneration = jiraContextGenerationRef.current;
     const existing = briefingCache[selectedJiraKey];
     if (existing) {
       setBriefingOpen((current) => ({
@@ -1265,6 +1478,7 @@ export const NotesWorkspace = ({
     try {
       if (isDemo) {
         await new Promise<void>((resolve) => window.setTimeout(resolve, 1300));
+        if (jiraContextGenerationRef.current !== contextGeneration) return;
         setBriefingCache((current) => ({
           ...current,
           [selectedJiraKey]: {
@@ -1277,6 +1491,7 @@ export const NotesWorkspace = ({
       }
 
       const details = await getJiraDetails(selectedMeta.jira);
+      if (jiraContextGenerationRef.current !== contextGeneration) return;
       const suggestions = await computeNotesBriefing(
         {
           ticket: {
@@ -1297,6 +1512,7 @@ export const NotesWorkspace = ({
         },
         aiConnection
       );
+      if (jiraContextGenerationRef.current !== contextGeneration) return;
       setBriefingCache((current) => ({
         ...current,
         [selectedJiraKey]: {
@@ -1318,6 +1534,7 @@ export const NotesWorkspace = ({
         }
       }));
     } catch (error) {
+      if (jiraContextGenerationRef.current !== contextGeneration) return;
       setBriefingCache((current) => ({
         ...current,
         [selectedJiraKey]: {
@@ -1408,7 +1625,12 @@ export const NotesWorkspace = ({
     );
   };
 
-  if (isLoading) {
+  if (
+    isLoading ||
+    (!loadError &&
+      !isDemo &&
+      loadedNotesContextKey !== notesContextKey)
+  ) {
     return (
       <section className="notes-workspace notes-workspace-loading" aria-label="Notes workspace">
         <LoaderCircle className="notes-spinner" size={18} />
@@ -1997,6 +2219,12 @@ export const NotesWorkspace = ({
                                 containerId: GENERAL_NOTES_CONTAINER_ID,
                                 notes: []
                               };
+                              if (!isDemo && !jiraNoteScope) {
+                                onErrorRef.current(
+                                  "Sync Jira once before saving ticket notes for this account."
+                                );
+                                return;
+                              }
                               const moved = moveWorkspaceNote(
                                 source,
                                 target,
@@ -2010,11 +2238,12 @@ export const NotesWorkspace = ({
                               };
                               setBucketState(next);
                               if (!isDemo) {
+                                const capturedScope = jiraNoteScope ?? null;
                                 enqueueMutation(() =>
                                   saveWorkspaceNoteBuckets([
                                     moved.source,
                                     moved.target
-                                  ])
+                                  ], capturedScope)
                                 );
                               }
                             }}

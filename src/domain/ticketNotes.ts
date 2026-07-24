@@ -38,6 +38,11 @@ export interface WorkspaceNoteBucket {
   notes: WorkspaceNote[];
 }
 
+export interface WorkspaceNoteJiraScope {
+  jiraSite: string;
+  authorAccountId: string;
+}
+
 export interface NoteNotebook {
   id: string;
   title: string;
@@ -84,6 +89,10 @@ export const notebookContainerId = (id: string) => {
 
 export const isNotebookContainerId = (containerId: string) =>
   containerId.startsWith(NOTEBOOK_CONTAINER_PREFIX);
+
+export const isGlobalWorkspaceNoteContainerId = (containerId: string) =>
+  containerId === GENERAL_NOTES_CONTAINER_ID ||
+  isNotebookContainerId(containerId);
 
 /**
  * The composer accepts `[] ` or `[ ] ` as a quick to-do prefix. The prefix

@@ -10,12 +10,15 @@ copies a suggestion into a local to-do.
 ## Data model and storage
 
 - Add an additive IndexedDB migration with two stores:
-  - note buckets keyed by `GENERAL`, a namespaced notebook id, or an uppercase Jira key;
-    each bucket owns flat text/to-do items plus an optional Jira snapshot.
+  - global note buckets keyed by `GENERAL` or a namespaced notebook id.
+  - Jira note buckets physically keyed by normalized Jira origin, account id, and
+    uppercase Jira key while exposing the logical Jira key to the UI; each bucket owns
+    flat text/to-do items plus an optional Jira snapshot.
   - a separately persisted flat notebook list; `GENERAL` is implicit and undeletable.
 - Keep workspace notes separate from the existing timed `PersonalNote` model.
 - Persist create/edit/check/archive/move/delete actions through a serialized mutation
-  queue. Archived items stay in their bucket and are excluded from counts/progress.
+  queue that captures the loaded Jira scope so delayed writes cannot cross accounts.
+  Archived items stay in their bucket and are excluded from counts/progress.
 - Build Today/Week/All ticket scopes from the local Jira worklog ledger's last-started
   timestamp, joined with current Jira ticket metadata and saved issue snapshots.
 
@@ -44,15 +47,18 @@ copies a suggestion into a local to-do.
 - [x] Ephemeral AI briefing and explicit suggestion-to-to-do flow.
 - [x] Pixel/state QA for default, hover, empty, archive, loading, PR, AI, collapsed,
       and narrow-window states.
+- [x] PR review follow-up: isolate Jira notes by site/account, migrate safe v14
+      records, quarantine ambiguous legacy records, and reload Jira-specific state
+      when the configured identity changes.
 
 ## Verification
 
-- `npm run test` — 133 files and 891 tests passed after rebasing onto the latest
-  `main`.
+- `npm run test` — 133 files and 902 tests passed after the PR review fixes.
 - `npm run build` — renderer and Electron TypeScript checks plus the production Vite
   build passed; the existing large-chunk advisory remains informational.
 - `npm run e2e:renderer` — all 8 renderer flows passed, including Notes navigation and
   local-only messaging.
+- `npm run check:brand` — passed.
 - Browser inspection passed at 1320×840, 1040×720, and 680×720 for default, hover,
   empty, archive, loading, PR, AI, modal, collapsed-rail, and narrow-editor states.
   No clipping, document overflow, or console warnings/errors were found.
